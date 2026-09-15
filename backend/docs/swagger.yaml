@@ -1,0 +1,542 @@
+openapi: 3.0.3
+info:
+  title: UNAHUR TP - API
+  description: API REST del Proyecto Integrador UNAHUR. Documenta usuarios, carreras, plan de estudios y progreso de alumnos.
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000
+tags:
+  - name: Health
+    description: Estado de la API
+  - name: Users
+    description: Gestión de usuarios
+  - name: Careers
+    description: Carreras y plan de estudios
+  - name: Progress
+    description: Progreso del alumno
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Verifica que la API esté viva
+      responses:
+        "200":
+          description: Servicio OK
+          content:
+            application/json:
+              example:
+                status: ok
+
+  /users/login:
+    post:
+      tags:
+        - Users
+      summary: Inicia sesión con nickName y contraseña
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginBody"
+      responses:
+        "200":
+          description: Usuario autenticado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: Faltan credenciales
+        "401":
+          description: Contraseña incorrecta
+        "404":
+          description: Usuario no encontrado
+
+  /users:
+    get:
+      tags:
+        - Users
+      summary: Lista los usuarios
+      responses:
+        "200":
+          description: Lista de usuarios
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+    post:
+      tags:
+        - Users
+      summary: Crea un usuario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserBody"
+      responses:
+        "201":
+          description: Usuario creado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: Validación fallida
+
+  /users/{nickName}:
+    get:
+      tags:
+        - Users
+      summary: Obtiene un usuario por nickName
+      parameters:
+        - $ref: "#/components/parameters/nickName"
+      responses:
+        "200":
+          description: Usuario encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          description: Usuario no encontrado
+    put:
+      tags:
+        - Users
+      summary: Actualiza un usuario por nickName
+      parameters:
+        - $ref: "#/components/parameters/nickName"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserBody"
+      responses:
+        "200":
+          description: Usuario actualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          description: Usuario no encontrado
+    delete:
+      tags:
+        - Users
+      summary: Elimina un usuario por nickName
+      parameters:
+        - $ref: "#/components/parameters/nickName"
+      responses:
+        "200":
+          description: Usuario eliminado
+        "404":
+          description: Usuario no encontrado
+
+  /careers:
+    get:
+      tags:
+        - Careers
+      summary: Lista las carreras (filtrable por status)
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [draft, published]
+      responses:
+        "200":
+          description: Lista de carreras
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Career"
+    post:
+      tags:
+        - Careers
+      summary: Crea una carrera (requiere header x-user-id)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCareerBody"
+      responses:
+        "201":
+          description: Carrera creada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Career"
+        "400":
+          description: Validación fallida
+
+  /careers/{id}/subjects:
+    get:
+      tags:
+        - Careers
+      summary: Lista las materias de una carrera
+      parameters:
+        - $ref: "#/components/parameters/id"
+      responses:
+        "200":
+          description: Lista de materias
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Subject"
+    post:
+      tags:
+        - Careers
+      summary: Guarda/mergea materias de una carrera
+      parameters:
+        - $ref: "#/components/parameters/id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                subjects:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/SubjectIn"
+      responses:
+        "200":
+          description: Materias guardadas
+          content:
+            application/json:
+              example:
+                saved: 12
+                total: 40
+
+  /careers/{id}/graph:
+    get:
+      tags:
+        - Careers
+      summary: Devuelve el grafo del plan de estudios (con progreso si hay x-user-id)
+      parameters:
+        - $ref: "#/components/parameters/id"
+      responses:
+        "200":
+          description: Grafo de nodos y aristas
+        "404":
+          description: Carrera no encontrada
+
+  /careers/{id}/parse-official:
+    post:
+      tags:
+        - Careers
+      summary: Parsea un PDF del plan oficial (multipart, campo file)
+      parameters:
+        - $ref: "#/components/parameters/id"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Materias extraídas del PDF
+          content:
+            application/json:
+              example:
+                sourceKind: official
+                detectedCount: 3
+                subjects: []
+
+  /careers/{id}/publish:
+    post:
+      tags:
+        - Careers
+      summary: Publica una carrera pasándola a status published
+      parameters:
+        - $ref: "#/components/parameters/id"
+      responses:
+        "200":
+          description: Carrera publicada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Career"
+        "404":
+          description: Carrera no encontrada
+
+  /progress/parse-history:
+    post:
+      tags:
+        - Progress
+      summary: Parsea un PDF del historial académico (multipart, campo file)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Progreso detectado en el PDF
+
+  /progress:
+    post:
+      tags:
+        - Progress
+      summary: Guarda el progreso de un alumno (requiere x-user-id)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/ProgressIn"
+      responses:
+        "200":
+          description: Progreso guardado
+
+  /progress/me:
+    get:
+      tags:
+        - Progress
+      summary: Obtiene el progreso del usuario logueado
+      responses:
+        "200":
+          description: Lista de progreso
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Progress"
+
+components:
+  parameters:
+    nickName:
+      name: nickName
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Identificador único del usuario
+    id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: ID (Mongo ObjectId) de la carrera
+
+  schemas:
+    User:
+      type: object
+      properties:
+        _id:
+          type: string
+        nickName:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+        birthdate:
+          type: string
+          format: date
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    LoginBody:
+      type: object
+      required: [nickName, password]
+      properties:
+        nickName:
+          type: string
+        password:
+          type: string
+    CreateUserBody:
+      type: object
+      required: [nickName, email]
+      properties:
+        nickName:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+        birthdate:
+          type: string
+          format: date
+    UpdateUserBody:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+        birthdate:
+          type: string
+          format: date
+    Career:
+      type: object
+      properties:
+        _id:
+          type: string
+        name:
+          type: string
+        institute:
+          type: string
+        color:
+          type: string
+        planResolution:
+          type: string
+        ruleCode:
+          type: string
+        durationYears:
+          type: number
+        creditsFinal:
+          type: number
+        creditsIntermediate:
+          type: number
+        status:
+          type: string
+          enum: [draft, published]
+        ownerId:
+          type: string
+        subjectCount:
+          type: number
+    CreateCareerBody:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        institute:
+          type: string
+        color:
+          type: string
+        planResolution:
+          type: string
+        ruleCode:
+          type: string
+        durationYears:
+          type: number
+        creditsFinal:
+          type: number
+        creditsIntermediate:
+          type: number
+    Subject:
+      type: object
+      properties:
+        _id:
+          type: string
+        careerId:
+          type: string
+        code:
+          type: string
+        name:
+          type: string
+        year:
+          type: number
+        cuatrimestre:
+          type: number
+        duration:
+          type: string
+          enum: [C, A, TF]
+        hours:
+          type: object
+          additionalProperties:
+            type: number
+        credits:
+          type: number
+        kind:
+          type: string
+        optional:
+          type: boolean
+        requires:
+          type: array
+          items:
+            type: string
+    SubjectIn:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        year:
+          type: number
+        cuatrimestre:
+          type: number
+        duration:
+          type: string
+        hours:
+          type: object
+          additionalProperties:
+            type: number
+        credits:
+          type: number
+        kind:
+          type: string
+        optional:
+          type: boolean
+        requires:
+          type: array
+          items:
+            type: string
+    ProgressIn:
+      type: object
+      required: [subjectCode]
+      properties:
+        subjectCode:
+          type: string
+        status:
+          type: string
+          enum: [Aprobada, Regular, Cursando, Pendiente]
+        nota:
+          type: number
+        fecha:
+          type: string
+          format: date
+        origen:
+          type: string
+    Progress:
+      allOf:
+        - $ref: "#/components/schemas/ProgressIn"
+        - type: object
+          properties:
+            _id:
+              type: string
+            userId:
+              type: string
+            careerId:
+              type: string

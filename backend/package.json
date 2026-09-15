@@ -1,0 +1,27 @@
+{
+  "name": "unahur-tp-backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "API REST del Proyecto Integrador UNAHUR",
+  "main": "src/main.js",
+  "scripts": {
+    "dev": "nodemon src/main.js",
+    "start": "node src/main.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "joi": "^18.2.8",
+    "mongoose": "^9.9.5",
+    "multer": "^2.3.0",
+    "pdfjs-dist": "^6.3.289",
+    "redis": "^6.2.1",
+    "swagger-ui-express": "^5.0.1",
+    "yamljs": "^0.3.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}

@@ -1,0 +1,279 @@
+/* ───────────── Splash: página de inicio ─────────────
+   Usa las variables de diseño del resto de la app.
+*/
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  padding: 24px 16px;
+  background-color: var(--gradify-app-bg);
+  background-image:
+    radial-gradient(ellipse 60% 45% at 85% 10%, rgba(34, 211, 238, 0.14), transparent 60%),
+    radial-gradient(ellipse 65% 50% at 8% 95%, rgba(var(--gradify-brand-rgb), 0.16), transparent 62%);
+  opacity: 1;
+  transition: opacity 0.6s ease-in-out;
+}
+
+.splash--fade-out {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ── Constelación (grafo de correlatividades) ── */
+.splash__scene {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.star-edge {
+  stroke: rgba(var(--gradify-brand-rgb), 0.28);
+  stroke-width: 1.4;
+  stroke-dasharray: 4 6;
+  opacity: 0;
+  animation: edgeIn 0.9s 0.3s ease forwards;
+}
+
+.star-node {
+  fill: var(--gradify-brand);
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: nodeAppear 0.8s ease forwards;
+}
+
+.star-node--twinkle {
+  animation: nodeAppear 0.8s ease forwards, starTwinkle 3.4s ease-in-out 1.6s infinite;
+}
+
+.star-node--hub {
+  fill: var(--gradify-accent);
+  stroke: rgba(var(--gradify-brand-rgb), 0.45);
+  stroke-width: 1.5;
+  filter: drop-shadow(0 0 6px rgba(var(--gradify-brand-rgb), 0.55));
+}
+
+/* ── Partículas ── */
+.splash__particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.splash__particle {
+  position: absolute;
+  border-radius: 50%;
+  background: var(--gradify-accent);
+  box-shadow: 0 0 8px rgba(var(--gradify-brand-rgb), 0.35);
+  opacity: 0;
+  animation-name: particleFloat;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+/* ── Card (mismo formato que .auth-card) ── */
+.splash__card {
+  position: relative;
+  width: 100%;
+  max-width: 460px;
+  background: var(--gradify-glass);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--gradify-border);
+  border-radius: var(--gradify-radius);
+  box-shadow: var(--gradify-shadow-lg);
+  padding: 34px 32px 30px;
+  text-align: center;
+  animation: splashCardIn 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.splash__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+  font-size: 1.08rem;
+  letter-spacing: -0.02em;
+  color: var(--gradify-text);
+  margin-bottom: 20px;
+}
+
+.splash__logo-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  object-fit: cover;
+  box-shadow: 0 4px 14px rgba(var(--gradify-brand-rgb), 0.3);
+}
+
+.splash__welcome {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--gradify-text-muted);
+}
+
+.splash__title {
+  margin: 2px 0 6px;
+  font-size: clamp(2.2rem, 8vw, 3rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  background-image: linear-gradient(90deg, var(--gradify-brand), var(--gradify-accent));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: var(--gradify-brand);
+}
+
+.splash__subtitle {
+  margin: 0 0 20px;
+  font-size: 0.98rem;
+  color: var(--gradify-text-muted);
+}
+
+.splash__features {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0;
+  margin: 0 0 24px;
+  text-align: left;
+}
+
+.splash__features li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 13px;
+  border: 1px solid var(--gradify-border);
+  border-radius: var(--gradify-radius-xs);
+  background: var(--gradify-surface);
+  box-shadow: var(--gradify-shadow-sm);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--gradify-text);
+  animation: featureIn 0.6s ease both;
+}
+
+.splash__features li:nth-child(2) {
+  animation-delay: 0.12s;
+}
+
+.splash__features li:nth-child(3) {
+  animation-delay: 0.24s;
+}
+
+.splash__features svg {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  color: var(--gradify-brand);
+}
+
+.splash__button {
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 1rem;
+}
+
+/* ── Animaciones ── */
+@keyframes nodeAppear {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+  100% {
+    opacity: 0.95;
+    transform: scale(1);
+  }
+}
+
+@keyframes starTwinkle {
+  0%,
+  100% {
+    opacity: 0.95;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+@keyframes edgeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 0.55;
+  }
+}
+
+@keyframes particleFloat {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  25% {
+    opacity: 0.7;
+  }
+  75% {
+    opacity: 0.3;
+  }
+  100% {
+    transform: translateY(-60px);
+    opacity: 0;
+  }
+}
+
+@keyframes splashCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes featureIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .splash__card {
+    padding: 28px 22px 24px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .star-edge,
+  .star-node,
+  .splash__particle,
+  .splash__card,
+  .splash__features li {
+    animation: none !important;
+  }
+  .star-edge,
+  .star-node {
+    opacity: 1;
+  }
+}

@@ -1,0 +1,42 @@
+services:
+  app:
+    build: .
+    container_name: unahur_tp_app
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - REDIS_URL=redis://cache:6379
+      - MONGODB_URI=mongodb://database:27017/unahur-tp
+    depends_on:
+      - cache
+      - database
+    networks:
+      - unahur_network
+
+  cache:
+    image: redis:7-alpine
+    container_name: unahur_tp_cache
+    restart: always
+    ports:
+      - "6380:6379"
+    networks:
+      - unahur_network
+
+  database:
+    image: mongo:6-jammy
+    container_name: unahur_tp_db
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - unahur_network
+
+volumes:
+  mongo_data:
+
+networks:
+  unahur_network:
+    driver: bridge
