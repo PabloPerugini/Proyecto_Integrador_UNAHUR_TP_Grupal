@@ -1,6 +1,6 @@
 # Backend - Proyecto Integrador UNAHUR
 
-API REST hecha con Node.js + Express + MongoDB + Redis. La estructura replica el formato del TP de Estrategias de Persistencia.
+API REST hecha con Node.js + Express + MongoDB + Redis. Provee la autenticación de usuarios, la carga y el parseo de planes de estudio, y los datos de progreso que consume el frontend.
 
 ## Requisitos
 

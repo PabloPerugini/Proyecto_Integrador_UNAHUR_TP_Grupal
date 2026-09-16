@@ -1,6 +1,6 @@
 # Frontend - Proyecto Integrador UNAHUR
 
-Aplicación web hecha con React + Vite + TypeScript. La estructura replica el formato del TP de Construcción de Interfaces de Usuario.
+Aplicación web hecha con React + Vite + TypeScript. Consume la API del backend para autenticar usuarios, cargar planes de estudio y visualizar correlatividades y progreso.
 
 ## Requisitos
 

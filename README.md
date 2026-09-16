@@ -1,8 +1,16 @@
-# Proyecto Integrador UNAHUR - Diseño y Programación
+# Gradify — Proyecto Integrador UNAHUR
 
-Proyecto integrador de la materia Programación - Informática (UNAHUR). Este repositorio agrupa el **backend** (API REST) y el **frontend** (aplicación web) de la aplicación.
+Aplicación web para planificar carreras universitarias: se sube el PDF de un plan de estudios, se exploran las correlatividades entre materias y se hace seguimiento del avance académico.
 
-> Estado: esqueleto básico. La estructura replica el formato usado en los TPs de Estrategias de Persistencia (backend) y Construcción de Interfaces de Usuario (frontend).
+Proyecto integrador de la materia **Programación - Informática (UNAHUR)**. El repositorio agrupa el **backend** (API REST) y el **frontend** (aplicación web).
+
+## Funcionalidades
+
+- Registro e inicio de sesión de usuarios.
+- Carga de planes de estudios a partir de un PDF.
+- Visualización del plan en tablero y en grafo de correlatividades.
+- Seguimiento del progreso por materia y por carrera.
+- Panel de administración de planes y materias.
 
 ## Estructura del repositorio
 
@@ -13,6 +21,13 @@ Proyecto integrador de la materia Programación - Informática (UNAHUR). Este re
 ```
 
 Cada carpeta tiene su propio `README.md` con instrucciones de instalación y ejecución.
+
+## Tecnologías
+
+| Capa     | Stack                                                       |
+| -------- | ----------------------------------------------------------- |
+| Backend  | Node.js 20+, Express, MongoDB (Mongoose), Redis, Joi, JWT   |
+| Frontend | React 19, TypeScript, Vite, React Router 7, Bootstrap 5     |
 
 ## Arranque rápido
 
@@ -29,6 +44,17 @@ npm install
 npm run dev
 ```
 
+- API: `http://localhost:3000`
+- Documentación Swagger: `http://localhost:3000/api-docs`
+- Frontend: `http://localhost:5173`
+
 ## Integrantes
 
-- _Pendiente de completar_
+| Integrante | Email | GitHub |
+| ---------- | ----- | ------ |
+| Pablo Perugini | pablochristian.perugini@estudiantes.unahur.edu.ar | [@PabloPerugini](https://github.com/PabloPerugini) |
+| Marcos | marcos241098@gmail.com | — |
+| Joaquín Masgo Sandoval | joaomasgosandoval@gmail.com | — |
+| Román Renaud | romanrenaud13@gmail.com | [@RomanRenaud](https://github.com/RomanRenaud) |
+| Eliel Remonda | elieldario.remonda@estudiantes.unahur.edu.ar | — |
+| Dylan Cotera | dylancotera@gmail.com | [@dylancotera](https://github.com/dylancotera) |
