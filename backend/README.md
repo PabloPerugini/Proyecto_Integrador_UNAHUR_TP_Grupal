@@ -24,7 +24,6 @@ Una vez iniciado:
 
 - API en `http://localhost:3000`
 - Documentación Swagger en `http://localhost:3000/api-docs`
-- Colección de prueba de Postman en `unahur-tp.postman_collection.json`
 
 ## Estructura
 
