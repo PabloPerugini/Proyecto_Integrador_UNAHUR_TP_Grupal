@@ -1,6 +1,6 @@
 const { Router } = require("express");
 const { uploadSinglePdf } = require("../middlewares/upload");
-const authUser = require("../middlewares/authUser");
+const withDeviceId = require("../middlewares/withDeviceId");
 const {
   createCareer,
   getAllCareers,
@@ -17,16 +17,16 @@ const {
 
 const router = Router();
 
-router.post("/", authUser, createCareer);
+router.post("/", createCareer);
 router.get("/", getAllCareers);
 router.get("/:id/subjects", getCareerSubjects);
-router.get("/:id/graph", authUser, getGraph);
+router.get("/:id/graph", withDeviceId, getGraph);
 router.post("/:id/parse-official", uploadSinglePdf, parseOfficial);
 router.post("/:id/parse-correlativas", uploadSinglePdf, parseCorrelativas);
 router.post("/:id/correlativas", saveCorrelativas);
 router.post("/:id/subjects", saveSubjects);
 router.post("/:id/publish", publishCareer);
-router.patch("/:id", authUser, updateCareer);
+router.patch("/:id", updateCareer);
 router.delete("/:id", deleteCareer);
 
 module.exports = router;

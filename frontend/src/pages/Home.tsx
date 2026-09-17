@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
 import { useCareerSelection } from '../context/CareerContext';
 import { useCareers } from '../hooks/useCareers';
 import { useFlashMessage } from '../hooks/useFlashMessage';
@@ -23,7 +22,6 @@ interface CareerEntry {
 const fmt = new Intl.NumberFormat('es-AR');
 
 export default function Home() {
-  const { user } = useAuth();
   const navigate = useNavigate();
   const { setCareerId } = useCareerSelection();
   const { msg, flash, flashFromError, clear } = useFlashMessage();
@@ -84,13 +82,8 @@ export default function Home() {
   return (
     <div>
       <PageHeader
-        title={`Hola, ${user?.nickName} 👋`}
+        title="Hola 👋"
         sub="Planeá tu camino: cargá un plan, explorá sus correlatividades y seguí tu avance."
-        action={
-          <Button className="btn-gradify" onClick={() => navigate('/cargar')}>
-            + Cargar plan nuevo
-          </Button>
-        }
       />
 
       <MessageBanner message={msg} onClose={clear} />
@@ -211,9 +204,6 @@ export default function Home() {
                   </Button>
                   <Button size="sm" variant="outline-secondary" onClick={() => go('/progreso', career._id)}>
                     Progreso
-                  </Button>
-                  <Button size="sm" variant="outline-secondary" onClick={() => go(`/admin/${career._id}`, career._id)}>
-                    Editar
                   </Button>
                 </div>
               </article>

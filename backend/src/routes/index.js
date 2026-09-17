@@ -1,5 +1,4 @@
 const { Router } = require("express");
-const userRoutes = require("./user.routes");
 const careerRoutes = require("./career.routes");
 const progressRoutes = require("./progress.routes");
 
@@ -18,7 +17,6 @@ router.get("/health", (req, res) => {
   res.json({ status: "ok" });
 });
 
-router.use("/users", userRoutes);
 router.use("/careers", careerRoutes);
 router.use("/progress", progressRoutes);
 

@@ -1,14 +1,18 @@
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
-function authHeaders(): Record<string, string> {
-  const raw = localStorage.getItem('user');
-  if (!raw) return {};
-  try {
-    const user = JSON.parse(raw) as { _id?: string };
-    return user._id ? { 'x-user-id': user._id } : {};
-  } catch {
-    return {};
+const DEVICE_ID_KEY = 'gradify-device-id';
+
+function getDeviceId(): string {
+  let id = localStorage.getItem(DEVICE_ID_KEY);
+  if (!id) {
+    id = `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
+    localStorage.setItem(DEVICE_ID_KEY, id);
   }
+  return id;
+}
+
+function deviceHeaders(): Record<string, string> {
+  return { 'x-user-id': getDeviceId() };
 }
 
 export async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
@@ -16,7 +20,7 @@ export async function request<T>(url: string, options: RequestInit = {}): Promis
     ...options,
     headers: {
       'Content-Type': 'application/json',
-      ...authHeaders(),
+      ...deviceHeaders(),
       ...(options.headers as Record<string, string>),
     },
   });
@@ -32,7 +36,7 @@ export async function uploadPdf<T>(url: string, file: File): Promise<T> {
   form.append('file', file);
   const response = await fetch(`${API_URL}${url}`, {
     method: 'POST',
-    headers: authHeaders(),
+    headers: deviceHeaders(),
     body: form,
   });
   if (!response.ok) {

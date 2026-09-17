@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 
 const userProgressSchema = new mongoose.Schema(
   {
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    userId: { type: String, required: true },
     careerId: { type: mongoose.Schema.Types.ObjectId, ref: "Career", required: true },
     subjectCode: { type: String, required: true, trim: true },
     status: {

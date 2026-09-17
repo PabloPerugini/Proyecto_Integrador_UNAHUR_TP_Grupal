@@ -1,6 +1,6 @@
 # Backend - Proyecto Integrador UNAHUR
 
-API REST hecha con Node.js + Express + MongoDB + Redis. Provee la autenticación de usuarios, la carga y el parseo de planes de estudio, y los datos de progreso que consume el frontend.
+API REST hecha con Node.js + Express + MongoDB + Redis. Provee la carga y el parseo de planes de estudio, y los datos de progreso que consume el frontend.
 
 ## Requisitos
 
@@ -34,7 +34,6 @@ src/
 ├── routes/            # Definición de rutas (index + por recurso)
 ├── controllers/       # Lógica de los endpoints (*.controllers.js)
 ├── models/            # Modelos Mongoose
-├── schemas/           # Esquemas Joi de validación
 ├── middlewares/       # Validaciones y helpers por ruta
 ├── services/          # Lógica transversal (ej: cache.service)
 └── config/            # Conexiones (mongo, redisClient)
@@ -43,5 +42,5 @@ src/
 ## Reglas de estilo
 
 - Mensajes de error en español, con formato `{ message, error }` o `{ error }`.
-- Nombres de archivo: `recurso.controllers.js`, `validateXxx.js`, `recurso.schemas.js`, modelos en minúscula singular (`user.js`).
-- Cache en Redis con claves tipo `user:nickname`.
+- Nombres de archivo: `recurso.controllers.js`, `recurso.routes.js`, modelos en minúscula singular (`career.js`).
+- El progreso se separa por navegador con el header `x-user-id` (no hay login).

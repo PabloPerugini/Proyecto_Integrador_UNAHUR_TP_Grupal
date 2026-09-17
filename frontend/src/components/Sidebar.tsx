@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { Offcanvas } from 'react-bootstrap';
-import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 import { useCareerSelection } from '../context/CareerContext';
 import ThemeToggle from './ThemeToggle';
@@ -13,7 +12,6 @@ import {
   IconChart,
   IconGraph,
   IconBoard,
-  IconLogout,
   IconMenu,
 } from './icons';
 import type { ReactNode } from 'react';
@@ -25,18 +23,20 @@ interface NavItem {
   end?: boolean;
 }
 
+export type SidebarVariant = 'app' | 'admin';
+
 function GradifyMark() {
   return <GradifyLogo className="sidebar__brand-logo" />;
 }
 
-export default function Sidebar() {
-  const { user, logout } = useAuth();
+export default function Sidebar({ variant = 'app' }: { variant?: SidebarVariant }) {
   const { theme } = useTheme();
   const { careerId } = useCareerSelection();
-  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
-  const nav: NavItem[] = [
+  const isAdmin = variant === 'admin';
+
+  const appNav: NavItem[] = [
     { to: '/', label: 'Inicio', icon: <IconHome />, end: true },
     {
       to: careerId ? `/grafo/${careerId}` : '/grafo',
@@ -53,25 +53,15 @@ export default function Sidebar() {
       label: 'Mi progreso',
       icon: <IconChart />,
     },
-    {
-      to: '/cargar',
-      label: 'Cargar plan',
-      icon: <IconUpload />,
-    },
-    {
-      to: '/admin',
-      label: 'Editar plan',
-      icon: <IconEdit />,
-    },
   ];
 
-  const handleLogout = () => {
-    setOpen(false);
-    logout();
-    navigate('/login');
-  };
+  const adminNav: NavItem[] = [
+    { to: '/cargar', label: 'Cargar plan', icon: <IconUpload /> },
+    { to: '/admin', label: 'Editar plan', icon: <IconEdit /> },
+  ];
 
-  const initial = (user?.nickName ?? '?').charAt(0).toUpperCase();
+  const nav = isAdmin ? adminNav : appNav;
+  const sectionLabel = isAdmin ? 'Administración' : 'Explorar';
 
   const renderLinks = (onClick?: () => void) =>
     nav.map((item) => (
@@ -86,24 +76,6 @@ export default function Sidebar() {
         {item.label}
       </NavLink>
     ));
-
-  const renderUser = (onClick?: () => void) => (
-    <>
-      <div className="sidebar__user">
-        <span className="sidebar__avatar">{initial}</span>
-        <span className="sidebar__user-name">{user?.nickName}</span>
-      </div>
-      <button
-        type="button"
-        className="sidebar__logout"
-        title="Cerrar sesión"
-        aria-label="Cerrar sesión"
-        onClick={onClick}
-      >
-        <IconLogout />
-      </button>
-    </>
-  );
 
   const renderPrefs = () => (
     <>
@@ -127,14 +99,10 @@ export default function Sidebar() {
         </NavLink>
 
         <nav className="sidebar__nav">
-          <div className="sidebar__section">Explorar</div>
+          <div className="sidebar__section">{sectionLabel}</div>
           {renderLinks()}
-          {renderPrefs()}
+          {!isAdmin && renderPrefs()}
         </nav>
-
-        <div className="sidebar__foot">
-          {renderUser(handleLogout)}
-        </div>
       </aside>
 
       {/* Mobile top bar + offcanvas */}
@@ -162,13 +130,10 @@ export default function Sidebar() {
         </Offcanvas.Header>
         <Offcanvas.Body className="d-flex flex-column">
           <nav className="sidebar__nav">
-            <div className="sidebar__section">Explorar</div>
+            <div className="sidebar__section">{sectionLabel}</div>
             {renderLinks(() => setOpen(false))}
-            {renderPrefs()}
+            {!isAdmin && renderPrefs()}
           </nav>
-          <div className="sidebar__foot">
-            {renderUser(handleLogout)}
-          </div>
         </Offcanvas.Body>
       </Offcanvas>
     </>

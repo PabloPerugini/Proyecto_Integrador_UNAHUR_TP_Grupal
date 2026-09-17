@@ -76,7 +76,7 @@
   animation-iteration-count: infinite;
 }
 
-/* ── Card (mismo formato que .auth-card) ── */
+/* ── Card ── */
 .splash__card {
   position: relative;
   width: 100%;

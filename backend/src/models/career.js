@@ -16,7 +16,6 @@ const careerSchema = new mongoose.Schema(
     creditsIntermediate: { type: Number, default: 0 },
     intermediateTitle: { type: String, default: null, trim: true },
     status: { type: String, enum: ["draft", "published"], default: "draft" },
-    ownerId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     subjectCount: { type: Number, default: 0 },
   },
   { timestamps: true },

@@ -1,6 +1,6 @@
 # Frontend - Proyecto Integrador UNAHUR
 
-Aplicación web hecha con React + Vite + TypeScript. Consume la API del backend para autenticar usuarios, cargar planes de estudio y visualizar correlatividades y progreso.
+Aplicación web hecha con React + Vite + TypeScript. Consume la API del backend para cargar planes de estudio y visualizar correlatividades y progreso.
 
 ## Requisitos
 
@@ -29,8 +29,8 @@ npm run lint
 ```
 src/
 ├── api/           # Cliente HTTP y llamadas al backend (client.ts + por recurso)
-├── components/    # Componentes reutilizables (NavBar, Footer, ProtectedRoute, ...)
-├── context/       # Contextos (AuthContext, ThemeContext, ...)
+├── components/    # Componentes reutilizables (Sidebar, Footer, ...)
+├── context/       # Contextos (ThemeContext, CareerContext, ...)
 ├── hooks/         # Custom hooks
 ├── pages/         # Páginas / rutas de la aplicación
 ├── types/         # Tipos TypeScript
@@ -49,6 +49,6 @@ src/
 
 ## Reglas de estilo
 
-- Cada entidad del backend tiene su módulo en `src/api/` (ej: `users.ts`) y se unifica en `src/api/index.ts` como `apiService`.
+- Cada entidad del backend tiene su módulo en `src/api/` (ej: `careers.ts`) y se unifica en `src/api/index.ts` como `apiService`.
 - Las páginas viven en `src/pages/`, los componentes reutilizables en `src/components/`.
-- Estado global con Context (AuthContext para sesión, ThemeContext para tema, etc.).
+- Estado global con Context (ThemeContext para tema, CareerContext para la carrera activa, etc.).

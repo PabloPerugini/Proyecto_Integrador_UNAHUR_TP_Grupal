@@ -1,18 +1,14 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
-import { AuthProvider } from './context/AuthContext'
+import { BrowserRouter, Outlet, Route, Routes } from 'react-router-dom'
 import { ThemeProvider } from './context/ThemeContext'
 import { CareerSelectionProvider } from './context/CareerContext'
-import { useAuth } from './hooks/useAuth'
-import ProtectedRoute from './components/ProtectedRoute'
 import PageLoader from './components/PageLoader'
 import Sidebar from './components/Sidebar'
+import type { SidebarVariant } from './components/Sidebar'
 import Footer from './components/Footer'
 import SplashScreen from './components/SplashScreen'
 import Favicon from './components/Favicon'
 import Home from './pages/Home'
-import Login from './pages/Login'
-import Register from './pages/Register'
 
 const PlanAdmin = lazy(() => import('./pages/PlanAdmin'))
 const MyProgress = lazy(() => import('./pages/MyProgress'))
@@ -28,42 +24,10 @@ function PageSuspense({ children }: { children: React.ReactNode }) {
   return <Suspense fallback={<PageLoader text="Abriendo…" />}>{children}</Suspense>
 }
 
-function AuthShell() {
-  const { user } = useAuth();
-
-  if (user) {
-    return <Navigate to="/" replace />;
-  }
-
-  return (
-    <div className="auth-app">
-      <main className="w-100 d-flex justify-content-center">
-        <Outlet />
-      </main>
-    </div>
-  );
-}
-
-function AppRoutes() {
-  return (
-    <Routes>
-      <Route element={<ProtectedRoute />}>
-        <Route path="/" element={<Home />} />
-        <Route path="/admin/:id?" element={<PageSuspense><PlanAdmin /></PageSuspense>} />
-        <Route path="/cargar" element={<PageSuspense><UploadPlan /></PageSuspense>} />
-        <Route path="/progreso" element={<PageSuspense><MyProgress /></PageSuspense>} />
-        <Route path="/grafo/:id?" element={<PageSuspense><PlanGraph /></PageSuspense>} />
-        <Route path="/tablero/:id?" element={<PageSuspense><PlanBoard /></PageSuspense>} />
-        <Route path="*" element={<PageSuspense><Error404 /></PageSuspense>} />
-      </Route>
-    </Routes>
-  );
-}
-
-function Shell() {
+function Shell({ variant = 'app' }: { variant?: SidebarVariant }) {
   return (
     <div className="app-root">
-      <Sidebar />
+      <Sidebar variant={variant} />
       <div className="app-main">
         <main className="app-content">
           <Outlet />
@@ -105,21 +69,23 @@ export default function App() {
   return (
     <ThemeProvider>
       <Favicon />
-      <AuthProvider>
-        <CareerSelectionProvider>
-          <BrowserRouter>
-            <Routes>
-              <Route element={<AuthShell />}>
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-              </Route>
-              <Route element={<Shell />}>
-                <Route path="*" element={<AppRoutes />} />
-              </Route>
-            </Routes>
-          </BrowserRouter>
-        </CareerSelectionProvider>
-      </AuthProvider>
+      <CareerSelectionProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route element={<Shell />}>
+              <Route path="/" element={<Home />} />
+              <Route path="/progreso" element={<PageSuspense><MyProgress /></PageSuspense>} />
+              <Route path="/grafo/:id?" element={<PageSuspense><PlanGraph /></PageSuspense>} />
+              <Route path="/tablero/:id?" element={<PageSuspense><PlanBoard /></PageSuspense>} />
+              <Route path="*" element={<PageSuspense><Error404 /></PageSuspense>} />
+            </Route>
+            <Route element={<Shell variant="admin" />}>
+              <Route path="/cargar" element={<PageSuspense><UploadPlan /></PageSuspense>} />
+              <Route path="/admin/:id?" element={<PageSuspense><PlanAdmin /></PageSuspense>} />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </CareerSelectionProvider>
     </ThemeProvider>
   );
 }

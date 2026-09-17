@@ -1,21 +1,3 @@
-export interface User {
-  _id: string;
-  nickName: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface CreateUserPayload {
-  nickName: string;
-  email: string;
-  firstName?: string;
-  lastName?: string;
-  password?: string;
-}
-
 export type CareerStatus = 'draft' | 'published';
 
 export interface Career {

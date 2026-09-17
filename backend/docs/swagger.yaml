@@ -1,15 +1,13 @@
 openapi: 3.0.3
 info:
   title: UNAHUR TP - API
-  description: API REST del Proyecto Integrador UNAHUR. Documenta usuarios, carreras, plan de estudios y progreso de alumnos.
+  description: API REST del Proyecto Integrador UNAHUR. Documenta carreras, plan de estudios y progreso del alumno.
   version: 1.0.0
 servers:
   - url: http://localhost:3000
 tags:
   - name: Health
     description: Estado de la API
-  - name: Users
-    description: Gestión de usuarios
   - name: Careers
     description: Carreras y plan de estudios
   - name: Progress
@@ -27,114 +25,6 @@ paths:
             application/json:
               example:
                 status: ok
-
-  /users/login:
-    post:
-      tags:
-        - Users
-      summary: Inicia sesión con nickName y contraseña
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/LoginBody"
-      responses:
-        "200":
-          description: Usuario autenticado
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/User"
-        "400":
-          description: Faltan credenciales
-        "401":
-          description: Contraseña incorrecta
-        "404":
-          description: Usuario no encontrado
-
-  /users:
-    get:
-      tags:
-        - Users
-      summary: Lista los usuarios
-      responses:
-        "200":
-          description: Lista de usuarios
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/User"
-    post:
-      tags:
-        - Users
-      summary: Crea un usuario
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CreateUserBody"
-      responses:
-        "201":
-          description: Usuario creado
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/User"
-        "400":
-          description: Validación fallida
-
-  /users/{nickName}:
-    get:
-      tags:
-        - Users
-      summary: Obtiene un usuario por nickName
-      parameters:
-        - $ref: "#/components/parameters/nickName"
-      responses:
-        "200":
-          description: Usuario encontrado
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/User"
-        "404":
-          description: Usuario no encontrado
-    put:
-      tags:
-        - Users
-      summary: Actualiza un usuario por nickName
-      parameters:
-        - $ref: "#/components/parameters/nickName"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UpdateUserBody"
-      responses:
-        "200":
-          description: Usuario actualizado
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/User"
-        "404":
-          description: Usuario no encontrado
-    delete:
-      tags:
-        - Users
-      summary: Elimina un usuario por nickName
-      parameters:
-        - $ref: "#/components/parameters/nickName"
-      responses:
-        "200":
-          description: Usuario eliminado
-        "404":
-          description: Usuario no encontrado
 
   /careers:
     get:
@@ -160,7 +50,7 @@ paths:
     post:
       tags:
         - Careers
-      summary: Crea una carrera (requiere header x-user-id)
+      summary: Crea una carrera
       requestBody:
         required: true
         content:
@@ -223,7 +113,7 @@ paths:
     get:
       tags:
         - Careers
-      summary: Devuelve el grafo del plan de estudios (con progreso si hay x-user-id)
+      summary: Devuelve el grafo del plan de estudios (incluye el progreso del navegador)
       parameters:
         - $ref: "#/components/parameters/id"
       responses:
@@ -299,7 +189,7 @@ paths:
     post:
       tags:
         - Progress
-      summary: Guarda el progreso de un alumno (requiere x-user-id)
+      summary: Guarda el progreso del alumno
       requestBody:
         required: true
         content:
@@ -316,7 +206,7 @@ paths:
     get:
       tags:
         - Progress
-      summary: Obtiene el progreso del usuario logueado
+      summary: Obtiene el progreso del navegador actual
       responses:
         "200":
           description: Lista de progreso
@@ -329,13 +219,6 @@ paths:
 
 components:
   parameters:
-    nickName:
-      name: nickName
-      in: path
-      required: true
-      schema:
-        type: string
-      description: Identificador único del usuario
     id:
       name: id
       in: path
@@ -345,67 +228,6 @@ components:
       description: ID (Mongo ObjectId) de la carrera
 
   schemas:
-    User:
-      type: object
-      properties:
-        _id:
-          type: string
-        nickName:
-          type: string
-        firstName:
-          type: string
-        lastName:
-          type: string
-        email:
-          type: string
-        birthdate:
-          type: string
-          format: date
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-    LoginBody:
-      type: object
-      required: [nickName, password]
-      properties:
-        nickName:
-          type: string
-        password:
-          type: string
-    CreateUserBody:
-      type: object
-      required: [nickName, email]
-      properties:
-        nickName:
-          type: string
-        firstName:
-          type: string
-        lastName:
-          type: string
-        email:
-          type: string
-        password:
-          type: string
-        birthdate:
-          type: string
-          format: date
-    UpdateUserBody:
-      type: object
-      properties:
-        firstName:
-          type: string
-        lastName:
-          type: string
-        email:
-          type: string
-        password:
-          type: string
-        birthdate:
-          type: string
-          format: date
     Career:
       type: object
       properties:
@@ -430,8 +252,6 @@ components:
         status:
           type: string
           enum: [draft, published]
-        ownerId:
-          type: string
         subjectCount:
           type: number
     CreateCareerBody:
