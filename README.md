@@ -16,11 +16,18 @@ Proyecto integrador de la materia **Programación - Informática (UNAHUR)**. El 
 
 ```
 .
+├── BRD.md      # Documentación de Requerimientos de Negocio
+├── FRD.md      # Documentación de Requerimientos Funcionales
 ├── backend/    # API REST (Node.js + Express + MongoDB + Redis)
 └── frontend/   # Aplicación web (React + Vite + TypeScript)
 ```
 
 Cada carpeta tiene su propio `README.md` con instrucciones de instalación y ejecución.
+
+## Documentación
+
+- [BRD — Documentación de Requerimientos de Negocio](./BRD.md)
+- [FRD — Documentación de Requerimientos Funcionales](./FRD.md)
 
 ## Tecnologías
 
