@@ -1,67 +1,31 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { Offcanvas } from 'react-bootstrap';
-import { useTheme } from '../hooks/useTheme';
-import { useCareerSelection } from '../context/CareerContext';
 import ThemeToggle from './ThemeToggle';
 import GradifyLogo from './GradifyLogo';
-import {
-  IconHome,
-  IconUpload,
-  IconEdit,
-  IconChart,
-  IconGraph,
-  IconBoard,
-  IconMenu,
-} from './icons';
+import { IconMenu } from './icons';
 import type { ReactNode } from 'react';
 
-interface NavItem {
+export interface NavItem {
   to: string;
   label: string;
   icon: ReactNode;
   end?: boolean;
 }
 
-export type SidebarVariant = 'app' | 'admin';
+interface SidebarBaseProps {
+  nav: NavItem[];
+  sectionLabel: string;
+  brandTo: string;
+  children?: ReactNode;
+}
 
 function GradifyMark() {
   return <GradifyLogo className="sidebar__brand-logo" />;
 }
 
-export default function Sidebar({ variant = 'app' }: { variant?: SidebarVariant }) {
-  const { theme } = useTheme();
-  const { careerId } = useCareerSelection();
+export default function SidebarBase({ nav, sectionLabel, brandTo, children }: SidebarBaseProps) {
   const [open, setOpen] = useState(false);
-
-  const isAdmin = variant === 'admin';
-
-  const appNav: NavItem[] = [
-    { to: '/', label: 'Inicio', icon: <IconHome />, end: true },
-    {
-      to: careerId ? `/grafo/${careerId}` : '/grafo',
-      label: 'Correlatividades',
-      icon: <IconGraph />,
-    },
-    {
-      to: careerId ? `/tablero/${careerId}` : '/tablero',
-      label: 'Tablero',
-      icon: <IconBoard />,
-    },
-    {
-      to: '/progreso',
-      label: 'Mi progreso',
-      icon: <IconChart />,
-    },
-  ];
-
-  const adminNav: NavItem[] = [
-    { to: '/cargar', label: 'Cargar plan', icon: <IconUpload /> },
-    { to: '/admin', label: 'Editar plan', icon: <IconEdit /> },
-  ];
-
-  const nav = isAdmin ? adminNav : appNav;
-  const sectionLabel = isAdmin ? 'Administración' : 'Explorar';
 
   const renderLinks = (onClick?: () => void) =>
     nav.map((item) => (
@@ -77,23 +41,11 @@ export default function Sidebar({ variant = 'app' }: { variant?: SidebarVariant 
       </NavLink>
     ));
 
-  const renderPrefs = () => (
-    <>
-      <div className="sidebar__section mt-3">Preferencias</div>
-      <div className="sidebar__link" style={{ cursor: 'default' }}>
-        <span className="sidebar__link-icon" />
-        <span className="d-flex align-items-center">
-          Modo {theme === 'dark' ? 'oscuro' : 'claro'} <ThemeToggle />
-        </span>
-      </div>
-    </>
-  );
-
   return (
     <>
       {/* Desktop sidebar */}
       <aside className="sidebar">
-        <NavLink to="/" className="sidebar__brand">
+        <NavLink to={brandTo} className="sidebar__brand">
           <GradifyMark />
           Gradify
         </NavLink>
@@ -101,7 +53,7 @@ export default function Sidebar({ variant = 'app' }: { variant?: SidebarVariant 
         <nav className="sidebar__nav">
           <div className="sidebar__section">{sectionLabel}</div>
           {renderLinks()}
-          {!isAdmin && renderPrefs()}
+          {children}
         </nav>
       </aside>
 
@@ -110,7 +62,7 @@ export default function Sidebar({ variant = 'app' }: { variant?: SidebarVariant 
         <button type="button" className="m-topbar__burger" aria-label="Abrir menú" onClick={() => setOpen(true)}>
           <IconMenu />
         </button>
-        <NavLink to="/" className="m-topbar__brand">
+        <NavLink to={brandTo} className="m-topbar__brand">
           <GradifyMark />
           Gradify
         </NavLink>
@@ -122,7 +74,7 @@ export default function Sidebar({ variant = 'app' }: { variant?: SidebarVariant 
       <Offcanvas show={open} onHide={() => setOpen(false)} placement="start" scroll={false} backdrop>
         <Offcanvas.Header closeButton>
           <Offcanvas.Title>
-            <NavLink to="/" className="sidebar__brand m-0 p-0" onClick={() => setOpen(false)}>
+            <NavLink to={brandTo} className="sidebar__brand m-0 p-0" onClick={() => setOpen(false)}>
               <GradifyMark />
               Gradify
             </NavLink>
@@ -132,7 +84,7 @@ export default function Sidebar({ variant = 'app' }: { variant?: SidebarVariant 
           <nav className="sidebar__nav">
             <div className="sidebar__section">{sectionLabel}</div>
             {renderLinks(() => setOpen(false))}
-            {!isAdmin && renderPrefs()}
+            {children}
           </nav>
         </Offcanvas.Body>
       </Offcanvas>

@@ -1,11 +1,10 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
-import { BrowserRouter, Outlet, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { ThemeProvider } from './context/ThemeContext'
 import { CareerSelectionProvider } from './context/CareerContext'
 import PageLoader from './components/PageLoader'
-import Sidebar from './components/Sidebar'
-import type { SidebarVariant } from './components/Sidebar'
-import Footer from './components/Footer'
+import UserLayout from './layouts/UserLayout'
+import AdminLayout from './layouts/AdminLayout'
 import SplashScreen from './components/SplashScreen'
 import Favicon from './components/Favicon'
 import Home from './pages/Home'
@@ -22,20 +21,6 @@ const SPLASH_FADE_MS = 600
 
 function PageSuspense({ children }: { children: React.ReactNode }) {
   return <Suspense fallback={<PageLoader text="Abriendo…" />}>{children}</Suspense>
-}
-
-function Shell({ variant = 'app' }: { variant?: SidebarVariant }) {
-  return (
-    <div className="app-root">
-      <Sidebar variant={variant} />
-      <div className="app-main">
-        <main className="app-content">
-          <Outlet />
-        </main>
-        <Footer />
-      </div>
-    </div>
-  );
 }
 
 export default function App() {
@@ -72,14 +57,14 @@ export default function App() {
       <CareerSelectionProvider>
         <BrowserRouter>
           <Routes>
-            <Route element={<Shell />}>
+            <Route element={<UserLayout />}>
               <Route path="/" element={<Home />} />
               <Route path="/progreso" element={<PageSuspense><MyProgress /></PageSuspense>} />
               <Route path="/grafo/:id?" element={<PageSuspense><PlanGraph /></PageSuspense>} />
               <Route path="/tablero/:id?" element={<PageSuspense><PlanBoard /></PageSuspense>} />
               <Route path="*" element={<PageSuspense><Error404 /></PageSuspense>} />
             </Route>
-            <Route element={<Shell variant="admin" />}>
+            <Route element={<AdminLayout />}>
               <Route path="/cargar" element={<PageSuspense><UploadPlan /></PageSuspense>} />
               <Route path="/admin/:id?" element={<PageSuspense><PlanAdmin /></PageSuspense>} />
             </Route>
