@@ -29,6 +29,8 @@ Cada carpeta tiene su propio `README.md` con instrucciones de instalación y eje
 
 - [BRD — Documentación de Requerimientos de Negocio](./docs/requirements/BRD.md)
 - [FRD — Documentación de Requerimientos Funcionales](./docs/requirements/FRD.md)
+- [Plan de Pruebas](./docs/requirements/Test-Plan.md)
+- [Seguimiento de Testing (Test Cases)](./docs/requirements/Test-Cases.md)
 - [ADRs — Decisiones de arquitectura](./docs/adr/)
 - [CHANGELOG — Mejoras por fecha](./CHANGELOG.md)
 
