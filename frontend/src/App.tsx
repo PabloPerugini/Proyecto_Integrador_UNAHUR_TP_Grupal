@@ -1,13 +1,13 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
-import { AuthProvider } from './context/AuthContext'
+import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import { ThemeProvider } from './context/ThemeContext'
 import { CareerSelectionProvider } from './context/CareerContext'
+import { AuthProvider } from './context/AuthContext'
 import { useAuth } from './hooks/useAuth'
 import ProtectedRoute from './components/ProtectedRoute'
 import PageLoader from './components/PageLoader'
-import Sidebar from './components/Sidebar'
-import Footer from './components/Footer'
+import UserLayout from './layouts/UserLayout'
+import AdminLayout from './layouts/AdminLayout'
 import SplashScreen from './components/SplashScreen'
 import Favicon from './components/Favicon'
 import Home from './pages/Home'
@@ -25,7 +25,7 @@ const SPLASH_DURATION_MS = 2600
 const SPLASH_FADE_MS = 600
 
 function PageSuspense({ children }: { children: React.ReactNode }) {
-  return <Suspense fallback={<PageLoader text="Abriendo…" />}>{children}</Suspense>
+  return <Suspense fallback={<PageLoader text="Abriendo." />}>{children}</Suspense>
 }
 
 function AuthShell() {
@@ -44,36 +44,6 @@ function AuthShell() {
       <main className="w-100 d-flex justify-content-center">
         <Outlet />
       </main>
-    </div>
-  );
-}
-
-function AppRoutes() {
-  return (
-    <Routes>
-      <Route element={<ProtectedRoute />}>
-        <Route path="/" element={<Home />} />
-        <Route path="/admin/:id?" element={<PageSuspense><PlanAdmin /></PageSuspense>} />
-        <Route path="/cargar" element={<PageSuspense><UploadPlan /></PageSuspense>} />
-        <Route path="/progreso" element={<PageSuspense><MyProgress /></PageSuspense>} />
-        <Route path="/grafo/:id?" element={<PageSuspense><PlanGraph /></PageSuspense>} />
-        <Route path="/tablero/:id?" element={<PageSuspense><PlanBoard /></PageSuspense>} />
-        <Route path="*" element={<PageSuspense><Error404 /></PageSuspense>} />
-      </Route>
-    </Routes>
-  );
-}
-
-function Shell() {
-  return (
-    <div className="app-root">
-      <Sidebar />
-      <div className="app-main">
-        <main className="app-content">
-          <Outlet />
-        </main>
-        <Footer />
-      </div>
     </div>
   );
 }
@@ -117,8 +87,18 @@ export default function App() {
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
               </Route>
-              <Route element={<Shell />}>
-                <Route path="*" element={<AppRoutes />} />
+              <Route element={<ProtectedRoute />}>
+                <Route element={<UserLayout />}>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/progreso" element={<PageSuspense><MyProgress /></PageSuspense>} />
+                  <Route path="/grafo/:id?" element={<PageSuspense><PlanGraph /></PageSuspense>} />
+                  <Route path="/tablero/:id?" element={<PageSuspense><PlanBoard /></PageSuspense>} />
+                  <Route path="*" element={<PageSuspense><Error404 /></PageSuspense>} />
+                </Route>
+                <Route element={<AdminLayout />}>
+                  <Route path="/cargar" element={<PageSuspense><UploadPlan /></PageSuspense>} />
+                  <Route path="/admin/:id?" element={<PageSuspense><PlanAdmin /></PageSuspense>} />
+                </Route>
               </Route>
             </Routes>
           </BrowserRouter>

@@ -6,7 +6,6 @@ Proyecto integrador de la materia **Programación - Informática (UNAHUR)**. El 
 
 ## Funcionalidades
 
-- Registro e inicio de sesión de usuarios.
 - Carga de planes de estudios a partir de un PDF.
 - Visualización del plan en tablero y en grafo de correlatividades.
 - Seguimiento del progreso por materia y por carrera.
@@ -33,7 +32,7 @@ Cada carpeta tiene su propio `README.md` con instrucciones de instalación y eje
 
 | Capa     | Stack                                                       |
 | -------- | ----------------------------------------------------------- |
-| Backend  | Node.js 20+, Express, MongoDB (Mongoose), Redis, Joi, JWT   |
+| Backend  | Node.js 20+, Express, MongoDB (Mongoose), Redis           |
 | Frontend | React 19, TypeScript, Vite, React Router 7, Bootstrap 5     |
 
 ## Arranque rápido

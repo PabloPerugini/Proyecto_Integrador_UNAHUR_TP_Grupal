@@ -42,7 +42,6 @@ const createCareer = async (req, res) => {
       durationYears,
       creditsFinal,
       creditsIntermediate,
-      ownerId: req.userId || undefined,
     });
     res.status(201).json(career);
   } catch (error) {
