@@ -5,7 +5,7 @@
 **Fecha:** 20/09/2026
 **Sponsor Organización:** Universidad Nacional de Hurlingham (UNAHUR) — Licenciatura en Informática
 **Autor:** Equipo del proyecto integrador
-**Tutor:** Prof. [Nombre del/de la docente]
+**Tutor:** Prof. Alejandra Pinto
 **Release:** Septiembre 2026
 
 ---
