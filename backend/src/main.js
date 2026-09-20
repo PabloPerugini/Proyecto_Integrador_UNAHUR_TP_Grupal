@@ -10,7 +10,23 @@ async function start() {
   cache.connect().catch(() => {});
 
   app.listen(PORT, () => {
-    console.log(`Servidor corriendo en http://localhost:${PORT}`);
+    console.log(`
+=====================================
+Gradify iniciado correctamente
+
+Frontend:
+http://localhost:5173
+
+Backend:
+http://localhost:${PORT}
+
+MongoDB:
+mongodb://localhost:27017/unahur-tp
+
+Redis:
+localhost:6380
+=====================================
+`);
   });
 }
 
