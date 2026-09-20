@@ -15,8 +15,10 @@ Proyecto integrador de la materia **Programación - Informática (UNAHUR)**. El 
 
 ```
 .
-├── BRD.md      # Documentación de Requerimientos de Negocio
-├── FRD.md      # Documentación de Requerimientos Funcionales
+├── CHANGELOG.md    # Mejoras técnicas por fecha
+├── docs/
+│   ├── requirements/  # BRD y FRD (requerimientos de negocio y funcionales)
+│   └── adr/           # Registros de decisiones de arquitectura
 ├── backend/    # API REST (Node.js + Express + MongoDB + Redis)
 └── frontend/   # Aplicación web (React + Vite + TypeScript)
 ```
@@ -25,8 +27,10 @@ Cada carpeta tiene su propio `README.md` con instrucciones de instalación y eje
 
 ## Documentación
 
-- [BRD — Documentación de Requerimientos de Negocio](./BRD.md)
-- [FRD — Documentación de Requerimientos Funcionales](./FRD.md)
+- [BRD — Documentación de Requerimientos de Negocio](./docs/requirements/BRD.md)
+- [FRD — Documentación de Requerimientos Funcionales](./docs/requirements/FRD.md)
+- [ADRs — Decisiones de arquitectura](./docs/adr/)
+- [CHANGELOG — Mejoras por fecha](./CHANGELOG.md)
 
 ## Tecnologías
 

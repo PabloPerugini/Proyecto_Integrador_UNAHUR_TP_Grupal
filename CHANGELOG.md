@@ -2,7 +2,7 @@
 
 **Proyecto:** Grafo Interactivo de Correlatividades y Seguimiento de Progreso Académico (UNAHUR — TP Integrador Academia)
 
-El registro histórico de requisitos/alcance por versión se mantiene en [BRD.md](BRD.md#1-historial-de-cambios) y [FRD.md](FRD.md#1-historial-de-cambios). Este archivo rastrea las mejoras técnicas por fecha.
+El registro histórico de requisitos/alcance por versión se mantiene en [BRD.md](docs/requirements/BRD.md#1-historial-de-cambios) y [FRD.md](docs/requirements/FRD.md#1-historial-de-cambios). Este archivo rastrea las mejoras técnicas por fecha.
 
 ---
 
@@ -10,6 +10,7 @@ El registro histórico de requisitos/alcance por versión se mantiene en [BRD.md
 
 ### Documentación (IA + lector de PDF)
 - **BRD.md** y **FRD.md** pasan a **v1.2**: restricciones y dependencias del lector de PDF (soporte del formato columnar compacto de Informática y fila de totales no importada), dependencias de IA y criterios de bondad. Se deja constancia de que, **al día de la fecha, la IA se usa en la carga de PDFs** (matching semántico de correlativas por embeddings, local y sin API); el chat del orientador (historia US-04) queda como **endpoint backend disponible, con UI planeada** en SC002.
+- **Reorganización de docs**: `BRD.md`/`FRD.md` → `docs/requirements/`; nuevos **ADRs** en `docs/adr/` (ADR-0001 auth por cookie JWT sin roles; ADR-0002 IA en carga de PDFs, chat planeado). Links actualizados en `README.md` y `CHANGELOG.md`.
 
 ---
 
