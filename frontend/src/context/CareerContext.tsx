@@ -1,4 +1,4 @@
-import { useCallback, useState, type ReactNode } from 'react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { CareerSelectionContext } from './CareerContextValue';
 
 const CAREER_KEY = 'gca-selected-career';
@@ -22,8 +22,10 @@ export function CareerSelectionProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const value = useMemo(() => ({ careerId, setCareerId }), [careerId, setCareerId]);
+
   return (
-    <CareerSelectionContext.Provider value={{ careerId, setCareerId }}>
+    <CareerSelectionContext.Provider value={value}>
       {children}
     </CareerSelectionContext.Provider>
   );

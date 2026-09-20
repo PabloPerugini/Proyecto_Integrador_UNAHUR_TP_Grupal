@@ -1,5 +1,4 @@
 const mongoose = require("mongoose");
-require("dotenv").config();
 
 const connectMongo = async () => {
   const uri = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/unahur-tp";
@@ -7,4 +6,9 @@ const connectMongo = async () => {
   console.log("MongoDB: Conectado");
 };
 
-module.exports = { connectMongo };
+const disconnectMongo = async () => {
+  await mongoose.disconnect();
+  console.log("MongoDB: Desconectado");
+};
+
+module.exports = { connectMongo, disconnectMongo };

@@ -1,4 +1,5 @@
 const User = require("../models/user");
+const { sendInternalError } = require("../utils/http");
 
 const validateUserExists = async (req, res, next) => {
   try {
@@ -6,13 +7,13 @@ const validateUserExists = async (req, res, next) => {
     const foundUser = await User.findOne({ nickName });
 
     if (!foundUser) {
-      return res.status(404).json({ error: "El usuario no existe" });
+      return res.status(404).json({ message: "El usuario no existe" });
     }
 
     req.foundUser = foundUser;
     next();
   } catch (error) {
-    res.status(500).json({ message: "Error al buscar el usuario", error: error.message });
+    sendInternalError(res, error, "validateUserExists");
   }
 };
 

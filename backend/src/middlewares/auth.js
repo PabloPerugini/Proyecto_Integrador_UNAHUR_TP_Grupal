@@ -1,7 +1,7 @@
 const jwt = require("jsonwebtoken");
 
 const COOKIE_NAME = "token";
-const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-change-me";
+const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = "7d";
 const COOKIE_SECURE =
   process.env.COOKIE_SECURE === "true" || process.env.NODE_ENV === "production";

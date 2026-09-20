@@ -14,6 +14,7 @@ import PageHeader from '../components/PageHeader';
 import ImportJobList from '../components/ImportJobList';
 import CareersTable from '../components/CareersTable';
 import ModalConfirm from '../components/ModalConfirm';
+import { confirmDeleteMessage } from '../utils/messages';
 import type { ImportJob } from '../components/ImportJobList';
 
 const JOB_STATUS_LABEL: Record<'creando' | 'parseando' | 'guardando', string> = {
@@ -21,9 +22,6 @@ const JOB_STATUS_LABEL: Record<'creando' | 'parseando' | 'guardando', string> = 
   parseando: 'Leyendo el PDF…',
   guardando: 'Guardando materias…',
 };
-
-const CONFIRM_DELETE = (name: string) =>
-  `¿Eliminar el plan "${name}"? Se borrarán también todas sus materias y el avance de los usuarios. Esta acción no se puede deshacer.`;
 
 export default function UploadPlan() {
   const { careers, reload } = useCareers();
@@ -187,7 +185,7 @@ export default function UploadPlan() {
       <ModalConfirm
         show={candidate !== null}
         title="Eliminar plan"
-        message={candidate ? CONFIRM_DELETE(candidate.name) : ''}
+        message={candidate ? confirmDeleteMessage(candidate.name) : ''}
         confirmLabel="Eliminar"
         loading={deleting}
         onConfirm={confirmRemove}

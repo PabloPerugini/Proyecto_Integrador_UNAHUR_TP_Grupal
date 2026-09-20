@@ -44,8 +44,17 @@ export default function PdfDropzone({ onFiles, disabled, accept = 'application/p
     <div
       className={`dropzone${drag ? ' dropzone--drag' : ''}${disabled ? ' dropzone--disabled' : ''}`}
       role="button"
+      tabIndex={disabled ? -1 : 0}
       aria-label="Subir PDF del plan de estudios"
+      aria-disabled={disabled || undefined}
       onClick={() => !disabled && inputRef.current?.click()}
+      onKeyDown={(e) => {
+        if (disabled) return;
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          inputRef.current?.click();
+        }
+      }}
       onDragOver={(e) => {
         e.preventDefault();
         if (!disabled) setDrag(true);

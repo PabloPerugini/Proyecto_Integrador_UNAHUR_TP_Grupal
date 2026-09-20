@@ -5,6 +5,7 @@ const {
   setAuthCookie,
   clearAuthCookie,
 } = require("../middlewares/auth");
+const { sendInternalError } = require("../utils/http");
 
 const createUser = async (req, res) => {
   try {
@@ -12,13 +13,12 @@ const createUser = async (req, res) => {
     setAuthCookie(res, signToken(newUser._id));
     res.status(201).json(newUser);
   } catch (error) {
-    const isDuplicate = error.code === 11000;
-    res.status(isDuplicate ? 409 : 400).json({
-      message: isDuplicate
-        ? "Ya existe una cuenta con ese nickName o email"
-        : "Error al crear el usuario",
-      ...(isDuplicate ? {} : { error: error.message }),
-    });
+    if (error.code === 11000) {
+      return res.status(409).json({
+        message: "Ya existe una cuenta con ese nickName o email",
+      });
+    }
+    sendInternalError(res, error, "createUser");
   }
 };
 
@@ -30,13 +30,13 @@ const getUserByNickName = async (req, res) => {
     const cached = await cacheService.getCache(cacheKey);
     if (cached) return res.status(200).json(JSON.parse(cached));
 
-    const profile = await User.findOne({ nickName }).select("-__v");
+    const profile = await User.findOne({ nickName }).select("-__v -email");
     if (!profile) return res.status(404).json({ message: "Usuario no encontrado" });
 
     await cacheService.setCache(cacheKey, profile, 300);
     res.status(200).json(profile);
   } catch (error) {
-    res.status(500).json({ message: "Error al obtener el perfil" });
+    sendInternalError(res, error, "getUserByNickName");
   }
 };
 
@@ -56,7 +56,7 @@ const updateUser = async (req, res) => {
     await cacheService.invalidateCache([`user:${nickName}`]);
     res.status(200).json(updatedUser);
   } catch (error) {
-    res.status(500).json({ message: "Error al actualizar el usuario" });
+    sendInternalError(res, error, "updateUser");
   }
 };
 
@@ -74,7 +74,7 @@ const deleteUser = async (req, res) => {
     clearAuthCookie(res);
     res.status(200).json({ message: "Usuario eliminado" });
   } catch (error) {
-    res.status(500).json({ message: "Error al eliminar el usuario" });
+    sendInternalError(res, error, "deleteUser");
   }
 };
 
@@ -87,17 +87,15 @@ const loginUser = async (req, res) => {
     }
 
     const user = await User.findOne({ nickName }).select("-__v");
-    if (!user) return res.status(404).json({ message: "El usuario no existe" });
-
-    const passwordOk = await user.comparePassword(password);
-    if (!passwordOk) {
-      return res.status(401).json({ message: "Contraseña incorrecta" });
+    const passwordOk = user ? await user.comparePassword(password) : false;
+    if (!user || !passwordOk) {
+      return res.status(401).json({ message: "Credenciales inválidas" });
     }
 
     setAuthCookie(res, signToken(user._id));
     res.status(200).json(user);
   } catch (error) {
-    res.status(500).json({ message: "Error al iniciar sesión" });
+    sendInternalError(res, error, "loginUser");
   }
 };
 
@@ -112,7 +110,7 @@ const getMe = async (req, res) => {
     if (!user) return res.status(404).json({ message: "Usuario no encontrado" });
     res.status(200).json(user);
   } catch (error) {
-    res.status(500).json({ message: "Error al obtener la sesión" });
+    sendInternalError(res, error, "getMe");
   }
 };
 

@@ -15,8 +15,14 @@ export default function Login() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    const trimmed = nickName.trim();
+    if (!trimmed || !password) {
+      setError('Completá tu nickName y tu contraseña');
+      return;
+    }
+    setError('');
     try {
-      await login(nickName, password);
+      await login(trimmed, password);
       navigate('/');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al iniciar sesión');

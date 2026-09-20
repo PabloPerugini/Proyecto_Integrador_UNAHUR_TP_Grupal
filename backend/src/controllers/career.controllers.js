@@ -4,8 +4,15 @@ const { parseOfficialPlan, parseCorrelativas: parseCorrelativasPdf } = require("
 const { buildGraph } = require("../services/graph.service");
 const UserProgress = require("../models/userprogress");
 const { deriveCareerColor } = require("../utils/careerColor");
+const { sendInternalError } = require("../utils/http");
+const { isPdfBuffer } = require("../utils/pdf");
 const crypto = require("crypto");
 const { chat, isConfigured } = require("../services/ai.service");
+
+function assertCanWrite(career, userId) {
+  const owner = career?.ownerId ? String(career.ownerId) : null;
+  return !owner || owner === String(userId);
+}
 
 const createCareer = async (req, res) => {
   try {
@@ -42,27 +49,34 @@ const createCareer = async (req, res) => {
       durationYears,
       creditsFinal,
       creditsIntermediate,
+      ownerId: req.userId,
     });
     res.status(201).json(career);
   } catch (error) {
-    res.status(400).json({ message: "Error al crear la carrera", error: error.message });
+    sendInternalError(res, error, "createCareer");
   }
 };
 
 const getAllCareers = async (req, res) => {
   try {
     const filter = {};
-    if (req.query.status) filter.status = req.query.status;
-    const careers = await Career.find(filter).sort({ createdAt: -1 }).select("-__v");
-    const withCount = await Promise.all(
-      careers.map(async (c) => ({
-        ...c.toObject(),
-        subjectCount: await Subject.countDocuments({ careerId: c._id }),
-      })),
-    );
-    res.status(200).json(withCount);
+    const requestedStatus = req.query.status;
+    if (requestedStatus && ["draft", "published"].includes(requestedStatus)) {
+      filter.status = requestedStatus;
+    }
+    const careers = await Career.find(filter).sort({ createdAt: -1 }).select("-__v").lean();
+    const counts = await Subject.aggregate([
+      { $match: { careerId: { $in: careers.map((c) => c._id) } } },
+      { $group: { _id: "$careerId", n: { $sum: 1 } } },
+    ]);
+    const countByCareer = new Map(counts.map((r) => [String(r._id), r.n]));
+    const result = careers.map((c) => ({
+      ...c,
+      subjectCount: countByCareer.get(String(c._id)) || 0,
+    }));
+    res.status(200).json(result);
   } catch (error) {
-    res.status(500).json({ message: "Error al obtener las carreras", error: error.message });
+    sendInternalError(res, error, "getAllCareers");
   }
 };
 
@@ -74,7 +88,7 @@ const getCareerSubjects = async (req, res) => {
       .select("-__v");
     res.status(200).json(subjects);
   } catch (error) {
-    res.status(500).json({ message: "Error al obtener las materias", error: error.message });
+    sendInternalError(res, error, "getCareerSubjects");
   }
 };
 
@@ -83,6 +97,9 @@ const parseOfficial = async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ message: "Enviá el PDF en el campo 'file'" });
+    }
+    if (!isPdfBuffer(req.file.buffer)) {
+      return res.status(400).json({ message: "El archivo no es un PDF válido" });
     }
     const parsed = await parseOfficialPlan(req.file.buffer);
     res.status(200).json({
@@ -94,7 +111,8 @@ const parseOfficial = async (req, res) => {
       creditsIntermediate: parsed.creditsIntermediate || 0,
     });
   } catch (error) {
-    res.status(400).json({ message: "Error al parsear el PDF" });
+    console.error("[career] parseOfficial:", error);
+    res.status(400).json({ message: "Error al parsear el PDF: ¿es un plan de estudios válido?" });
   }
 };
 
@@ -223,6 +241,9 @@ const parseCorrelativas = async (req, res) => {
     if (!req.file) {
       return res.status(400).json({ message: "Enviá el PDF en el campo 'file'" });
     }
+    if (!isPdfBuffer(req.file.buffer)) {
+      return res.status(400).json({ message: "El archivo no es un PDF válido" });
+    }
     const { id } = req.params;
     const career = await Career.findById(id);
     if (!career) return res.status(404).json({ message: "Carrera no encontrada" });
@@ -269,6 +290,7 @@ const parseCorrelativas = async (req, res) => {
       unresolved: rows.filter((r) => !r.matched),
     });
   } catch (error) {
+    console.error("[career] parseCorrelativas:", error);
     res.status(400).json({ message: "Error al parsear las correlativas" });
   }
 };
@@ -279,6 +301,9 @@ const saveCorrelativas = async (req, res) => {
     const { id } = req.params;
     const career = await Career.findById(id);
     if (!career) return res.status(404).json({ message: "Carrera no encontrada" });
+    if (!assertCanWrite(career, req.userId)) {
+      return res.status(403).json({ message: "No tenés permiso para modificar esta carrera" });
+    }
 
     const incoming = Array.isArray(req.body.subjects) ? req.body.subjects : [];
     if (!incoming.length) {
@@ -307,7 +332,7 @@ const saveCorrelativas = async (req, res) => {
       total: await Subject.countDocuments({ careerId: career._id }),
     });
   } catch (error) {
-    res.status(500).json({ message: "Error al guardar las correlativas", error: error.message });
+    sendInternalError(res, error, "saveCorrelativas");
   }
 };
 
@@ -317,6 +342,10 @@ const saveSubjects = async (req, res) => {
     const { id } = req.params;
     const career = await Career.findById(id);
     if (!career) return res.status(404).json({ message: "Carrera no encontrada" });
+    if (!assertCanWrite(career, req.userId)) {
+      return res.status(403).json({ message: "No tenés permiso para modificar esta carrera" });
+    }
+    if (!career.ownerId) career.ownerId = req.userId;
 
     const incoming = Array.isArray(req.body.subjects) ? req.body.subjects : [];
     if (!incoming.length) {
@@ -411,7 +440,7 @@ const saveSubjects = async (req, res) => {
       total: career.subjectCount,
     });
   } catch (error) {
-    res.status(500).json({ message: "Error al guardar las materias", error: error.message });
+    sendInternalError(res, error, "saveSubjects");
   }
 };
 
@@ -432,6 +461,10 @@ const updateCareer = async (req, res) => {
 
     const career = await Career.findById(id);
     if (!career) return res.status(404).json({ message: "Carrera no encontrada" });
+    if (!assertCanWrite(career, req.userId)) {
+      return res.status(403).json({ message: "No tenés permiso para modificar esta carrera" });
+    }
+    if (!career.ownerId) career.ownerId = req.userId;
 
     if (name !== undefined) {
       const trimmed = String(name).trim();
@@ -449,7 +482,7 @@ const updateCareer = async (req, res) => {
     await career.save();
     res.status(200).json(career);
   } catch (error) {
-    res.status(400).json({ message: "Error al actualizar la carrera", error: error.message });
+    sendInternalError(res, error, "updateCareer");
   }
 };
 
@@ -459,6 +492,9 @@ const deleteCareer = async (req, res) => {
     const { id } = req.params;
     const career = await Career.findById(id);
     if (!career) return res.status(404).json({ message: "Carrera no encontrada" });
+    if (!assertCanWrite(career, req.userId)) {
+      return res.status(403).json({ message: "No tenés permiso para eliminar esta carrera" });
+    }
 
     await Promise.all([
       Subject.deleteMany({ careerId: career._id }),
@@ -468,22 +504,25 @@ const deleteCareer = async (req, res) => {
 
     res.status(200).json({ deleted: career.name, deletedId: career._id });
   } catch (error) {
-    res.status(500).json({ message: "Error al eliminar la carrera", error: error.message });
+    sendInternalError(res, error, "deleteCareer");
   }
 };
 
 const publishCareer = async (req, res) => {
   try {
     const { id } = req.params;
-    const career = await Career.findByIdAndUpdate(
-      id,
-      { status: "published", subjectCount: await Subject.countDocuments({ careerId: id }) },
-      { returnDocument: "after" },
-    );
+    const career = await Career.findById(id);
     if (!career) return res.status(404).json({ message: "Carrera no encontrada" });
+    if (!assertCanWrite(career, req.userId)) {
+      return res.status(403).json({ message: "No tenés permiso para modificar esta carrera" });
+    }
+    if (!career.ownerId) career.ownerId = req.userId;
+    career.status = "published";
+    career.subjectCount = await Subject.countDocuments({ careerId: career._id });
+    await career.save();
     res.status(200).json(career);
   } catch (error) {
-    res.status(500).json({ message: "Error al publicar la carrera", error: error.message });
+    sendInternalError(res, error, "publishCareer");
   }
 };
 
@@ -568,7 +607,7 @@ const getGraph = async (req, res) => {
       intermediate,
     });
   } catch (error) {
-    res.status(500).json({ message: "Error al generar el grafo", error: error.message });
+    sendInternalError(res, error, "getGraph");
   }
 };
 
@@ -609,7 +648,7 @@ const chatCareer = async (req, res) => {
     const result = await chat(system, prompt, key);
     res.status(200).json({ ...result, careerId: id, subjects: subjects.length });
   } catch (error) {
-    res.status(500).json({ message: "Error al consultar la IA", error: error.message });
+    sendInternalError(res, error, "chatCareer");
   }
 };
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Form, Spinner, Table } from 'react-bootstrap';
 import { apiService } from '../api';
 import type { ParsedSubject, ProgressEntry, ProgressSummary, Subject, SubjectStatus } from '../types';
@@ -36,7 +36,15 @@ function Ring({ value, color, size = 96, stroke = 9 }: { value: number; color: s
   const c = 2 * Math.PI * r;
   const offset = c - (safe / 100) * c;
   return (
-    <div className="ring" style={{ width: size, height: size }}>
+    <div
+      className="ring"
+      style={{ width: size, height: size }}
+      role="progressbar"
+      aria-label="Avance de créditos"
+      aria-valuenow={safe}
+      aria-valuemin={0}
+      aria-valuemax={100}
+    >
       <svg width={size} height={size}>
         <circle className="ring__track" cx={size / 2} cy={size / 2} r={r} strokeWidth={stroke} fill="none" />
         <circle
@@ -69,6 +77,8 @@ export default function MyProgress() {
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  const reqRef = useRef(0);
+
   useEffect(() => {
     if (careers.length && !careerId) {
       setCareerId(ctxCareerId && careers.some((c) => c._id === ctxCareerId) ? ctxCareerId : careers[0]._id);
@@ -77,9 +87,12 @@ export default function MyProgress() {
 
   const loadSubjects = useCallback(
     async (id: string) => {
+      const reqId = ++reqRef.current;
       const s = await apiService.getSubjects(id);
+      if (reqId !== reqRef.current) return;
       setSubjects(s);
       const current = await apiService.getMine(id);
+      if (reqId !== reqRef.current) return;
       setSummary(current.summary);
       const d: Record<string, { status: SubjectStatus; nota: string }> = {};
       for (const subj of s) {
@@ -345,10 +358,10 @@ export default function MyProgress() {
                 <Table size="sm" striped hover responsive>
                   <thead>
                     <tr>
-                      <th>Materia</th>
-                      <th style={{ width: 140 }}>Estado</th>
-                      <th style={{ width: 90 }}>Nota</th>
-                      <th style={{ width: 80 }}>Créditos</th>
+                      <th scope="col">Materia</th>
+                      <th scope="col" style={{ width: 140 }}>Estado</th>
+                      <th scope="col" style={{ width: 90 }}>Nota</th>
+                      <th scope="col" style={{ width: 80 }}>Créditos</th>
                     </tr>
                   </thead>
                   <tbody>

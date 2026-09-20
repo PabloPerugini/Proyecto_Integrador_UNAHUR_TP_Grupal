@@ -15,9 +15,7 @@ import CareersTable from '../components/CareersTable';
 import ModalConfirm from '../components/ModalConfirm';
 import ColorDot from '../components/ColorDot';
 import { IconUpload, IconUsers } from '../components/icons';
-
-const CONFIRM_DELETE = (name: string) =>
-  `¿Eliminar el plan "${name}"? Se borrarán también todas sus materias y el avance de los usuarios. Esta acción no se puede deshacer.`;
+import { confirmDeleteMessage } from '../utils/messages';
 
 export default function PlanAdmin() {
   const { id } = useParams<{ id: string }>();
@@ -580,7 +578,7 @@ export default function PlanAdmin() {
       <ModalConfirm
         show={candidate !== null}
         title="Eliminar plan"
-        message={candidate ? CONFIRM_DELETE(candidate.name) : ''}
+        message={candidate ? confirmDeleteMessage(candidate.name) : ''}
         confirmLabel="Eliminar"
         loading={deleting}
         onConfirm={confirmRemove}

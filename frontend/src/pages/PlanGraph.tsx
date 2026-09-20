@@ -173,7 +173,7 @@ function DetailPanel({ graph, selectedNode, requires, successors, fastPath, onCl
       <Card>
         <Card.Header className="d-flex align-items-center">
           <span className="me-auto fw-semibold">Detalle</span>
-          <Button variant="link" size="sm" className="p-0 text-decoration-none" onClick={onClose}>✕</Button>
+          <Button variant="link" size="sm" className="p-0 text-decoration-none" aria-label="Cerrar detalle" onClick={onClose}>✕</Button>
         </Card.Header>
         <Card.Body>
           {!selectedNode && <p className="text-muted mb-0">Tocá una materia para ver sus correlatividades.</p>}
@@ -269,19 +269,41 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
   const selectedCareer = useMemo(() => careers.find((c) => c._id === id) ?? null, [careers, id]);
 
   useEffect(() => {
+    let alive = true;
     apiService
       .getAll()
-      .then(setCareers)
-      .catch((e) => setErr(e instanceof Error ? e.message : 'Error cargando las carreras'));
+      .then((list) => {
+        if (alive) {
+          setErr(null);
+          setCareers(list);
+        }
+      })
+      .catch((e) => {
+        if (alive) setErr(e instanceof Error ? e.message : 'Error cargando las carreras');
+      });
+    return () => {
+      alive = false;
+    };
   }, []);
 
   useEffect(() => {
+    let alive = true;
     if (!id) return;
     setSelectedCareerId(id);
     apiService
       .getGraph(id)
-      .then((g) => setGraphState({ careerId: id, data: g }))
-      .catch((e) => setErr(e instanceof Error ? e.message : 'Error cargando el plan'));
+      .then((g) => {
+        if (alive) {
+          setErr(null);
+          setGraphState({ careerId: id, data: g });
+        }
+      })
+      .catch((e) => {
+        if (alive) setErr(e instanceof Error ? e.message : 'Error cargando el plan');
+      });
+    return () => {
+      alive = false;
+    };
   }, [id, setSelectedCareerId]);
 
   useEffect(() => {

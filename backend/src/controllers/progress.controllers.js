@@ -1,12 +1,17 @@
 const UserProgress = require("../models/userprogress");
 const Subject = require("../models/subject");
 const { parseAcademicHistory } = require("../services/pdfParser.service");
+const { sendInternalError } = require("../utils/http");
+const { isPdfBuffer } = require("../utils/pdf");
 
 // POST /progress/parse-history (multipart, campo "file")
 const parseHistory = async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ message: "Enviá el PDF en el campo 'file'" });
+    }
+    if (!isPdfBuffer(req.file.buffer)) {
+      return res.status(400).json({ message: "El archivo no es un PDF válido" });
     }
     const parsed = await parseAcademicHistory(req.file.buffer);
     res.status(200).json({
@@ -16,7 +21,7 @@ const parseHistory = async (req, res) => {
       detectedCount: parsed.subjects.length,
     });
   } catch (error) {
-    res.status(500).json({ message: "Error al parsear el PDF", error: error.message });
+    sendInternalError(res, error, "parseHistory");
   }
 };
 
@@ -59,7 +64,7 @@ const saveProgress = async (req, res) => {
     const result = await UserProgress.bulkWrite(ops, { ordered: false });
     res.status(200).json({ saved: result.upsertedCount + result.modifiedCount });
   } catch (error) {
-    res.status(500).json({ message: "Error al guardar el progreso", error: error.message });
+    sendInternalError(res, error, "saveProgress");
   }
 };
 
@@ -77,7 +82,7 @@ const getProgress = async (req, res) => {
     const summary = await buildSummary(filter.careerId, req.userId);
     res.status(200).json({ entries, summary });
   } catch (error) {
-    res.status(500).json({ message: "Error al obtener el progreso", error: error.message });
+    sendInternalError(res, error, "getProgress");
   }
 };
 

@@ -6,6 +6,28 @@ El registro histórico de requisitos/alcance por versión se mantiene en [BRD.md
 
 ---
 
+## [1.3] — 2026-09-20
+
+### Correcciones por auditoría de buenas prácticas (backend)
+- **Config segura:** nuevo `config/env.js` carga `dotenv` al inicio y **falla rápido** si falta `JWT_SECRET` o se usa el placeholder (se elimina el secreto de desarrollo). `backend/.env.Ejemplo` con instrucciones de generación; corregida una línea fusionada en el `.env` real.
+- **Helmet + rate limit:** `helmet()` activado; limitadores `config/limits.js` (300/min general, 10/15 min en login/registro, 10/min en parseo de PDFs, 20/min en chat) aplicados en sus rutas.
+- **Sin fugas de mensajes internos:** handlers de error unificados (`utils/http.js` → `sendInternalError`) registran el detalle en el server y responden neutro; `CastError` de ObjectId → `400`; errores Joi/validación → `400` en el handler central de `app.js`.
+- **Graceful shutdown:** en `main.js` señales `SIGTERM`/`SIGINT` cierran servidor, Mongo y Redis; handlers de `unhandledRejection`/`uncaughtException`.
+- **Autorización por dueño (`ownerId`):** crear carrera fija `ownerId`; editar/publicar/borrar/guardar exige ser el dueño (carreras legacy sin dueño siguen editables y se "reclaman").
+- **Quick wins:** N+1 en `getAllCareers` resuelto con agregación `$in` + `$group`; perfil público sin `-email`; `401` uniforme en login (anti-enumeración); validación de firma `%PDF` en archivos subidos.
+
+### Correcciones frontend
+- **Race conditions:** guards `alive`/request-token en `PlanGraph` y `MyProgress`; el error ya no persiste al cambiar de carrera.
+- **Contextos memoizados** (Auth/Theme/Career): evita re-renders en cascada de consumidores.
+- **Accesibilidad:** `PdfDropzone` operable por teclado, `Ring` con `role="progressbar"`, `<th scope="col">` y `aria-label` en botones de cierre.
+- **Limpieza:** `CONFIRM_DELETE` duplicado unificado en `utils/messages.ts`; campo `main` residual eliminado de `frontend/package.json`; validación cliente en Login.
+
+### Verificación
+- Backend: `node --check` OK en todos los archivos modificados; arranque real OK (Mongo conectado, Redis offline tolerado como antes).
+- Frontend: `npm run lint` limpio; `tsc -b` y `vite build` OK.
+
+---
+
 ## [1.2] — 2026-09-20
 
 ### Documentación (IA + lector de PDF)
