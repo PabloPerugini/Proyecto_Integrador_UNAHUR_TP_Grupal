@@ -17,3 +17,8 @@ npm-debug.log*
 # Sistema
 .DS_Store
 Thumbs.db
+
+# Artefactos de load test
+backend/loadtest/*.csv
+backend/loadtest/*.log
+backend/loadtest/*.err.log

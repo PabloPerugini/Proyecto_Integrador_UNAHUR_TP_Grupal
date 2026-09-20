@@ -1,11 +1,5 @@
-import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
-
-interface CareerSelectionContextType {
-  careerId: string | null;
-  setCareerId: (id: string | null) => void;
-}
-
-const CareerSelectionContext = createContext<CareerSelectionContextType | null>(null);
+import { useCallback, useState, type ReactNode } from 'react';
+import { CareerSelectionContext } from './CareerContextValue';
 
 const CAREER_KEY = 'gca-selected-career';
 
@@ -33,10 +27,4 @@ export function CareerSelectionProvider({ children }: { children: ReactNode }) {
       {children}
     </CareerSelectionContext.Provider>
   );
-}
-
-export function useCareerSelection() {
-  const ctx = useContext(CareerSelectionContext);
-  if (!ctx) throw new Error('useCareerSelection debe usarse dentro de <CareerSelectionProvider>');
-  return ctx;
 }

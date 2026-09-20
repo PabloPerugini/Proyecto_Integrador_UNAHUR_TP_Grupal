@@ -29,7 +29,11 @@ function PageSuspense({ children }: { children: React.ReactNode }) {
 }
 
 function AuthShell() {
-  const { user } = useAuth();
+  const { user, status } = useAuth();
+
+  if (status === 'loading') {
+    return <PageLoader />;
+  }
 
   if (user) {
     return <Navigate to="/" replace />;

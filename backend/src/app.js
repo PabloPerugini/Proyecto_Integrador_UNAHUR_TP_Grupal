@@ -1,6 +1,7 @@
 const path = require("path");
 const express = require("express");
 const cors = require("cors");
+const cookieParser = require("cookie-parser");
 const multer = require("multer");
 const swaggerUi = require("swagger-ui-express");
 const YAML = require("yamljs");
@@ -10,8 +11,15 @@ const app = express();
 
 const swaggerDocument = YAML.load(path.join(__dirname, "../docs/swagger.yaml"));
 
-app.use(cors());
+const FRONTEND_ORIGIN = process.env.FRONTEND_URL || "http://localhost:5173";
+app.use(
+  cors({
+    origin: FRONTEND_ORIGIN,
+    credentials: true,
+  }),
+);
 app.use(express.json());
+app.use(cookieParser());
 
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.use("/", routes);
@@ -32,7 +40,7 @@ app.use((err, req, res, next) => {
     return res.status(400).json({ message: err.message });
   }
   console.error(err);
-  res.status(500).json({ message: "Error interno del servidor", error: err.message });
+  res.status(500).json({ message: "Error interno del servidor" });
 });
 
 module.exports = app;

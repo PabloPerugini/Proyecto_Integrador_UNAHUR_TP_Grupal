@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { apiService } from '../api';
+import { useAuth } from '../hooks/useAuth';
 import GradifyLogo from '../components/GradifyLogo';
 import FormField from '../components/FormField';
 
@@ -9,13 +10,13 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function Register() {
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const [nickName, setNickName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const validate = () => {
@@ -51,8 +52,8 @@ export default function Register() {
         email: email.trim(),
         password,
       });
-      setSuccess(true);
-      setTimeout(() => navigate('/login'), 1500);
+      await login(nickName.trim(), password);
+      navigate('/', { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo crear el usuario.');
     } finally {
@@ -60,7 +61,7 @@ export default function Register() {
     }
   };
 
-  const disabled = loading || success;
+  const disabled = loading;
 
   return (
     <div className="auth-card">
@@ -75,11 +76,6 @@ export default function Register() {
       {error && (
         <div className="alert alert-danger py-2 small" role="alert">
           {error}
-        </div>
-      )}
-      {success && (
-        <div className="alert alert-success py-2 small" role="status">
-          ¡Cuenta creada con éxito! Redirigiendo al login...
         </div>
       )}
 

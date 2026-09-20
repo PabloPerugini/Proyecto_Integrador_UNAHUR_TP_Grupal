@@ -27,7 +27,6 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      default: "123456",
     },
   },
   {
@@ -55,7 +54,7 @@ userSchema.methods.comparePassword = async function (candidatePassword) {
   if (this.password.startsWith("$2")) {
     return bcrypt.compare(candidatePassword, this.password);
   }
-  return candidatePassword === this.password;
+  return false;
 };
 
 userSchema.set("toJSON", {

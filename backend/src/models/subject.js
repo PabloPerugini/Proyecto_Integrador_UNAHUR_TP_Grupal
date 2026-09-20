@@ -20,6 +20,7 @@ const subjectSchema = new mongoose.Schema(
     credits: { type: Number, default: 0 },
     kind: { type: String, enum: ["Materia", "ACA", "AU", "OTRA"], default: "Materia" },
     generic: { type: String, enum: ["CFC", "CFB", "CFP", "ACA", null], default: null },
+    trayecto: { type: String, default: null, trim: true },
     optional: { type: Boolean, default: false },
     intermediate: { type: Boolean, default: false },
     requires: { type: [String], default: [] },

@@ -23,8 +23,6 @@ export interface Career {
   name: string;
   institute?: string;
   color?: string;
-  planResolution?: string;
-  ruleCode?: string;
   durationYears?: number;
   creditsFinal?: number;
   creditsIntermediate?: number;
@@ -59,7 +57,6 @@ export interface Subject {
   hours: Hours;
   credits: number;
   kind: SubjectKind;
-  generic?: string | null;
   optional: boolean;
   intermediate?: boolean;
   requires: string[];
@@ -88,7 +85,6 @@ export interface ProgressEntry {
   nota: number | null;
   fecha: string | null;
   origen: string | null;
-  extraRequires?: string[];
 }
 
 export interface ProgressSummary {
@@ -123,9 +119,6 @@ export interface GraphStats {
   total: number;
   aprobadas: number;
   disponibles: number;
-  pendientes: number;
-  enCurso: number;
-  regulares: number;
   creditsTotal: number;
   creditsAprobados: number;
 }
@@ -145,8 +138,6 @@ export interface GraphData {
   edges: GraphEdge[];
   availableNow: string[];
   criticalPath: string[];
-  hasCycle: boolean;
-  topologicalOrder: string[];
   stats: GraphStats;
   intermediate?: IntermediateProgress;
 }
@@ -165,7 +156,6 @@ export interface CorrelativasRow {
 }
 
 export interface ParseCorrelativasResponse {
-  sourceKind: string;
   total: number;
   careerSubjects: number;
   matchedCount: number;

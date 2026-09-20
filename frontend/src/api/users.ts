@@ -12,4 +12,9 @@ export const usersApi = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+  getMe: () => request<User>('/users/me'),
+  logout: () =>
+    request<{ message: string }>('/users/logout', {
+      method: 'POST',
+    }),
 };

@@ -1,12 +1,12 @@
 const { Router } = require("express");
 const { uploadSinglePdf } = require("../middlewares/upload");
-const authUser = require("../middlewares/authUser");
+const { requireAuth } = require("../middlewares/auth");
 const { parseHistory, saveProgress, getProgress } = require("../controllers/progress.controllers");
 
 const router = Router();
 
-router.post("/parse-history", uploadSinglePdf, parseHistory);
-router.post("/", authUser, saveProgress);
-router.get("/me", authUser, getProgress);
+router.post("/parse-history", requireAuth, uploadSinglePdf, parseHistory);
+router.post("/", requireAuth, saveProgress);
+router.get("/me", requireAuth, getProgress);
 
 module.exports = router;

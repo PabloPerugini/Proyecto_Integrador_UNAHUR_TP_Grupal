@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { Offcanvas } from 'react-bootstrap';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
-import { useCareerSelection } from '../context/CareerContext';
+import { useCareerSelection } from '../hooks/useCareerSelection';
 import ThemeToggle from './ThemeToggle';
 import GradifyLogo from './GradifyLogo';
 import {

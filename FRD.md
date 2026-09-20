@@ -11,8 +11,8 @@
 | Institución           | Universidad Nacional de Hurlingham (UNAHUR)                          |
 | Unidad Académica      | Facultad de Informática — Proyecto Integrador Programación           |
 | Tipo de documento     | FRD — Documentación de Requerimientos Funcionales                    |
-| Versión               | 1.0                                                                   |
-| Fecha                 | 10 de septiembre de 2026                                              |
+| Versión               | 1.2                                                                   |
+| Fecha                 | 20 de septiembre de 2026                                              |
 | Sponsor Operación     | Secretaría Académica / Dirección de Carrera                          |
 | Sponsor Organización  | UNAHUR                                                               |
 | Integrantes           | Perugini, Pablo; Acuña, Marcos; Masgo Sandoval, Joaquín; Renaud, Román; Remonda, Eliel; Cotera, Dylan |
@@ -37,6 +37,8 @@
 | Versión | Fecha        | Autor | Descripción      |
 | ------- | ------------ | ----- | ---------------- |
 | 1.0     | 10/09/2026   | Equipo | Versión inicial. |
+| 1.1     | 20/09/2026   | Equipo | Autenticación basada en cookie httpOnly (JWT) sin distinción de roles; registro con auto-login; requisitos de seguridad (firma con bcrypt, 401, privacidad de usuarios); ajuste de US-01 y SC001 a la implementación. |
+| 1.2     | 20/09/2026   | Equipo | IA aplicada hoy a la carga de PDFs (matching semántico de correlativas por embeddings, local y sin API); chat del orientador solo como endpoint backend (UI planeada, historia US-04); criterios de bondad y dependencias de IA; SC002 con chat planeado. |
 
 ---
 
@@ -78,6 +80,8 @@ Los planes de estudio universitarios suelen ser complejos y estar llenos de depe
 ### 2.6 Dependencias
 
 - Disponibilidad del reporte "Plan de Estudios" en PDF generado por el usuario.
+- Matching semántico de correlativas **local, sin API** (modelo de embeddings de Hugging Face descargado a demanda).
+- Solo si se habilita el chat del orientador (pendiente): claves de API de un proveedor LLM (**Groq** o **Gemini**) o servidor **Ollama** local, con fallback automático entre proveedores.
 - Servidor de base de datos (MongoDB) y caché (Redis) disponibles.
 - Acceso al entorno de ejecución para deploy local/Docker.
 
@@ -267,9 +271,10 @@ flowchart LR
 | AR-1  | Estudiante    | Iniciar sesión y visualizar mi progreso académico en un grafo interactivo.                                        | Planificar mi cursada.                                                                   | El sistema muestra materias aprobadas, regularizadas, cursando y pendientes con colores/nodos diferenciados. | —           |
 | AR-2  | Administrador | Importar el plan de estudios en PDF y editar correlatividades.                                                    | Publicar la carrera.                                                                     | El sistema permite cargar PDF de SIU-Guaraní y modificar relaciones entre materias.                         | —           |
 | AR-3  | Estudiante    | Recibir sugerencias automáticas de inscripción dentro de la plataforma.                                           | Decidir mi inscripción según mi recorrido académico.                                    | El sistema aplica las reglas de negocio (R0–R6) y muestra recomendaciones en pantalla.                     | —           |
-| US-01 | Estudiante    | Registrarme e iniciar sesión con un correo y contraseña.                                                          | Que mi historial académico y el estado de mi grafo queden guardados de forma segura.     | Validar credenciales y redirigir al usuario a su panel principal cargando su grafo personalizado.          | —           |
+| US-01 | Estudiante    | Registrarme e iniciar sesión con un nickName y contraseña.                                                           | Que mi historial académico y el estado de mi grafo queden guardados de forma segura.     | Validar credenciales; la sesión se mantiene mediante cookie httpOnly (sin exponer identificadores en el cliente) y el usuario es redirigido a su panel principal cargando su grafo personalizado.          | —           |
 | US-02 | Estudiante    | Visualizar el plan de estudios en forma de grafo interactivo.                                                     | Identificar rápidamente qué materias puedo cursar, cuáles tengo aprobadas y cuáles están bloqueadas. | Diferenciar claramente por colores según su estado (aprobada, disponible, bloqueada).      | —           |
 | US-03 | Estudiante    | Hacer clic en una materia disponible para cambiar su estado.                                                       | Ver cómo se actualizan dinámicamente las materias subsiguientes en el grafo.             | Clickear en un nodo habilitado lo cambia de color e inmediatamente desbloquea los nodos hijos en pantalla.  | —           |
+| US-04 | Estudiante    | Consultar a un asistente de IA (chat) sobre qué materias puedo cursar según mis correlatividades y mi plan.       | Resolver dudas de cursada y planificación sin buscar manualmente en el grafo.            | El sistema responde en español basándose únicamente en el plan vigente y las correlatividades de la carrera; requiere sesión iniciada (401 sin cookie); indica el proveedor que respondió o si la respuesta provino de caché; ante proveedor no configurado devuelve 503 con mensaje claro. **Planeado:** el endpoint de backend existe (`POST /careers/:id/chat`) pero la interfaz aún no se implementó. | US-02, AR-2 |
 
 ### 4.2 Criterios de Bondad
 
@@ -279,6 +284,16 @@ flowchart LR
 - **MATERIAS A ⇒ MATERIAS B:** Para cada cuatrimestre, generar la sugerencia conforme las reglas C1–C6 (ver Sección 3.1.2).
 - **ORDEN DE ESTADÍSTICAS:** Mostrar las estadísticas de MATERIAS B en orden **decreciente**.
 - **FUSIÓN DE CONDICIONES:** Si no hay materias C4 en MATERIAS A, usar solo C1, C2, C3. Si no hay materias C1/C2, fusionarlas en C5 [APROBADA] (nota ≥ 4).
+- **CHAT SOBRE EL PLAN VIGENTE (planeado):** El asistente de IA responde únicamente en base al plan de estudios y al estado correlativo actual de la carrera (no inventa datos). El endpoint existe en el backend; la interfaz está pendiente.
+- **RESOLUCIÓN SEMÁNTICA DE CORRELATIVAS:** Las materias que el matching clásico (exacto, compacto, Levenshtein, prefijo) no casa se intentan resolver por sinonimia mediante embeddings, con umbral de similitud configurable. **Activo hoy en la carga de PDFs.**
+
+### 4.3 Requisitos de Seguridad
+
+- **Autenticación:** sesión por token JWT en cookie `httpOnly` (nombre `token`), `SameSite: Lax`, `Secure` en producción; el frontend envía y recibe la cookie automáticamente (no se persisten contraseñas ni tokens en el cliente).
+- **Contraseñas:** almacenadas con hash bcrypt (10 rondas de sal).
+- **Rutas protegidas:** ante cookie ausente, inválida o expirada, los endpoints autenticados responden `401`; el frontend cierra la sesión y redirige al login automáticamente.
+- **Privacidad:** no existe listado público de usuarios (se eliminó el endpoint `GET /users`); el perfil ajeno solo es consultable por nickName y el usuario dueño puede editar/eliminar su propia cuenta.
+- **Sin distinción de roles:** un único perfil autenticado (ver nota en BRD §2.7).
 
 ---
 
@@ -286,8 +301,9 @@ flowchart LR
 
 ### SC001 · Inicio de sesión / Registro
 
-- **Campos:** nickName y contraseña; formulario de creación de cuenta nueva (correo y contraseña).
-- **Comportamiento:** Validación de credenciales contra la base de datos; acceso diferenciado según rol (Estudiante / Administrador).
+- **Campos:** nickName y contraseña; formulario de creación de cuenta nueva (nickName y contraseña).
+- **Comportamiento:** Validación de credenciales contra la base de datos; la sesión se mantiene mediante cookie segura (httpOnly, SameSite Lax; Secure en producción) y se redirige al usuario a su panel con el grafo personalizado.
+- **Roles:** no existe distinción de roles en la implementación actual (ver nota en BRD §2.7); todo usuario autenticado accede a su progreso y puede gestionar carreras.
 
 ### SC002 · Panel del Estudiante (vista principal del grafo)
 
@@ -295,6 +311,7 @@ flowchart LR
 - Estados de cada materia: *Aprobada, Regular, Cursando, Pendiente* (colores/nodos diferenciados).
 - **Barra superior** con el progreso porcentual de la carrera.
 - **Panel lateral** con sugerencias automáticas de inscripción y **panel de detalles** de la materia seleccionada al hacer clic.
+- **Chat con orientador IA (planeado)**: consultas sobre materias cursables, correlatividades y plan; el backend ya expone `POST /careers/:id/chat` (respuestas según el plan real, `503` si no hay proveedor configurado), pero la interfaz de usuario aún no se desarrolló.
 - Interacción: clic en nodos para actualizar estado y desbloqueo dinámico de correlativas.
 
 ### SC003 · Panel del Administrador

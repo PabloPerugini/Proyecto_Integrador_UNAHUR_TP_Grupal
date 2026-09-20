@@ -26,7 +26,7 @@ const VALID_STATUS = ["Aprobada", "Regular", "Cursando", "Pendiente"];
 const saveProgress = async (req, res) => {
   try {
     if (!req.userId) {
-      return res.status(401).json({ message: "Falta identificar al usuario (x-user-id)" });
+      return res.status(401).json({ message: "Falta la sesión del usuario" });
     }
     const { careerId } = req.body;
     const entries = Array.isArray(req.body.entries) ? req.body.entries : [];
@@ -67,7 +67,7 @@ const saveProgress = async (req, res) => {
 const getProgress = async (req, res) => {
   try {
     if (!req.userId) {
-      return res.status(401).json({ message: "Falta identificar al usuario (x-user-id)" });
+      return res.status(401).json({ message: "Falta la sesión del usuario" });
     }
     const filter = { userId: req.userId };
     if (req.query.careerId) filter.careerId = req.query.careerId;

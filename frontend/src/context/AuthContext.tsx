@@ -1,43 +1,52 @@
-import { createContext, useState, useCallback, type ReactNode } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { apiService } from '../api';
+import { AuthContext } from './AuthContextValue';
+import type { AuthStatus } from './AuthContextValue';
 import type { User } from '../types';
 
-interface AuthContextType {
-  user: User | null;
-  login: (nickName: string, password: string) => Promise<void>;
-  logout: () => void;
-}
-
-const AuthContext = createContext<AuthContextType | null>(null);
-
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(() => {
-    const raw = localStorage.getItem('user');
-    if (!raw) return null;
-    try {
-      return JSON.parse(raw) as User;
-    } catch {
-      localStorage.removeItem('user');
-      return null;
-    }
-  });
+  const [user, setUser] = useState<User | null>(null);
+  const [status, setStatus] = useState<AuthStatus>('loading');
+
+  const logout = useCallback(() => {
+    void apiService.logout().catch(() => {});
+    setUser(null);
+    setStatus('guest');
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+    apiService
+      .getMe()
+      .then((me) => {
+        if (alive) {
+          setUser(me);
+          setStatus('authed');
+        }
+      })
+      .catch(() => {
+        if (alive) setStatus('guest');
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const onUnauthorized = () => logout();
+    window.addEventListener('auth:unauthorized', onUnauthorized);
+    return () => window.removeEventListener('auth:unauthorized', onUnauthorized);
+  }, [logout]);
 
   const login = useCallback(async (nickName: string, password: string) => {
     const loggedUser = await apiService.loginUser(nickName, password);
     setUser(loggedUser);
-    localStorage.setItem('user', JSON.stringify(loggedUser));
-  }, []);
-
-  const logout = useCallback(() => {
-    setUser(null);
-    localStorage.removeItem('user');
+    setStatus('authed');
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, status, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
 }
-
-export { AuthContext };

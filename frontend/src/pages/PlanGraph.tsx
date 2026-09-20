@@ -16,7 +16,7 @@ import { Alert, Badge, Button, Card, Form } from 'react-bootstrap';
 import { useNavigate, useParams } from 'react-router-dom';
 import { apiService } from '../api';
 import type { Career, GraphData, IntermediateProgress } from '../types';
-import { useCareerSelection } from '../context/CareerContext';
+import { useCareerSelection } from '../hooks/useCareerSelection';
 import { STATUS_COLOR, STATUS_BADGE, statusColor, statusLabel } from '../utils/status';
 import ColorDot from '../components/ColorDot';
 
@@ -251,9 +251,19 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { careerId: selectedCareerId, setCareerId: setSelectedCareerId } = useCareerSelection();
-  const [graph, setGraph] = useState<GraphData | null>(null);
+  const currentId = id ?? null;
+  const [graphState, setGraphState] = useState<{ careerId: string | null; data: GraphData | null }>({
+    careerId: null,
+    data: null,
+  });
+  const graph = graphState.careerId === currentId ? graphState.data : null;
   const view = initialView;
   const [pinnedCode, setPinnedCode] = useState<string | null>(null);
+  const [pinnedId, setPinnedId] = useState(currentId);
+  if (pinnedId !== currentId) {
+    setPinnedId(currentId);
+    setPinnedCode(null);
+  }
   const [err, setErr] = useState<string | null>(null);
   const [careers, setCareers] = useState<Career[]>([]);
   const selectedCareer = useMemo(() => careers.find((c) => c._id === id) ?? null, [careers, id]);
@@ -262,18 +272,16 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
     apiService
       .getAll()
       .then(setCareers)
-      .catch((e) => setErr(e.message));
+      .catch((e) => setErr(e instanceof Error ? e.message : 'Error cargando las carreras'));
   }, []);
 
   useEffect(() => {
     if (!id) return;
     setSelectedCareerId(id);
-    setGraph(null);
-    setPinnedCode(null);
     apiService
       .getGraph(id)
-      .then((g) => setGraph(g))
-      .catch((e) => setErr(e.message));
+      .then((g) => setGraphState({ careerId: id, data: g }))
+      .catch((e) => setErr(e instanceof Error ? e.message : 'Error cargando el plan'));
   }, [id, setSelectedCareerId]);
 
   useEffect(() => {

@@ -1,11 +1,11 @@
-const { userSchema } = require("../schemas/user.schemas");
+const Joi = require("joi");
 
-const validarUser = (req, res, next) => {
-  const { error } = userSchema.validate(req.body);
+const validate = (schema) => (req, res, next) => {
+  const { error } = schema.validate(req.body, { abortEarly: false });
   if (error) {
-    return res.status(400).json({ error: error.details[0].message });
+    return res.status(400).json({ message: error.details[0].message });
   }
   next();
 };
 
-module.exports = validarUser;
+module.exports = validate;

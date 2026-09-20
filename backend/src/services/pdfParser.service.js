@@ -135,6 +135,13 @@ const TAB_PERIODICITY_RE = /^(Mensual|Semestral)$/i;
 const TAB_AREA_RE =
   /^(CFB|CFC|CFE|CIC|CP|CBGyE|ASOyR|ISBDySO|OTRAS|TALLER|AyL|ASyP)$/i;
 const TAB_TOTAL_RE = /^(TOTAL|SUBTOTAL)\b/i;
+// Fila de totales que cierra la tabla de un plan: "TÍTULO: …", "TÍTULO DE
+// GRADO: …", "TÍTULO: Técnico/a …" seguidas de la suma de horas y créditos por
+// columna (p. ej. "TÍTULO DE GRADO: Ingeniería Metalúrgica 3.600 3.900 7.500
+// 300" y "TÍTULO: … en Metalurgia 1440 2110 3550 142"). No son materias: en
+// Electromovilidad terminaban parseándose como la materia OF02x con 1903
+// créditos y en Metalurgia agregaban 300 y 142 créditos fantasma.
+const TAB_FOOTER_RE = /^T[ÍI]TULO\b/i;
 const TAB_ACA_RE = /ACTIVIDADES CURRICULARES (?:ACREDITABLES|DE)|(^|\s)ACA([\s(]|$)/i;
 // Tabla-resumen de carga horaria por campo (CFC/CFE/CIC) en los planes de
 // licenciaturas: filas "Común", "Básica", "Específica", "Integración
@@ -269,10 +276,15 @@ function detectOfficialMeta(rawPages) {
     let yearX = null;
     let codeX = null;
     let sawData = false;
+    // Escaneo de abajo hacia arriba. En páginas donde la tabla arranca en la
+    // parte alta (sin nota de leyenda arriba), la primera fila "de datos"
+    // (token de duración o fila con números) puede quedar ENCIMA de las
+    // etiquetas de horas/total de esa misma página. En vez de cortar al primer
+    // dato, se sigue subiendo para juntar las etiquetas de la cabecera.
     for (const row of [...rows].sort((a, b) => b.y - a.y)) {
       if (isDurToken(row.items[0]) || row.items.some(isDurToken)) {
         sawData = true;
-        break;
+        continue;
       }
       for (const it of row.items) {
         if (TAB_LABEL_TOKEN_RE.test(it.t) && TAB_FIELD_BY_LABEL[TAB_LABEL_KEY(it.t)]) {
@@ -283,6 +295,13 @@ function detectOfficialMeta(rawPages) {
       }
     }
     const realLabels = [...labels].filter(([, x]) => x >= 300);
+    if (process.env.PARSE_DEBUG) {
+      console.log(
+        `[meta] page=${page.num} yearX=${yearX} codeX=${codeX} labels=${JSON.stringify(
+          [...labels],
+        )} real=${JSON.stringify([...realLabels])}`,
+      );
+    }
     if (realLabels.length >= 2) {
       return { labels: new Map(realLabels), yearX, codeX };
     }
@@ -357,7 +376,12 @@ function isOfficialNameLine(row) {
   const joined = rowText(row);
   if (rowSpillsRight(row)) return false;
   if (isPeriodMarkerRow(row)) return false;
-  if (TAB_TOTAL_RE.test(joined) || TAB_ACA_RE.test(joined)) return false;
+  if (
+    TAB_TOTAL_RE.test(joined) ||
+    TAB_ACA_RE.test(joined) ||
+    TAB_FOOTER_RE.test(joined)
+  )
+    return false;
   if (TAB_SUMMARY_ROW_RE.test(joined)) return false;
   if (TAB_HEADER_ROW_RE.test(joined)) {
     // Un encabezado de tabla es una fila de puras etiquetas. "Asignatura
@@ -411,9 +435,297 @@ function medianGap(ys) {
 
 const windowFor = (gapMedian) => Math.max(20, Math.round(gapMedian * 0.75));
 
+// ---------------------------------------------------------------------------
+// Plan "columnar compacto": una fila = una materia, con el número pegado al
+// nombre en un solo token ("1 Matemática para informática I") y 4 columnas
+// numéricas (Hs Semana, Hs Inter., Hs Trabajo, Créditos) seguidas de una
+// columna de correlativas (referencias por número: "-", "1", "5 - 6") y una de
+// equivalencias / nombre anterior ("Igual", "Inglés II").
+// Encabezado en 3 filas: "Nro | Materia | Créditos | Correlativas | Nombre
+// anterior / | Equivalencia", más "Hs | Hs Inter. | Hs Trabajo" y sus
+// sub-etiquetas "Semana | Pedag. | Auton.". Usado por los planes
+// "para comunicar" / "para web" de Informática (IA, Ciberseguridad,
+// Videojuegos, Hojas de cálculo de Google).
+// ---------------------------------------------------------------------------
+const COLUMNAR_NRO_RE = /^NRO$/i;
+const COLUMNAR_MATERIA_RE = /^MATERIA$/i;
+const COLUMNAR_CRED_RE = /^CR[EÉ]DITOS\b/i;
+const COLUMNAR_CORR_RE = /^CORRELATIVAS$/i;
+const COLUMNAR_YEAR_TOTAL_RE = /^Total\s+(\d)\s*[°º]?\s*A[ÑN]O/i;
+const COLUMNAR_ACA_RE = /^CR[EÉ]DITOS\s+ACA\b/i;
+const COLUMNAR_GLUE_RE = /^(\d{1,3})\s+(\S.*)$/;
+const COLUMNAR_REF_RE = /^[\d\s.,\-–—‐]+$/;
+
+// Mapeo de trayectos/áreas de formación detectados (clásico o columnar) al
+// campo "generic" del modelo. Sólo los códigos que existen en el enum se
+// traducen; el resto queda como `trayecto` textual sin generic.
+const TRAJECTORY_GENERIC = {
+  CFC: "CFC",
+  CFB: "CFB",
+  CFP: "CFP",
+};
+
+// Token de trayecto/área de formación dentro de una fila de materia:
+// un texto corto ("CBGyE", "AyL", "ISBDySO"...) a la derecha del nombre.
+const findTrayectoTok = (row) =>
+  (row.items || []).find(
+    (it) => TAB_AREA_RE.test(it.t.trim()) && it.t.trim().length <= 8,
+  );
+
+const trajectoryFor = (tok) => {
+  if (!tok) return { trayecto: null, generic: null };
+  const trayecto = tok.t.trim();
+  return {
+    trayecto,
+    generic: TRAJECTORY_GENERIC[trayecto.toUpperCase()] || null,
+  };
+};
+
+function detectColumnarMeta(rawPages) {
+  for (const page of rawPages) {
+    const rows = groupRows(page);
+    if (!rows.length) continue;
+    for (const row of rows) {
+      const byTok = {};
+      for (const it of row.items) {
+        if (COLUMNAR_NRO_RE.test(it.t)) byTok.nro = it.x;
+        else if (COLUMNAR_MATERIA_RE.test(it.t)) byTok.materia = it.x;
+        else if (COLUMNAR_CRED_RE.test(it.t)) byTok.cred = it.x;
+        else if (COLUMNAR_CORR_RE.test(it.t)) byTok.corr = it.x;
+      }
+      if (byTok.nro == null || byTok.materia == null || byTok.cred == null) {
+        continue;
+      }
+      // Requiere al menos una fila de dato con el número pegado al nombre
+      // ("1 Matemática para informática I") para no secuestrar tablas de
+      // estructura clásicas (Cód | Unidad curricular | horas | CRE).
+      const hasGlued = rows.some(
+        (r) =>
+          r.y < row.y - 20 &&
+          r.items.some(
+            (it) =>
+              it.x < byTok.materia + 40 && COLUMNAR_GLUE_RE.test(it.t),
+          ),
+      );
+      if (hasGlued) {
+        const meta = {
+          pageNum: page.num,
+          headerY: row.y,
+          codeX: byTok.nro,
+          nameX: byTok.materia,
+          credX: byTok.cred,
+          corrX: byTok.corr,
+          careerName: null,
+          intermediateTitle: null,
+          trayectoX: null,
+        };
+        // Leyenda por encima de la cabecera ("Carrera: Licenciatura en …",
+        // "Título intermedio: Técnico/a …") y columna de trayecto/área cuando
+        // el encabezado la declara ("TRAYECTO", "FORMACIÓN", "CAMPO").
+        for (const legendRow of rows) {
+          const byLine = legendRow.items
+            .slice()
+            .sort((a, b) => a.x - b.x);
+          if (byLine.some((it) => COLUMNAR_CRED_RE.test(it.t))) {
+            for (const it of byLine) {
+              if (
+                /^(TRAYECTO|FORMACI[ÓO]N|CAMP[ÓO])$/.test(it.t.trim()) &&
+                it.x >= byTok.materia + 20
+              ) {
+                meta.trayectoX = it.x;
+              }
+            }
+          } else {
+            for (let i = 0; i < byLine.length; i++) {
+              const tok = byLine[i].t.trim();
+              if (/^T[ÍI]TULO\s+INTERMEDIO$/i.test(tok)) {
+                const val = byLine[i + 1];
+                if (val && /[a-z\u00c0-\u017f]/i.test(val.t)) {
+                  meta.intermediateTitle = val.t.trim();
+                }
+              } else if (/^CARRERA$/i.test(tok) && !meta.careerName) {
+                const val = byLine[i + 1];
+                if (val && /[a-z\u00c0-\u017f]/i.test(val.t)) {
+                  meta.careerName = val.t.trim();
+                }
+              }
+            }
+          }
+        }
+        return meta;
+      }
+    }
+  }
+  return null;
+}
+
+// Filas del bloque de encabezado columnar, para excluirlas de los datos:
+// "Nro | Materia | Créditos (Correlativas)", "Hs | Hs Inter. | Hs Trabajo"
+// y "Semana | Pedag. | Auton.". ("Créditos ACA..." es dato, no header).
+const COLUMNAR_HDR_TOKEN_TEST = (it) =>
+  /^(NRO|MATERIA|CORRELATIVAS|HS|SEMANA|PEDAG\.|AUTON\.)$/i.test(it.t) ||
+  /^CR[EÉ]DITOS$/i.test(it.t);
+
+// Obtiene las filas de materia de una página columnar: tokens pegados
+// "N Nombre..." a la izquierda del encabezado, con números a la derecha.
+// También emite filas marcadoras (totales de año, Créditos ACA) sin token pegado.
+function columnarSubjectRows(page, meta) {
+  const out = [];
+  const headerY = meta.headerY;
+  for (const row of groupRows(page)) {
+    if (row.y > headerY) continue;
+    if (row.items.some(COLUMNAR_HDR_TOKEN_TEST)) continue;
+    const text = rowText(row);
+    const isMarker =
+      COLUMNAR_YEAR_TOTAL_RE.test(text) ||
+      COLUMNAR_ACA_RE.test(text) ||
+      /^Total\s*T[ÍI]TULO/i.test(text);
+    const nameTok = row.items.find(
+      (it) => it.x < meta.nameX + 40 && COLUMNAR_GLUE_RE.test(it.t),
+    );
+    if (!nameTok && !isMarker) continue;
+    const numbers = row.items
+      .filter((it) => isNumber(it.t) && it.x > meta.nameX)
+      .sort((a, b) => a.x - b.x);
+    out.push({ row, nameTok: nameTok || null, numbers, isMarker });
+  }
+  return out;
+}
+
+function parseColumnarOfficial(rawPages, meta) {
+  const subjects = [];
+  const seen = new Map();
+  let year = null;
+  let unassigned = [];
+  let seq = 0;
+  let creditsIntermediate = 0;
+  let creditsFinalOverride = null;
+
+  const flush = (y) => {
+    for (const s of unassigned) if (s.year == null) s.year = y;
+    unassigned = [];
+  };
+
+  const push = (entry) => {
+    const key = entry.name.toLowerCase().replace(/\s+/g, " ").trim();
+    const existing = seen.get(key);
+    if (existing) {
+      if (existing.year == null && entry.year != null) existing.year = entry.year;
+      for (const [k, v] of Object.entries(entry.hours || {})) {
+        if (!existing.hours[k]) existing.hours[k] = v;
+      }
+      return existing;
+    }
+    seen.set(key, entry);
+    subjects.push(entry);
+  };
+
+  for (const page of rawPages) {
+    for (const { row, nameTok, numbers } of columnarSubjectRows(page, meta)) {
+      const text = rowText(row);
+      const ym = text.match(COLUMNAR_YEAR_TOTAL_RE);
+      if (ym) {
+        // El total llega DESPUÉS de las materias de ese año.
+        flush(parseInt(ym[1], 10));
+        year = parseInt(ym[1], 10) + 1;
+        continue;
+      }
+      if (/^Total\s*(?:T[ÍI]TULO\s+INTERMEDIO|INTERMEDIO)/i.test(text)) {
+        // "Total Título intermedio": el último número de la fila es la meta de
+        // créditos del título intermedio (p. ej. 120).
+        creditsIntermediate = numbers.length
+          ? numVal(numbers[numbers.length - 1].t)
+          : 0;
+        continue;
+      }
+      if (/^Total\s*(?:T[ÍI]TULO\s*(?:DE\s*GRADO|FINAL))/i.test(text)) {
+        creditsFinalOverride = numbers.length
+          ? numVal(numbers[numbers.length - 1].t)
+          : null;
+        continue;
+      }
+      if (COLUMNAR_ACA_RE.test(text)) {
+        // Créditos ACA separados por tramo: el que acredita el título
+        // intermedio y el del tramo de grado. Cada uno es su propia materia
+        // ACA (con nombre distinto para no colisionar en el dedupe).
+        const credits = numbers.length
+          ? numVal(numbers[numbers.length - 1].t)
+          : 0;
+        const belongsIntermediate =
+          /T[ÍI]TULO\s+INTERMEDIO/i.test(text);
+        const acaName = belongsIntermediate
+          ? "Créditos ACA (Título intermedio)"
+          : "Créditos ACA (Tramo final)";
+        push({
+          code: belongsIntermediate ? "ACA" : "ACAD",
+          name: acaName,
+          year: null,
+          cuatrimestre: null,
+          duration: "C",
+          hours: { his: 0, hit: 0, hite: 0, hip: 0, htat: 0, ht: 0 },
+          credits,
+          kind: "ACA",
+          generic: "ACA",
+          optional: true,
+          intermediate: belongsIntermediate,
+        });
+        continue;
+      }
+      if (/^Total\b/i.test(text)) continue;
+
+      const glue = nameTok.t.match(COLUMNAR_GLUE_RE);
+      const num = glue ? parseInt(glue[1], 10) : null;
+      const name = cleanName([glue ? glue[2] : nameTok.t]);
+      if (!name) continue;
+      const n = numbers.map((x) => numVal(x.t));
+      const code = num != null ? `OF${String(num).padStart(3, "0")}` : `OF${String(++seq).padStart(3, "0")}`;
+      const tfg = meta && meta.trayectoX != null ? trajectoryFor(findTrayectoTok(row)) : { trayecto: null, generic: null };
+      const entry = {
+        code,
+        name,
+        year: null,
+        cuatrimestre: null,
+        duration: "C",
+        hours: {
+          his: n[0] ?? 0,
+          hit: n[1] ?? 0,
+          hite: 0,
+          hip: 0,
+          htat: n[2] ?? 0,
+          ht: 0,
+        },
+        credits: n[3] ?? (n.length ? n[n.length - 1] : 0),
+        kind: "Materia",
+        generic: tfg.generic,
+        trayecto: tfg.trayecto,
+        optional: /^AU[_ ]/i.test(name),
+        intermediate: false,
+      };
+      push(entry);
+      unassigned.push(entry);
+    }
+  }
+  // Año por defecto para materias sin marcador (p. ej. planes de una sola tabla).
+  flush(year ?? 1);
+
+  const creditsFinal =
+    creditsFinalOverride ??
+    subjects.reduce((acc, s) => acc + (s.credits || 0), 0);
+  return {
+    sourceKind: "oficial",
+    subjects,
+    intermediateTitle: (meta && meta.intermediateTitle) || null,
+    careerName: (meta && meta.careerName) || null,
+    creditsFinal,
+    creditsIntermediate: creditsIntermediate || 0,
+  };
+}
+
 // Parser de plan oficial (tabla de estructura: Cód, Unidad curricular, TF, D, horas, CRE)
 async function parseOfficialPlan(data) {
   const rawPages = await getRawItems(data);
+  const columnarMeta = detectColumnarMeta(rawPages);
+  if (columnarMeta) return parseColumnarOfficial(rawPages, columnarMeta);
   const meta = detectOfficialMeta(rawPages);
   const intermedioPages = detectIntermedioPages(rawPages);
   const intermediateTitle = detectIntermediateTitle(rawPages);
@@ -518,6 +830,7 @@ async function parseOfficialPlan(data) {
 
     const isAca = /\bACA\b/i.test(name);
     const isAu = /^AU[_ ]/i.test(name);
+    const tfg = trajectoryFor(anchor.tfTok || null);
 
     const code = `OF${String(anchor.num ?? subjects.length + 1).padStart(3, "0")}`;
 
@@ -530,7 +843,8 @@ async function parseOfficialPlan(data) {
       hours: facts,
       credits: credits ?? 0,
       kind: isAca ? "ACA" : "Materia",
-      generic: isAca ? "ACA" : null,
+      generic: isAca ? "ACA" : tfg.generic,
+      trayecto: isAca ? null : tfg.trayecto,
       optional: isAu || isAca,
       intermediate: !!state.inIntermediate,
     };
@@ -627,7 +941,7 @@ async function parseOfficialPlan(data) {
         ));
     const isNameFragRow = (r) => {
       const joined = rowText(r);
-      if (TAB_TOTAL_RE.test(joined) || TAB_ACA_RE.test(joined)) return false;
+      if (TAB_TOTAL_RE.test(joined) || TAB_ACA_RE.test(joined) || TAB_FOOTER_RE.test(joined)) return false;
       if (isPeriodMarkerRow(r)) return false;
       if (!isOfficialNameLine(r)) return false;
       if (!officialNameTokens(r).length) return false;
@@ -640,6 +954,7 @@ async function parseOfficialPlan(data) {
       return (
         !TAB_TOTAL_RE.test(joined) &&
         !TAB_ACA_RE.test(joined) &&
+        !TAB_FOOTER_RE.test(joined) &&
         !isPeriodMarkerRow(r)
       );
     });
@@ -678,6 +993,7 @@ async function parseOfficialPlan(data) {
         y: d.y,
         duration: durTok ? normalizeDurationToken(durTok.t) : null,
         num: codeTok ? parseInt(codeTok.t, 10) : null,
+        tfTok: [fa, d, fb].map(findTrayectoTok).find(Boolean) || null,
         yearCol: null,
         nameParts: [
           ...officialNameTokens(fa),
@@ -696,7 +1012,12 @@ async function parseOfficialPlan(data) {
     const anchors = [];
     for (const row of rows) {
       const joined = rowText(row);
-      if (TAB_TOTAL_RE.test(joined) || TAB_ACA_RE.test(joined)) continue;
+      if (
+        TAB_TOTAL_RE.test(joined) ||
+        TAB_ACA_RE.test(joined) ||
+        TAB_FOOTER_RE.test(joined)
+      )
+        continue;
       if (isPeriodMarkerRow(row)) continue;
       if (consumedFragY.has(row.y) || wrappedDataY.has(row.y)) continue;
       if (isOfficialNameLine(row) && officialNameTokens(row).length) {
@@ -712,6 +1033,7 @@ async function parseOfficialPlan(data) {
           y: row.y,
           duration: durTok ? normalizeDurationToken(durTok.t) : null,
           num: codeTok ? parseInt(codeTok.t, 10) : null,
+          tfTok: findTrayectoTok(row) || null,
           yearCol: null,
           nameParts: [],
           nums: [],
@@ -1648,8 +1970,260 @@ function correlativasPayload(subjects) {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Formato columnar (Informática "para comunicar" / "para web"): las
+// correlativas son NÚMEROS en su propia columna ("-", "1", "5 - 6").
+// ---------------------------------------------------------------------------
+function parseColumnarCorrelativas(rawPages, meta) {
+  const subjects = [];
+  const byName = new Map();
+  let seq = 0;
+  let year = null;
+  let unassigned = [];
+
+  const flush = (y) => {
+    for (const s of unassigned) if (s.year == null) s.year = y;
+    unassigned = [];
+  };
+
+  for (const page of rawPages) {
+    for (const { row, nameTok, numbers } of columnarSubjectRows(page, meta)) {
+      const text = rowText(row);
+      const ym = text.match(COLUMNAR_YEAR_TOTAL_RE);
+      if (ym) {
+        flush(parseInt(ym[1], 10));
+        year = parseInt(ym[1], 10) + 1;
+        continue;
+      }
+      if (COLUMNAR_ACA_RE.test(text)) continue;
+      if (/^Total\b/i.test(text)) continue;
+      if (!nameTok) continue;
+
+      const glue = nameTok.t.match(COLUMNAR_GLUE_RE);
+      const num = glue ? parseInt(glue[1], 10) : null;
+      const name = cleanName([glue ? glue[2] : nameTok.t]);
+      if (!name) continue;
+
+      const key = normSubjectKey(name);
+      if (byName.has(key)) continue;
+
+      // La columna de correlativas queda después de los 4 números fijos
+      // (Hs Semana, Hs Inter., Hs Trabajo, Créditos); los tokens que quedan a
+      // la derecha y son solo dígitos/guiones son las referencias. Nota: en
+      // filas con correlativa de un solo número ("1"), ese ref aparece dentro
+      // de `numbers`, así que la cota de la columna es el 4º número.
+      const credX =
+        numbers.length >= 4
+          ? numbers[3].x
+          : numbers.length
+            ? numbers[numbers.length - 1].x
+            : meta.credX;
+      const refToks = row.items
+        .filter((it) => it.x > credX + 2 && COLUMNAR_REF_RE.test(it.t))
+        .sort((a, b) => b.y - a.y || a.x - b.x);
+      const refs = [
+        ...new Set(
+          refToks.flatMap((it) =>
+            [...it.t.matchAll(/\d{1,3}/g)].map((m) => parseInt(m[0], 10)),
+          ),
+        ),
+      ];
+
+      // Una correlativa por referencia para que todas resuelvan a código.
+      const criteria = refs.map((r) => ({ name: null, refs: [r] }));
+      const subject = {
+        num,
+        code: `CR${String(seq + 1).padStart(3, "0")}`,
+        name,
+        year: null,
+        cuatrimestre: null,
+        duration: "C",
+        credits: 0,
+        kind: "Materia",
+        optional: false,
+        criteria,
+        correlativas: [],
+      };
+      byName.set(key, subject);
+      subjects.push(subject);
+      unassigned.push(subject);
+      seq++;
+    }
+  }
+
+  flush(year ?? 1);
+  return subjects;
+}
+
+// ---------------------------------------------------------------------------
+// Formato de DOS columnas (correlatividades de Diseño Industrial): a la
+// izquierda "Actividad Curricular" (nombre que puede ocupar varias líneas), a
+// la derecha las correlativas (varias líneas, separadas por " - "). No hay
+// números. Una celda derecha más alta que su izquierda aparece como líneas
+// solo-derecha ANTES de la fila de su materia: se encolan y se adosan a la
+// siguiente materia.
+// ---------------------------------------------------------------------------
+const COL2_HDR_TOKEN_RE = /^(ACTIVIDAD|CURRICULAR|CORRELATIVAS)$/i;
+const COL2_NOISE_RE = /^\d+\s*\/\s*\d+$|^(?:CS|RCS)\b|^ANEXO\b/i;
+const COL2_GAP_THRESHOLD = 21;
+
+function splitTwoColumnCorrelativas(text) {
+  const cleaned = text.replace(/\s+/g, " ").trim();
+  if (!cleaned) return [];
+  return cleaned
+    .split(/\s+[-‐–—]\s+/)
+    .map((p) => p.replace(/^\s*[-‐–—]+\s*/, "").replace(/\s+[-‐–—]+\s*$/, "").trim())
+    .filter((p) => p && /[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/i.test(p))
+    .map((p) => ({ name: p, refs: [] }));
+}
+
+function detectTwoColumnMeta(rawPages) {
+  for (const page of rawPages) {
+    const rows = groupRows(page);
+    let corrRow = null;
+    let hasCurricular = false;
+    for (const row of rows) {
+      let hasCorr = false;
+      for (const it of row.items) {
+        if (/^CORRELATIVAS$/i.test(it.t)) hasCorr = true;
+        if (/^CURRICULAR$/i.test(it.t)) hasCurricular = true;
+      }
+      if (hasCorr) corrRow = row;
+    }
+    if (!corrRow || !hasCurricular) continue;
+    return { pageNum: page.num };
+  }
+  return null;
+}
+
+function parseTwoColumnCorrelativas(rawPages) {
+  const subjects = [];
+  const byName = new Map();
+  let seq = 0;
+
+  const pushSubject = (entry) => {
+    const key = normSubjectKey(entry.name);
+    if (byName.has(key)) return;
+    byName.set(key, entry);
+    subjects.push(entry);
+    seq++;
+  };
+
+  const closeSubject = (current) => {
+    current.criteria = splitTwoColumnCorrelativas(current.corrText.join(" "));
+    current.correlativas = current.criteria.map((c) => c.name).filter(Boolean);
+    current.code = `CR${String(subjects.length + 1).padStart(3, "0")}`;
+    pushSubject(current);
+  };
+
+  const isHeaderRow = (row) =>
+    row.items.some((it) => COL2_HDR_TOKEN_RE.test(it.t));
+
+  // Límite entre columnas: se toman las X frecuentes de todos los tokens de
+  // datos (sin encabezado). Los nombres de materia se repiten por fila a una X
+  // fija a la izquierda y las correlativas a otra X a la derecha; títulos y
+  // ruido suelto ("RCS...", "7/9", "ANEXO I") aparecen una o dos veces y se
+  // ignoran pidiendo frecuencia mínima. La columna derecha empieza tras el
+  // mayor salto entre esas X.
+  const counts = new Map();
+  for (const page of rawPages) {
+    for (const row of groupRows(page)) {
+      if (isHeaderRow(row)) continue;
+      for (const it of row.items) {
+        const x = Math.round(it.x);
+        counts.set(x, (counts.get(x) || 0) + 1);
+      }
+    }
+  }
+  const freqXs = [...counts.entries()]
+    .filter(([, n]) => n >= 3)
+    .map(([x]) => x)
+    .sort((a, b) => a - b);
+  let boundary = Infinity;
+  if (freqXs.length >= 2) {
+    let gapIdx = -1;
+    let maxGap = 40;
+    for (let i = 1; i < freqXs.length; i++) {
+      const gap = freqXs[i] - freqXs[i - 1];
+      if (gap > maxGap) {
+        maxGap = gap;
+        gapIdx = i;
+      }
+    }
+    boundary =
+      gapIdx > 0
+        ? (freqXs[gapIdx - 1] + freqXs[gapIdx]) / 2
+        : (freqXs[0] + freqXs[freqXs.length - 1]) / 2;
+  }
+  if (!Number.isFinite(boundary)) return [];
+
+  for (const page of rawPages) {
+    const rows = groupRows(page);
+    // En la página que tiene encabezado, el título queda arriba de él; en las
+    // demás no hay encabezado y toda la página es tabla.
+    const headerRows = rows.filter(isHeaderRow);
+    const headerY = headerRows.length ? Math.max(...headerRows.map((r) => r.y)) : null;
+
+    let current = null;
+    let pendingRight = [];
+    let lastLeftY = 0;
+    for (const row of rows) {
+      if (isHeaderRow(row)) continue;
+      if (headerY != null && row.y >= headerY) continue;
+      const left = row.items.filter((it) => it.x < boundary && !/^[-‐–—\s]+$/.test(it.t));
+      const right = row.items.filter((it) => it.x >= boundary && !/^[-‐–—\s]+$/.test(it.t));
+      if (!left.length && !right.length) continue;
+
+      const Ltext = cleanName(left.map((i) => i.t));
+      const Rtext = cleanName(right.map((i) => i.t));
+      if (COL2_NOISE_RE.test(Ltext) || COL2_NOISE_RE.test(Rtext)) continue;
+
+      if (left.length) {
+        const newSubject = !current || lastLeftY - row.y > COL2_GAP_THRESHOLD;
+        if (newSubject) {
+          if (current) closeSubject(current);
+          current = {
+            num: null,
+            code: null,
+            name: Ltext,
+            year: null,
+            cuatrimestre: null,
+            duration: "C",
+            credits: 0,
+            kind: "Materia",
+            optional: false,
+            corrText: pendingRight.concat(right).map((i) => i.t),
+          };
+          pendingRight = [];
+        } else {
+          current.name += " " + Ltext;
+          if (right.length) current.corrText = current.corrText.concat(right.map((i) => i.t));
+        }
+        lastLeftY = row.y;
+      } else {
+        pendingRight = pendingRight.concat(right);
+      }
+    }
+    if (current) closeSubject(current);
+  }
+
+  return subjects;
+}
+
 async function parseCorrelativas(data) {
   const rawPages = await getRawItems(data);
+
+  const columnarMeta = detectColumnarMeta(rawPages);
+  if (columnarMeta) {
+    const subjects = parseColumnarCorrelativas(rawPages, columnarMeta);
+    return correlativasPayload(resolveCorrelativas(subjects));
+  }
+
+  const twoColumnMeta = detectTwoColumnMeta(rawPages);
+  if (twoColumnMeta) {
+    const subjects = parseTwoColumnCorrelativas(rawPages, twoColumnMeta);
+    return correlativasPayload(resolveCorrelativas(subjects));
+  }
 
   if (hasCorrelativasTable(rawPages)) {
     return correlativasPayload(resolveCorrelativas(parseCorrelativasTable(rawPages)));

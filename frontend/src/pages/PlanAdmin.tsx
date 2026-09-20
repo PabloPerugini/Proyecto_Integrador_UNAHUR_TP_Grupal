@@ -24,7 +24,7 @@ export default function PlanAdmin() {
   const navigate = useNavigate();
   const { careers, reload } = useCareers();
   const { msg, flash, flashFromError, clear } = useFlashMessage();
-  const [selectedId, setSelectedId] = useState<string | null>(id ?? null);
+  const selectedId = id ?? null;
   const [candidate, setCandidate] = useState<Career | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -42,30 +42,40 @@ export default function PlanAdmin() {
   const [nameDraft, setNameDraft] = useState('');
   const [renaming, setRenaming] = useState(false);
 
-  useEffect(() => {
-    if (id) setSelectedId(id);
-  }, [id]);
+  const [loadKey, setLoadKey] = useState(selectedId);
+  if (loadKey !== selectedId) {
+    setLoadKey(selectedId);
+    if (!selectedId) setSubjects([]);
+    setRequiresDraft({});
+    setCorrParsed(null);
+  }
 
-  const reloadSubjects = useCallback(
-    async (careerId: string) => {
+  const loadSubjects = useCallback(
+    async (careerId: string): Promise<{ subjects: Subject[]; draft: Record<string, string> }> => {
       const s = await apiService.getSubjects(careerId);
-      setSubjects(s);
       const draft: Record<string, string> = {};
       for (const subj of s) draft[subj.code] = (subj.requires || []).join(', ');
-      setRequiresDraft(draft);
+      return { subjects: s, draft };
     },
     [],
   );
 
   useEffect(() => {
-    if (!selectedId) {
-      setSubjects([]);
-      setRequiresDraft({});
-      setCorrParsed(null);
-      return;
-    }
-    reloadSubjects(selectedId).catch((e) => flashFromError(e, 'Error cargando las materias'));
-  }, [selectedId, reloadSubjects, flashFromError]);
+    if (!selectedId) return;
+    let alive = true;
+    loadSubjects(selectedId)
+      .then((result) => {
+        if (!alive) return;
+        setSubjects(result.subjects);
+        setRequiresDraft(result.draft);
+      })
+      .catch((e) => {
+        if (alive) flashFromError(e, 'Error cargando las materias');
+      });
+    return () => {
+      alive = false;
+    };
+  }, [selectedId, loadSubjects, flashFromError]);
 
   const onPersonal = async (file: File) => {
     try {
@@ -149,7 +159,6 @@ export default function PlanAdmin() {
     try {
       await apiService.deleteCareer(candidate._id);
       if (selectedId === candidate._id) {
-        setSelectedId(null);
         navigate('/admin');
       }
       flash('success', `Plan "${candidate.name}" eliminado`);
@@ -194,7 +203,9 @@ export default function PlanAdmin() {
       const r = await apiService.saveCorrelativas(selectedId, payload);
       flash('success', `Correlatividades guardadas en ${r.saved} materias (${r.total} en total).`);
       setCorrParsed(null);
-      await reloadSubjects(selectedId);
+      const refreshed = await loadSubjects(selectedId);
+      setSubjects(refreshed.subjects);
+      setRequiresDraft(refreshed.draft);
     } catch (err) {
       flashFromError(err, 'Error guardando las correlatividades');
     } finally {
@@ -205,6 +216,13 @@ export default function PlanAdmin() {
   const selected = careers.find((c) => c._id === selectedId) || null;
   const ordered = useMemo(() => sortSubjects(subjects), [subjects]);
 
+  const careerKey = `${selectedId ?? ''}|${selected?.name ?? ''}`;
+  const [nameDraftKey, setNameDraftKey] = useState(careerKey);
+  if (careerKey !== nameDraftKey) {
+    setNameDraftKey(careerKey);
+    setNameDraft(selected?.name ?? '');
+  }
+
   const nameByCode = new Map(subjects.map((s) => [s.code, s.name]));
   const pctMatch =
     corrParsed && corrParsed.total ? Math.round((corrParsed.matchedCount / corrParsed.total) * 100) : 0;
@@ -213,11 +231,6 @@ export default function PlanAdmin() {
         corrFilter === 'todas' ? true : corrFilter === 'coinciden' ? s.matched : !s.matched,
       )
     : [];
-
-  useEffect(() => {
-    const career = careers.find((c) => c._id === selectedId);
-    setNameDraft(career?.name ?? '');
-  }, [selectedId, careers]);
 
   const draftCodes = (code: string) =>
     (requiresDraft[code] || '')
@@ -246,7 +259,6 @@ export default function PlanAdmin() {
             careers={careers}
             selectedId={selectedId}
             onSelect={(c) => {
-              setSelectedId(c._id);
               navigate(`/admin/${c._id}`);
             }}
             emptyText={

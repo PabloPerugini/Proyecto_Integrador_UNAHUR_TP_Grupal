@@ -4,6 +4,8 @@ const { parseOfficialPlan, parseCorrelativas: parseCorrelativasPdf } = require("
 const { buildGraph } = require("../services/graph.service");
 const UserProgress = require("../models/userprogress");
 const { deriveCareerColor } = require("../utils/careerColor");
+const crypto = require("crypto");
+const { chat, isConfigured } = require("../services/ai.service");
 
 const createCareer = async (req, res) => {
   try {
@@ -93,7 +95,7 @@ const parseOfficial = async (req, res) => {
       creditsIntermediate: parsed.creditsIntermediate || 0,
     });
   } catch (error) {
-    res.status(500).json({ message: "Error al parsear el PDF", error: error.message });
+    res.status(400).json({ message: "Error al parsear el PDF" });
   }
 };
 
@@ -185,6 +187,37 @@ function bestDbMatch(parsedName, dbSubjects) {
   return { db: null, confidence: null };
 }
 
+// Intenta resolver por sinonimia/embedding las materias que el matching clásico
+// (exacto, compacto, Levenshtein y prefijo) no pudo casar.
+async function enrichSemantic(rows, dbSubjects) {
+  const pending = rows.filter((r) => !r.matched);
+  if (!pending.length || !dbSubjects.length) return;
+  try {
+    const { embedTexts, cosine, MIN_SIMILARITY } = require("../services/embeddings.service");
+    const dbVectors = await embedTexts(dbSubjects.map((d) => d.name));
+    for (let i = 0; i < pending.length; i++) {
+      const nameVec = await embedTexts([pending[i].name]);
+      let bestDb = null;
+      let bestSim = MIN_SIMILARITY;
+      for (let j = 0; j < dbVectors.length; j++) {
+        const sim = cosine(nameVec[0], dbVectors[j]);
+        if (sim > bestSim) {
+          bestSim = sim;
+          bestDb = dbSubjects[j];
+        }
+      }
+      if (bestDb) {
+        pending[i].matched = true;
+        pending[i].dbCode = bestDb.code;
+        pending[i].dbName = bestDb.name;
+        pending[i].confidence = "semantic";
+      }
+    }
+  } catch (error) {
+    // conserva el matching clásico si el modelo no está disponible
+  }
+}
+
 // POST /careers/:id/parse-correlativas (multipart, campo "file")
 const parseCorrelativas = async (req, res) => {
   try {
@@ -212,6 +245,8 @@ const parseCorrelativas = async (req, res) => {
       };
     });
 
+    await enrichSemantic(rows, dbSubjects);
+
     // Mapea las referencias internas (CR###) a códigos reales de la carrera.
     const byPCode = new Map(rows.map((r) => [r.parsedCode, r]));
     for (const s of parsed.subjects) {
@@ -235,7 +270,7 @@ const parseCorrelativas = async (req, res) => {
       unresolved: rows.filter((r) => !r.matched),
     });
   } catch (error) {
-    res.status(500).json({ message: "Error al parsear las correlativas", error: error.message });
+    res.status(400).json({ message: "Error al parsear las correlativas" });
   }
 };
 
@@ -322,6 +357,8 @@ const saveSubjects = async (req, res) => {
         "hours.ht": raw.hours?.ht ?? 0,
         credits: raw.credits ?? 0,
         kind: ["Materia", "ACA", "AU", "OTRA"].includes(raw.kind) ? raw.kind : "Materia",
+        generic: ["CFC", "CFB", "CFP", "ACA", null].includes(raw.generic) ? raw.generic : null,
+        trayecto: raw.trayecto ? String(raw.trayecto).trim().slice(0, 20) : null,
         optional: !!raw.optional,
         intermediate: !!raw.intermediate,
         requires: Array.isArray(raw.requires) ? raw.requires.map(String) : [],
@@ -481,10 +518,29 @@ const getGraph = async (req, res) => {
       career.creditsIntermediate > 0
         ? career.creditsIntermediate
         : interSum + acaCredits || interSum;
+    const intermediateHours = (list) =>
+    list.reduce(
+      (acc, s) => ({
+        hit: (acc.hit || 0) + (s.hours?.hit || 0),
+        htat: (acc.htat || 0) + (s.hours?.htat || 0),
+        ht: (acc.ht || 0) + (s.hours?.ht || 0),
+      }),
+      { hit: 0, htat: 0, ht: 0 },
+    );
     const intermediate = {
       title: career.intermediateTitle || null,
       total: interMat.length,
       credits: intermediateTarget || interSum,
+      hours: intermediateHours(interAll),
+      subjects: interMat.map((s) => ({
+        code: s.code,
+        name: s.name,
+        slug: s.slug,
+        year: s.year,
+        cuatrimestre: s.cuatrimestre,
+        hours: s.hours || {},
+        credits: s.credits || 0,
+      })),
       aprobadas: 0,
       creditsAprob: 0,
     };
@@ -517,6 +573,47 @@ const getGraph = async (req, res) => {
   }
 };
 
+// POST /careers/:id/chat — orientador académico por IA, basado en el plan real
+const chatCareer = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const prompt = String(req.body?.prompt || "").trim();
+    if (!prompt) return res.status(400).json({ message: "Enviá un prompt" });
+    if (!isConfigured()) {
+      return res.status(503).json({
+        message:
+          "No hay proveedor de IA configurado. Configurá GROQ_API_KEY, GEMINI_API_KEY o un Ollama local.",
+      });
+    }
+
+    const career = await Career.findById(id);
+    if (!career) return res.status(404).json({ message: "Carrera no encontrada" });
+
+    const subjects = await Subject.find({ careerId: id })
+      .sort({ year: 1, cuatrimestre: 1, name: 1 })
+      .select("code name year credits requires");
+
+    const lines = subjects.map(
+      (s) =>
+        `${s.code} | ${s.name}${s.year ? ` | Año ${s.year}` : ""}${s.credits ? ` | ${s.credits} créditos` : ""}${
+          s.requires?.length ? ` | Requiere: ${s.requires.join(", ")}` : ""
+        }`,
+    );
+
+    const system = `Sos un orientador académico de la UNAHUR. Respondés en español, conciso y práctico, sobre la carrera "${career.name}". Plan de estudios (código | materia | año | créditos | requiere):\n${lines.join("\n")}`;
+
+    const key = `ai:chat:${id}:${crypto
+      .createHash("sha256")
+      .update(prompt.toLowerCase())
+      .digest("hex")}`;
+
+    const result = await chat(system, prompt, key);
+    res.status(200).json({ ...result, careerId: id, subjects: subjects.length });
+  } catch (error) {
+    res.status(500).json({ message: "Error al consultar la IA", error: error.message });
+  }
+};
+
 module.exports = {
   createCareer,
   getAllCareers,
@@ -529,4 +626,5 @@ module.exports = {
   getGraph,
   deleteCareer,
   updateCareer,
+  chatCareer,
 };

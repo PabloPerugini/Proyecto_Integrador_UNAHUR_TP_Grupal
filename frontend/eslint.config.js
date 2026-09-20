@@ -19,8 +19,8 @@ export default defineConfig([
       globals: globals.browser,
     },
     rules: {
-      'react-hooks/set-state-in-effect': 'off',
-      'react-refresh/only-export-components': 'off',
+      'react-hooks/set-state-in-effect': 'error',
+      'react-refresh/only-export-components': 'error',
     },
   },
 ])

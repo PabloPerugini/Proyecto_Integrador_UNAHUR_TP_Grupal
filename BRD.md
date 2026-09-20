@@ -11,8 +11,8 @@
 | Institución           | Universidad Nacional de Hurlingham (UNAHUR)                          |
 | Unidad Académica      | Facultad de Informática — Proyecto Integrador Programación           |
 | Tipo de documento     | BRD — Documentación de Requerimientos de Negocio                     |
-| Versión               | 1.0                                                                   |
-| Fecha                 | 10 de septiembre de 2026                                              |
+| Versión               | 1.2                                                                   |
+| Fecha                 | 20 de septiembre de 2026                                              |
 | Sponsor Operación     | Secretaría Académica / Dirección de Carrera                          |
 | Sponsor Organización  | UNAHUR                                                               |
 | Integrantes           | Perugini, Pablo; Acuña, Marcos; Masgo Sandoval, Joaquín; Renaud, Román; Remonda, Eliel; Cotera, Dylan |
@@ -37,6 +37,8 @@
 | Versión | Fecha        | Autor | Descripción      |
 | ------- | ------------ | ----- | ---------------- |
 | 1.0     | 10/09/2026   | Equipo | Versión inicial. |
+| 1.1     | 20/09/2026   | Equipo | Autenticación basada en cookie httpOnly (JWT) sin distinción de roles; registro con auto-login; eliminación del listado público de usuarios; limpieza de deuda técnica y alineación de la documentación con la implementación. |
+| 1.2     | 20/09/2026   | Equipo | IA aplicada a la carga de PDFs (matching semántico de correlativas local) y ampliación del lector de PDF a formatos columnares compactos; chat de orientador como endpoint backend (UI planeada). |
 
 ---
 
@@ -74,6 +76,7 @@ Los planes de estudio universitarios suelen ser complejos y estar llenos de depe
 ### 2.4 Restricciones
 
 - La ingesta se basa en la estructura del PDF exportado por **SIU-Guaraní** (tolera campos vacíos como créditos/puntaje).
+- El lector de PDF acepta el formato clásico **SIU-Guaraní** y el formato **columnar compacto** ("para comunicar"/"para web" de Informática: IA, Ciberseguridad, Videojuegos, Hojas de cálculo). La **fila de totales de cierre** ("TÍTULO: …") no se importa como materia.
 - La aplicación **NO reemplaza** la transacción de inscripción oficial (se efectúa en SIU-Guaraní); solo asiste la planificación.
 - Compatibilidad garantizada con navegadores web modernos (Chrome, Edge, Firefox).
 - Los planes soportados siguen el modelo año/cuatrimestre con créditos numéricos (entero o vacío).
@@ -90,6 +93,8 @@ Los planes de estudio universitarios suelen ser complejos y estar llenos de depe
 ### 2.6 Dependencias
 
 - Disponibilidad del reporte "Plan de Estudios" en PDF generado por el usuario.
+- Matching semántico de correlativas **local, sin API** (modelo de embeddings descargado a demanda).
+- Solo si se habilita el chat del orientador (pendiente): claves de API de un proveedor LLM (**Groq** o **Gemini**) o servidor **Ollama** local, con fallback automático.
 - Servidor de base de datos (MongoDB) y caché (Redis) disponibles.
 - Acceso al entorno de ejecución para deploy local/Docker.
 
@@ -101,6 +106,9 @@ Los planes de estudio universitarios suelen ser complejos y estar llenos de depe
 | Administrador / Dirección de Carrera | Carga y publica planes, edita correlatividades.              |
 | Docentes                     | Consulta opcional (solo lectura), si lo requiere la secretaría.      |
 
+> [!NOTE]
+> **Decisión de diseño (v1.1):** en la implementación actual no existe separación de roles. Todo usuario autenticado puede gestionar carreras (carga del plan, correlatividades y publicación) además de consultar y actualizar su propio progreso. La tabla de actores refleja el modelo de negocio objetivo; el sistema único de autenticación por cookie simplifica el alcance entregable.
+
 ### 2.8 Alcance del Proyecto
 
 El alcance incluye:
@@ -109,6 +117,8 @@ El alcance incluye:
 - Visualizador gráfico del plan de estudios en forma de nodos interactivos (grafo).
 - Lógica backend de validación de correlatividades.
 - Motor de sugerencias de inscripción basado en reglas de negocio.
+- IA colaborativa en la **carga del PDF**: matching semántico (embeddings) para resolver correlativas que el mapeo clásico no casa.
+- Asistente académico con IA (chat sobre el plan) a futuro: endpooint backend disponible, interfaz de usuario planeada.
 - Panel de estadísticas básicas del progreso del estudiante (porcentaje de carrera avanzada).
 
 ---
@@ -188,7 +198,7 @@ Vista de alto nivel. El detalle por pantalla se encuentra en el **FRD, Sección 
 | Pantalla   | Descripción                                                                     |
 | ---------- | ------------------------------------------------------------------------------- |
 | SC001      | Inicio de sesión y registro.                                                     |
-| SC002      | Panel del estudiante: grafo interactivo con estados y sugerencias.              |
+| SC002      | Panel del estudiante: grafo interactivo con estados, sugerencias y chat con orientador IA.     |
 | SC003      | Panel del administrador: importación de PDF, edición y publicación del plan.    |
 | SC004      | Estadísticas de progreso académico.                                              |
 | SC005      | Pantalla de orientación.                                                         |

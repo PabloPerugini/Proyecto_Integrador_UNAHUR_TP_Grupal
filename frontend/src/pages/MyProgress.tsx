@@ -4,7 +4,7 @@ import { apiService } from '../api';
 import type { ParsedSubject, ProgressEntry, ProgressSummary, Subject, SubjectStatus } from '../types';
 import { STATUS_LABEL } from '../utils/status';
 import { getCareerColor } from '../utils/careerColor';
-import { useCareerSelection } from '../context/CareerContext';
+import { useCareerSelection } from '../hooks/useCareerSelection';
 import { useCareers } from '../hooks/useCareers';
 import { useFlashMessage } from '../hooks/useFlashMessage';
 import { sortSubjects } from '../utils/subjects';
