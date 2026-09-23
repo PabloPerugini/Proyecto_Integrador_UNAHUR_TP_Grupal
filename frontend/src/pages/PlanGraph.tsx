@@ -262,7 +262,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
     apiService
       .getAll()
       .then(setCareers)
-      .catch((e) => setErr(e.message));
+      .catch((e) => setErr(e instanceof Error ? e.message : 'Error cargando las carreras'));
   }, []);
 
   useEffect(() => {
@@ -273,7 +273,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
     apiService
       .getGraph(id)
       .then((g) => setGraph(g))
-      .catch((e) => setErr(e.message));
+      .catch((e) => setErr(e instanceof Error ? e.message : 'Error cargando el plan'));
   }, [id, setSelectedCareerId]);
 
   useEffect(() => {

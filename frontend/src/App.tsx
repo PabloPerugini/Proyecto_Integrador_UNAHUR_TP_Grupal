@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { ThemeProvider } from './context/ThemeContext'
 import { CareerSelectionProvider } from './context/CareerContext'
 import PageLoader from './components/PageLoader'
+import ErrorBoundary from './components/ErrorBoundary'
 import UserLayout from './layouts/UserLayout'
 import AdminLayout from './layouts/AdminLayout'
 import SplashScreen from './components/SplashScreen'
@@ -56,19 +57,21 @@ export default function App() {
       <Favicon />
       <CareerSelectionProvider>
         <BrowserRouter>
-          <Routes>
-            <Route element={<UserLayout />}>
-              <Route path="/" element={<Home />} />
-              <Route path="/progreso" element={<PageSuspense><MyProgress /></PageSuspense>} />
-              <Route path="/grafo/:id?" element={<PageSuspense><PlanGraph /></PageSuspense>} />
-              <Route path="/tablero/:id?" element={<PageSuspense><PlanBoard /></PageSuspense>} />
-              <Route path="*" element={<PageSuspense><Error404 /></PageSuspense>} />
-            </Route>
-            <Route element={<AdminLayout />}>
-              <Route path="/cargar" element={<PageSuspense><UploadPlan /></PageSuspense>} />
-              <Route path="/admin/:id?" element={<PageSuspense><PlanAdmin /></PageSuspense>} />
-            </Route>
-          </Routes>
+          <ErrorBoundary>
+            <Routes>
+              <Route element={<UserLayout />}>
+                <Route path="/" element={<Home />} />
+                <Route path="/progreso" element={<PageSuspense><MyProgress /></PageSuspense>} />
+                <Route path="/grafo/:id?" element={<PageSuspense><PlanGraph /></PageSuspense>} />
+                <Route path="/tablero/:id?" element={<PageSuspense><PlanBoard /></PageSuspense>} />
+                <Route path="*" element={<PageSuspense><Error404 /></PageSuspense>} />
+              </Route>
+              <Route element={<AdminLayout />}>
+                <Route path="/cargar" element={<PageSuspense><UploadPlan /></PageSuspense>} />
+                <Route path="/admin/:id?" element={<PageSuspense><PlanAdmin /></PageSuspense>} />
+              </Route>
+            </Routes>
+          </ErrorBoundary>
         </BrowserRouter>
       </CareerSelectionProvider>
     </ThemeProvider>

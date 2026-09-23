@@ -15,8 +15,25 @@ function deviceHeaders(): Record<string, string> {
   return { 'x-user-id': getDeviceId() };
 }
 
+async function fetchJson(url: string, init: RequestInit): Promise<Response> {
+  try {
+    return await fetch(url, init);
+  } catch {
+    throw new Error('No se pudo conectar con el servidor. Revisá que el backend esté corriendo.');
+  }
+}
+
+async function errorMessage(response: Response, fallback: string): Promise<string> {
+  try {
+    const data = await response.json();
+    return data.error || data.message || fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 export async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
-  const response = await fetch(`${API_URL}${url}`, {
+  const response = await fetchJson(`${API_URL}${url}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -25,8 +42,7 @@ export async function request<T>(url: string, options: RequestInit = {}): Promis
     },
   });
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || errorData.message || 'Error en la solicitud');
+    throw new Error(await errorMessage(response, 'Error en la solicitud'));
   }
   return response.json();
 }
@@ -34,14 +50,13 @@ export async function request<T>(url: string, options: RequestInit = {}): Promis
 export async function uploadPdf<T>(url: string, file: File): Promise<T> {
   const form = new FormData();
   form.append('file', file);
-  const response = await fetch(`${API_URL}${url}`, {
+  const response = await fetchJson(`${API_URL}${url}`, {
     method: 'POST',
     headers: deviceHeaders(),
     body: form,
   });
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || errorData.message || 'Error al procesar el PDF');
+    throw new Error(await errorMessage(response, 'Error al procesar el PDF'));
   }
   return response.json();
 }

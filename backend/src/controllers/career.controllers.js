@@ -4,8 +4,9 @@ const { parseOfficialPlan, parseCorrelativas: parseCorrelativasPdf } = require("
 const { buildGraph } = require("../services/graph.service");
 const UserProgress = require("../models/userprogress");
 const { deriveCareerColor } = require("../utils/careerColor");
+const AppError = require("../utils/AppError");
 
-const createCareer = async (req, res) => {
+const createCareer = async (req, res, next) => {
   try {
     const {
       name,
@@ -43,11 +44,11 @@ const createCareer = async (req, res) => {
     });
     res.status(201).json(career);
   } catch (error) {
-    res.status(400).json({ message: "Error al crear la carrera", error: error.message });
+    next(error);
   }
 };
 
-const getAllCareers = async (req, res) => {
+const getAllCareers = async (req, res, next) => {
   try {
     const filter = {};
     if (req.query.status) filter.status = req.query.status;
@@ -60,29 +61,40 @@ const getAllCareers = async (req, res) => {
     );
     res.status(200).json(withCount);
   } catch (error) {
-    res.status(500).json({ message: "Error al obtener las carreras", error: error.message });
+    next(error);
   }
 };
 
-const getCareerSubjects = async (req, res) => {
+const getCareerSubjects = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const career = await Career.findById(id);
+    if (!career) return res.status(404).json({ message: "Carrera no encontrada" });
     const subjects = await Subject.find({ careerId: id })
       .sort({ year: 1, cuatrimestre: 1, name: 1 })
       .select("-__v");
     res.status(200).json(subjects);
   } catch (error) {
-    res.status(500).json({ message: "Error al obtener las materias", error: error.message });
+    next(error);
   }
 };
 
 // POST /careers/:id/parse-official (multipart, campo "file")
-const parseOfficial = async (req, res) => {
+const parseOfficial = async (req, res, next) => {
   try {
     if (!req.file) {
       return res.status(400).json({ message: "Enviá el PDF en el campo 'file'" });
     }
-    const parsed = await parseOfficialPlan(req.file.buffer);
+    let parsed;
+    try {
+      parsed = await parseOfficialPlan(req.file.buffer);
+    } catch (error) {
+      throw new AppError(
+        400,
+        "No se pudo leer el PDF. Asegurate de que sea un PDF con texto (no escaneado).",
+        error.message,
+      );
+    }
     res.status(200).json({
       sourceKind: parsed.sourceKind,
       subjects: parsed.subjects,
@@ -92,7 +104,7 @@ const parseOfficial = async (req, res) => {
       creditsIntermediate: parsed.creditsIntermediate || 0,
     });
   } catch (error) {
-    res.status(500).json({ message: "Error al parsear el PDF", error: error.message });
+    next(error);
   }
 };
 
@@ -185,7 +197,7 @@ function bestDbMatch(parsedName, dbSubjects) {
 }
 
 // POST /careers/:id/parse-correlativas (multipart, campo "file")
-const parseCorrelativas = async (req, res) => {
+const parseCorrelativas = async (req, res, next) => {
   try {
     if (!req.file) {
       return res.status(400).json({ message: "Enviá el PDF en el campo 'file'" });
@@ -195,7 +207,16 @@ const parseCorrelativas = async (req, res) => {
     if (!career) return res.status(404).json({ message: "Carrera no encontrada" });
 
     const dbSubjects = await Subject.find({ careerId: id }).select("-__v");
-    const parsed = await parseCorrelativasPdf(req.file.buffer);
+    let parsed;
+    try {
+      parsed = await parseCorrelativasPdf(req.file.buffer);
+    } catch (error) {
+      throw new AppError(
+        400,
+        "No se pudo leer el PDF de correlatividades. Asegurate de que sea un PDF con texto (no escaneado).",
+        error.message,
+      );
+    }
 
     const rows = parsed.subjects.map((s) => {
       const r = bestDbMatch(s.name, dbSubjects);
@@ -234,12 +255,12 @@ const parseCorrelativas = async (req, res) => {
       unresolved: rows.filter((r) => !r.matched),
     });
   } catch (error) {
-    res.status(500).json({ message: "Error al parsear las correlativas", error: error.message });
+    next(error);
   }
 };
 
 // POST /careers/:id/correlativas (JSON) — actualiza SOLO el campo requires
-const saveCorrelativas = async (req, res) => {
+const saveCorrelativas = async (req, res, next) => {
   try {
     const { id } = req.params;
     const career = await Career.findById(id);
@@ -272,12 +293,12 @@ const saveCorrelativas = async (req, res) => {
       total: await Subject.countDocuments({ careerId: career._id }),
     });
   } catch (error) {
-    res.status(500).json({ message: "Error al guardar las correlativas", error: error.message });
+    next(error);
   }
 };
 
 // POST /careers/:id/subjects (JSON) — guardado/merge por nombre
-const saveSubjects = async (req, res) => {
+const saveSubjects = async (req, res, next) => {
   try {
     const { id } = req.params;
     const career = await Career.findById(id);
@@ -374,12 +395,12 @@ const saveSubjects = async (req, res) => {
       total: career.subjectCount,
     });
   } catch (error) {
-    res.status(500).json({ message: "Error al guardar las materias", error: error.message });
+    next(error);
   }
 };
 
 // PATCH /careers/:id — actualiza datos de la carrera (nombre, instituto, color, etc.)
-const updateCareer = async (req, res) => {
+const updateCareer = async (req, res, next) => {
   try {
     const { id } = req.params;
     const {
@@ -412,12 +433,12 @@ const updateCareer = async (req, res) => {
     await career.save();
     res.status(200).json(career);
   } catch (error) {
-    res.status(400).json({ message: "Error al actualizar la carrera", error: error.message });
+    next(error);
   }
 };
 
 // DELETE /careers/:id — borra la carrera y todo lo asociado (materias, avance)
-const deleteCareer = async (req, res) => {
+const deleteCareer = async (req, res, next) => {
   try {
     const { id } = req.params;
     const career = await Career.findById(id);
@@ -431,11 +452,11 @@ const deleteCareer = async (req, res) => {
 
     res.status(200).json({ deleted: career.name, deletedId: career._id });
   } catch (error) {
-    res.status(500).json({ message: "Error al eliminar la carrera", error: error.message });
+    next(error);
   }
 };
 
-const publishCareer = async (req, res) => {
+const publishCareer = async (req, res, next) => {
   try {
     const { id } = req.params;
     const career = await Career.findByIdAndUpdate(
@@ -446,12 +467,12 @@ const publishCareer = async (req, res) => {
     if (!career) return res.status(404).json({ message: "Carrera no encontrada" });
     res.status(200).json(career);
   } catch (error) {
-    res.status(500).json({ message: "Error al publicar la carrera", error: error.message });
+    next(error);
   }
 };
 
 // GET /careers/:id/graph?userId=...
-const getGraph = async (req, res) => {
+const getGraph = async (req, res, next) => {
   try {
     const { id } = req.params;
     const career = await Career.findById(id);
@@ -512,7 +533,7 @@ const getGraph = async (req, res) => {
       intermediate,
     });
   } catch (error) {
-    res.status(500).json({ message: "Error al generar el grafo", error: error.message });
+    next(error);
   }
 };
 
