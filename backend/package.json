@@ -12,6 +12,11 @@
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+<<<<<<< HEAD
+=======
+    "joi": "^18.2.8",
+    "jsonwebtoken": "^9.0.3",
+>>>>>>> 01be390 (Se agrego toda la parte de user con su autenticacion en JWT)
     "mongoose": "^9.9.5",
     "multer": "^2.3.0",
     "pdfjs-dist": "^6.3.289",
