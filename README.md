@@ -44,6 +44,7 @@ cp backend/.env.Ejemplo backend/.env
 
 # Levantar todos los servicios con Docker
 docker compose up --build
+```
 
 - API: `http://localhost:3000`
 - Documentación Swagger: `http://localhost:3000/api-docs`
