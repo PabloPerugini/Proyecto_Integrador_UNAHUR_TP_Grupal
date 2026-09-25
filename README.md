@@ -30,18 +30,20 @@ Cada carpeta tiene su propio `README.md` con instrucciones de instalación y eje
 
 ## Arranque rápido
 
-```bash
-# Backend (puerto 3000)
-cd backend
-npm install
-cp .env.Ejemplo .env
-npm run dev
 
-# Frontend (puerto 5173)
-cd frontend
-npm install
-npm run dev
-```
+
+**Importante:** Docker debe estar abierto y ejecutándose antes de levantar el proyecto
+
+### Iniciar el proyecto
+
+Desde la carpeta raíz del proyecto:
+
+```bash
+# Crear el archivo de variables de entorno del backend
+cp backend/.env.Ejemplo backend/.env
+
+# Levantar todos los servicios con Docker
+docker compose up --build
 
 - API: `http://localhost:3000`
 - Documentación Swagger: `http://localhost:3000/api-docs`
