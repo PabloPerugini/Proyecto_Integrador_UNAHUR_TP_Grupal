@@ -26,7 +26,15 @@ async function fetchJson(url: string, init: RequestInit): Promise<Response> {
 async function errorMessage(response: Response, fallback: string): Promise<string> {
   try {
     const data = await response.json();
-    return data.error || data.message || fallback;
+    // Envelope nuevo { success:false, error:{ message } } con fallback
+    // a los formatos legados { message } y { error: string }.
+    if (data && typeof data === 'object') {
+      if (typeof data.error === 'object' && data.error !== null && data.error.message) {
+        return String(data.error.message);
+      }
+      return data.error || data.message || fallback;
+    }
+    return fallback;
   } catch {
     return fallback;
   }

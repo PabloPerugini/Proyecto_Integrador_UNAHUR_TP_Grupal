@@ -4,26 +4,21 @@ import type { DragEvent, ChangeEvent } from 'react';
 interface PdfDropzoneProps {
   onFiles: (files: File[]) => void;
   disabled?: boolean;
-  accept?: string;
   text?: string;
   hint?: string;
   multiple?: boolean;
 }
 
-export default function PdfDropzone({ onFiles, disabled, accept = 'application/pdf', text, hint, multiple = false }: PdfDropzoneProps) {
+// Solo PDF (el backend rechaza el resto con firma %PDF-): sin rama de imágenes.
+export default function PdfDropzone({ onFiles, disabled, text, hint, multiple = false }: PdfDropzoneProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [drag, setDrag] = useState(false);
 
   const acceptFiles = (list: FileList | null) => {
     if (!list) return;
-    const norm = accept.toLowerCase();
-    const wantsPdf = norm.includes('pdf');
-    const wantsImage = norm.includes('image');
     const files = Array.from(list).filter((f) => {
       const n = f.name.toLowerCase();
-      if (wantsPdf && (f.type === 'application/pdf' || n.endsWith('.pdf'))) return true;
-      if (wantsImage && (f.type.startsWith('image/') || /\.(png|jpe?g|webp)$/.test(n))) return true;
-      return false;
+      return f.type === 'application/pdf' || n.endsWith('.pdf');
     });
     if (files.length) onFiles(files);
   };
@@ -56,7 +51,7 @@ export default function PdfDropzone({ onFiles, disabled, accept = 'application/p
       <input
         ref={inputRef}
         type="file"
-        accept={accept}
+        accept="application/pdf,.pdf"
         multiple={multiple}
         hidden
         onChange={handleChange}

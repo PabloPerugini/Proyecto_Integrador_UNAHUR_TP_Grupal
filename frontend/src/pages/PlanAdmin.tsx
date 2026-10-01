@@ -2,11 +2,12 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { Badge, Button, Card, Col, Form, Row, Spinner, Table } from 'react-bootstrap';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { apiService } from '../api';
-import type { Career, ParsedSubject, ParseCorrelativasResponse, Subject } from '../types';
+import type { ParsedSubject, ParseCorrelativasResponse, Subject } from '../types';
 import { getCareerColor } from '../utils/careerColor';
 import { toSubjectPayload } from '../utils/subjectMappers';
 import { groupSubjectsByYear, sortSubjects, yearLabel } from '../utils/subjects';
 import { useCareers } from '../hooks/useCareers';
+import { useAdminActions } from '../hooks/useAdminActions';
 import { useFlashMessage } from '../hooks/useFlashMessage';
 import PdfDropzone from '../components/PdfDropzone';
 import MessageBanner from '../components/MessageBanner';
@@ -16,17 +17,20 @@ import ModalConfirm from '../components/ModalConfirm';
 import ColorDot from '../components/ColorDot';
 import { IconUpload, IconUsers } from '../components/icons';
 
-const CONFIRM_DELETE = (name: string) =>
-  `¿Eliminar el plan "${name}"? Se borrarán también todas sus materias y el avance de los usuarios. Esta acción no se puede deshacer.`;
-
 export default function PlanAdmin() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { careers, reload } = useCareers();
   const { msg, flash, flashFromError, clear } = useFlashMessage();
   const [selectedId, setSelectedId] = useState<string | null>(id ?? null);
-  const [candidate, setCandidate] = useState<Career | null>(null);
-  const [deleting, setDeleting] = useState(false);
+  const { candidate, setCandidate, deleting, publish, confirmRemove, CONFIRM_DELETE } = useAdminActions({
+    reload,
+    flash,
+    flashFromError,
+    isSelected: (cid) => selectedId === cid,
+    clearSelection: () => setSelectedId(null),
+    afterDelete: () => navigate('/admin'),
+  });
 
   const [personalParsed, setPersonalParsed] = useState<ParsedSubject[] | null>(null);
   const [personalIntermediateTitle, setPersonalIntermediateTitle] = useState<string | null>(null);
@@ -117,16 +121,6 @@ export default function PlanAdmin() {
     }
   };
 
-  const publish = async (id: string) => {
-    try {
-      await apiService.publish(id);
-      flash('success', 'Carrera publicada');
-      await reload();
-    } catch (err) {
-      flashFromError(err, 'Error publicando la carrera');
-    }
-  };
-
   const renameCareer = async () => {
     if (!selectedId) return;
     const newName = nameDraft.trim();
@@ -143,25 +137,6 @@ export default function PlanAdmin() {
     }
   };
 
-  const confirmRemove = async () => {
-    if (!candidate) return;
-    setDeleting(true);
-    try {
-      await apiService.deleteCareer(candidate._id);
-      if (selectedId === candidate._id) {
-        setSelectedId(null);
-        navigate('/admin');
-      }
-      flash('success', `Plan "${candidate.name}" eliminado`);
-      setCandidate(null);
-      await reload();
-    } catch (err) {
-      flashFromError(err, 'Error eliminando el plan');
-    } finally {
-      setDeleting(false);
-    }
-  };
-
   const onCorrelativas = async (file: File) => {
     if (!selectedId) return;
     setCorrLoading(true);
@@ -169,9 +144,13 @@ export default function PlanAdmin() {
     try {
       const r = await apiService.parseCorrelativas(selectedId, file);
       setCorrParsed(r);
+      const aiMsg =
+        r.aiFallback && (r.aiSuggested?.length ?? 0) > 0
+          ? ` La IA (${r.aiProvider ?? 'IA'}) propone ${r.aiSuggested!.length} mapeos para revisar antes de guardar.`
+          : '';
       flash(
         r.partial && r.matchedCount > 0 ? 'warning' : r.partial ? 'danger' : 'success',
-        `${r.total} materias leídas del PDF · ${r.matchedCount} reconocidas en la carrera.`,
+        `${r.total} materias leídas del PDF · ${r.matchedCount} reconocidas en la carrera.${aiMsg}`,
       );
     } catch (err) {
       flashFromError(err, 'Error leyendo las correlatividades');
@@ -180,19 +159,22 @@ export default function PlanAdmin() {
     }
   };
 
-  const saveCorrelativas = async () => {
+  const doSaveCorrelativas = async (
+    payload: { code: string; name: string; requires: string[] }[],
+    emptyMsg: string,
+  ) => {
     if (!selectedId || !corrParsed) return;
-    const payload = corrParsed.subjects
-      .filter((s) => s.matched && s.dbCode)
-      .map((s) => ({ code: s.dbCode!, name: s.dbName || s.name, requires: s.requires }));
     if (!payload.length) {
-      flash('warning', 'No hay materias con coincidencia para guardar.');
+      flash('warning', emptyMsg);
       return;
     }
     setCorrSaving(true);
     try {
       const r = await apiService.saveCorrelativas(selectedId, payload);
-      flash('success', `Correlatividades guardadas en ${r.saved} materias (${r.total} en total).`);
+      const droppedMsg = r.dropped?.length
+        ? ` Se descartaron ${r.dropped.length} correlativas inválidas (códigos inexistentes o ciclos).`
+        : '';
+      flash('success', `Correlatividades guardadas en ${r.saved} materias (${r.total} en total).${droppedMsg}`);
       setCorrParsed(null);
       await reloadSubjects(selectedId);
     } catch (err) {
@@ -200,6 +182,29 @@ export default function PlanAdmin() {
     } finally {
       setCorrSaving(false);
     }
+  };
+
+  const saveCorrelativas = async () => {
+    if (!corrParsed) return;
+    await doSaveCorrelativas(
+      corrParsed.subjects
+        .filter((s) => s.matched && s.dbCode)
+        .map((s) => ({ code: s.dbCode!, name: s.dbName || s.name, requires: s.requires })),
+      'No hay materias con coincidencia para guardar.',
+    );
+  };
+
+  // Sugerencias de IA: acción explícita de revisión (nunca se guardan solas).
+  const saveAiSuggested = async () => {
+    if (!corrParsed?.aiSuggested?.length) return;
+    await doSaveCorrelativas(
+      corrParsed.aiSuggested.map((s) => ({
+        code: s.code,
+        name: nameByCode.get(s.code) || s.code,
+        requires: s.requires,
+      })),
+      'No hay sugerencias de IA para guardar.',
+    );
   };
 
   const selected = careers.find((c) => c._id === selectedId) || null;
@@ -427,6 +432,30 @@ export default function PlanAdmin() {
                             {corrSaving && <Spinner size="sm" className="me-1" />}
                             Guardar correlatividades ({corrParsed.matchedCount})
                           </Button>
+                          {(corrParsed.aiSuggested?.length ?? 0) > 0 && (
+                            <Button
+                              size="sm"
+                              variant="outline-warning"
+                              disabled={corrSaving}
+                              onClick={saveAiSuggested}
+                              title="Solo incluye coincidencias exactas resueltas contra la base. Las difusas quedan abajo para revisión."
+                            >
+                              {corrSaving && <Spinner size="sm" className="me-1" />}
+                              Aplicar sugerencias de IA ({corrParsed.aiSuggested!.length})
+                            </Button>
+                          )}
+                          {(corrParsed.aiReview?.length ?? 0) > 0 && (
+                            <span className="small text-muted ms-auto" style={{ maxWidth: 340 }}>
+                              {corrParsed.aiReview!.length} para revisión (coincidencia aproximada):{' '}
+                              {corrParsed.aiReview!.slice(0, 4).map((r) => (
+                                <span key={r.code ?? r.subject} title={r.evidence ?? r.subject}>
+                                  {r.subject}
+                                  {'; '}
+                                </span>
+                              ))}
+                              {(corrParsed.aiReview!.length > 4) && '…'}
+                            </span>
+                          )}
                           <Button
                             size="sm"
                             variant="outline-secondary"

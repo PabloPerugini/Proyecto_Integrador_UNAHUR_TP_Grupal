@@ -47,15 +47,34 @@ function buildGraph({ subjects, progress = [], title = "" }) {
     if (st === "Aprobada") approved.add(code);
   }
 
+  // RN04: la aprobación EFECTIVA exige sustento transitivo — una materia
+  // aprobada cuyo requisito no está efectivamente aprobado pierde sustento
+  // (p. ej. al desmarcar un requisito). No se toca el estado guardado, solo
+  // el cómputo de disponibilidad/camino crítico. Punto fijo sobre cadenas.
+  const grounded = new Set();
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const code of approved) {
+      if (grounded.has(code)) continue;
+      const subj = byCode.get(code);
+      const reqs = (subj?.requires || []).filter((req) => byCode.has(req));
+      if (reqs.every((req) => grounded.has(req))) {
+        grounded.add(code);
+        changed = true;
+      }
+    }
+  }
+
   const availableNow = nodes
-    .filter((n) => !approved.has(n.id))
+    .filter((n) => !grounded.has(n.id))
     .filter((n) => {
       const subj = byCode.get(n.id);
-      return (subj.requires || []).every((req) => approved.has(req) || !byCode.has(req));
+      return (subj.requires || []).every((req) => grounded.has(req) || !byCode.has(req));
     })
     .map((n) => n.id);
 
-  const { criticalPath, hasCycle, topologicalOrder } = longestPendingPath(nodes, edges, approved);
+  const { criticalPath, hasCycle, topologicalOrder } = longestPendingPath(nodes, edges, grounded);
 
   const stats = {
     total: nodes.length,

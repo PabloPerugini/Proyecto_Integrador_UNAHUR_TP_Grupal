@@ -2,16 +2,16 @@ import { useState } from 'react';
 import { Button, Card } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
 import { apiService } from '../api';
-import type { Career } from '../types';
-import { deriveCareerColor } from '../utils/careerColor';
 import { careerNameFromFilename, instituteFromCareer } from '../utils/careerName';
 import { toSubjectPayload } from '../utils/subjectMappers';
 import { useCareers } from '../hooks/useCareers';
+import { useAdminActions } from '../hooks/useAdminActions';
 import { useFlashMessage } from '../hooks/useFlashMessage';
 import PdfDropzone from '../components/PdfDropzone';
 import MessageBanner from '../components/MessageBanner';
 import PageHeader from '../components/PageHeader';
 import ImportJobList from '../components/ImportJobList';
+import { makeJobId } from '../utils/importJobs';
 import CareersTable from '../components/CareersTable';
 import ModalConfirm from '../components/ModalConfirm';
 import type { ImportJob } from '../components/ImportJobList';
@@ -22,28 +22,31 @@ const JOB_STATUS_LABEL: Record<'creando' | 'parseando' | 'guardando', string> = 
   guardando: 'Guardando materias…',
 };
 
-const CONFIRM_DELETE = (name: string) =>
-  `¿Eliminar el plan "${name}"? Se borrarán también todas sus materias y el avance de los usuarios. Esta acción no se puede deshacer.`;
-
 export default function UploadPlan() {
   const { careers, reload } = useCareers();
   const { msg, flash, flashFromError, clear } = useFlashMessage();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [jobs, setJobs] = useState<ImportJob[]>([]);
-  const [candidate, setCandidate] = useState<Career | null>(null);
-  const [deleting, setDeleting] = useState(false);
+  const { candidate, setCandidate, deleting, publish, confirmRemove, CONFIRM_DELETE } = useAdminActions({
+    reload,
+    flash,
+    flashFromError,
+    isSelected: (id) => selectedId === id,
+    clearSelection: () => setSelectedId(null),
+  });
   const navigate = useNavigate();
 
   const importOfficial = async (file: File) => {
-    const id = `${file.name}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const id = makeJobId(file.name);
     setJobs((j) => [...j, { id, file: file.name, status: 'creando' }]);
     try {
       const name = careerNameFromFilename(file.name);
       const institute = instituteFromCareer(name);
+      // Sin color: el backend es la única fuente (deriveCareerColor) y lo
+      // persiste al crear; el front solo lee career.color (Fase 5 §11.1).
       const career = await apiService.create({
         name,
         institute,
-        color: deriveCareerColor(institute, name),
         durationYears: 5,
       });
       const reused = career.reused === true;
@@ -82,10 +85,12 @@ export default function UploadPlan() {
       );
       setSelectedId(career._id);
       flash(
-        reused ? 'warning' : parsed.detectedCount ? 'success' : 'info',
+        reused ? 'warning' : parsed.aiFallback ? 'warning' : parsed.detectedCount ? 'success' : 'info',
         reused
           ? `"${career.name}" ya existía: se reimportó el PDF y se actualizaron sus materias (${parsed.detectedCount}).`
-          : `"${career.name}" generada automáticamente con ${parsed.detectedCount} materias.`,
+          : parsed.aiFallback
+            ? `"${career.name}" generada con ayuda de IA (${parsed.aiProvider ?? 'IA'}): revisá las materias antes de publicar (${parsed.detectedCount}).`
+            : `"${career.name}" generada automáticamente con ${parsed.detectedCount} materias.`,
       );
       await reload();
     } catch (err) {
@@ -96,32 +101,6 @@ export default function UploadPlan() {
 
   const onFiles = (files: File[]) => {
     files.forEach((f) => void importOfficial(f));
-  };
-
-  const publish = async (id: string) => {
-    try {
-      await apiService.publish(id);
-      flash('success', 'Carrera publicada');
-      await reload();
-    } catch (err) {
-      flashFromError(err, 'Error publicando la carrera');
-    }
-  };
-
-  const confirmRemove = async () => {
-    if (!candidate) return;
-    setDeleting(true);
-    try {
-      await apiService.deleteCareer(candidate._id);
-      if (selectedId === candidate._id) setSelectedId(null);
-      flash('success', `Plan "${candidate.name}" eliminado`);
-      setCandidate(null);
-      await reload();
-    } catch (err) {
-      flashFromError(err, 'Error eliminando el plan');
-    } finally {
-      setDeleting(false);
-    }
   };
 
   const renderReady = (j: ImportJob) => (

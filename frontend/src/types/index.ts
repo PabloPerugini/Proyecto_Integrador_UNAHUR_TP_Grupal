@@ -146,6 +146,21 @@ export interface CorrelativasRow {
   requires: string[];
 }
 
+export interface CorrelativasAiSuggestion {
+  code: string;
+  requires: string[];
+  confidence: 'exact' | 'compact';
+  evidence?: string | null;
+}
+
+export interface CorrelativasAiReview {
+  code: string | null;
+  subject: string;
+  subjectConfidence: 'exact' | 'compact' | 'fuzzy' | 'prefix' | null;
+  requires: { code: string; name: string; confidence: 'exact' | 'compact' | 'fuzzy' | 'prefix' | null }[];
+  evidence?: string | null;
+}
+
 export interface ParseCorrelativasResponse {
   sourceKind: string;
   total: number;
@@ -154,4 +169,25 @@ export interface ParseCorrelativasResponse {
   partial: boolean;
   subjects: CorrelativasRow[];
   unresolved: CorrelativasRow[];
+  aiSuggested?: CorrelativasAiSuggestion[];
+  aiReview?: CorrelativasAiReview[];
+  aiUnresolved?: string[];
+  aiFallback?: boolean;
+  aiProvider?: string | null;
+  aiCoverage?: { extraidos: number; total: number } | null;
+}
+
+export interface SugerenciaMensaje {
+  regla: string;
+  texto: string;
+}
+
+export interface Sugerencias {
+  materiasA: { C1: string[]; C2: string[]; C3: string[]; C5?: string[] };
+  materiasB: { regla: string; count: number }[];
+  disponibles: { code: string; name: string; critica: boolean }[];
+  finalesPendientes: { code: string; name: string }[];
+  comunesDisponibles: { code: string; name: string }[];
+  ritmo: { ultimos12Meses: number; regularizadas: number; sugeridas: number };
+  mensajes: SugerenciaMensaje[];
 }

@@ -127,7 +127,7 @@ function cleanName(parts) {
 //    cada columna según las etiquetas del encabezado (HIS/HIT/IPP/HTAT/CRE…).
 // ---------------------------------------------------------------------------
 
-const TAB_DURATION_RE = /^(C|A|Cuatrimestral|Anual)$/i;
+const TAB_DURATION_RE = /^(C|A|Cuatr\.?|Cuatrimestral|Anual)$/i;
 // Periodicidad que en algunas tablas aparece en la columna de duración pero NO
 // es duración de la materia (p. ej. "Mensual"/"Semestral" en Prácticas). Se usa
 // sólo para excluir la palabra del nombre, no para detectar anclas.
@@ -172,6 +172,35 @@ const TAB_LABEL_KEY = (t) =>
 
 const TAB_YEAR_COL_RE = /^A[ÑN]O$/i;
 const TAB_CODE_COL_RE = /^(COD|C[ÓO]DIGO|NRO|N[°º]?[.]?$|N[ÚU]MERO)$/i;
+
+// Dialecto "Asignatura|Campo|Carga" (p. ej. Tec. en Producción Agroecológica):
+// filas "N° Nombre CAMPO cargasemanal cargatotal correlatividad", sin columna
+// D ni duración. Se detecta por encabezado a nivel página.
+function isAgroPage(rows) {
+  let hasAsig = false;
+  let hasCampo = false;
+  let hasCarga = false;
+  for (const row of rows) {
+    for (const it of row.items) {
+      const t = it.t.trim().toUpperCase();
+      if (t === "ASIGNATURA") hasAsig = true;
+      else if (t === "CAMPO") hasCampo = true;
+      else if (t === "CARGA" || t === "HORARIA") hasCarga = true;
+    }
+    if (hasAsig && hasCampo && hasCarga) return true;
+  }
+  return false;
+}
+
+function isDialectDataRow(row) {
+  const first = row.items[0];
+  if (!first || !/^\d{1,3}$/.test(first.t) || first.x >= 200) return false;
+  if (!row.items.some((it) => TAB_AREA_RE.test(it.t))) return false;
+  const joined = row.items.map((i) => i.t).join(" ").trim();
+  if (TAB_TOTAL_RE.test(joined) || TAB_ACA_RE.test(joined)) return false;
+  if (isPeriodMarkerRow(row)) return false;
+  return true;
+}
 
 const TAB_HEADER_ROW_RE =
   /^(UNIDAD CURRICULAR|ASIGNATURA|C[ÓO]DIGO|NRO|N[°º]?|N[ÚU]MERO|A[ÑN]O|CANTIDAD DE|CAMP|HORAS DE|CR[EÉ]DITOS|REQUISIT|R[ÉE]GIMEN|CORRELATIV|CARRERA|PROFESORADO|PLAN|VERSI[ÓO]N|PROPUESTA|D[=:;]\s|T[ÍI]TULO)/i;
@@ -395,7 +424,7 @@ function officialNameTokens(row) {
 }
 
 function normalizeDurationToken(t) {
-  return /^(C|Cuatrimestral)$/i.test(t) ? "C" : "A";
+  return /^(C|Cuatr\.?|Cuatrimestral)$/i.test(t) ? "C" : "A";
 }
 
 function medianGap(ys) {
@@ -436,6 +465,17 @@ async function parseOfficialPlan(data) {
     }
   };
 
+  // Subtotales de cierre ("TOTAL PRIMER AÑO"): las materias de esa sección ya
+  // se empujaron sin año porque el marcador viene al final. Se les asigna el
+  // año del cierre. Solo Materia no optativa (la ACA y optativas quedan null).
+  const fillRetroactiveYear = (year) => {
+    for (const s of subjects) {
+      if (s.year == null && s.kind === "Materia" && !s.optional) {
+        s.year = year;
+      }
+    }
+  };
+
   const applyMarkerRow = (row) => {
     const joined = rowText(row);
     if (!joined) return false;
@@ -447,6 +487,7 @@ async function parseOfficialPlan(data) {
         fillRetroactiveCuat(peri.cuatrimestre);
         state.cuatrimestre = peri.cuatrimestre + 1;
       } else if (peri) {
+        fillRetroactiveYear(peri.year);
         state.year = peri.year;
         state.cuatrimestre = null;
       }
@@ -473,7 +514,20 @@ async function parseOfficialPlan(data) {
 
     let facts;
     let credits;
-    if (meta) {
+    if (anchor.dialectAgro) {
+      // Dialecto Asignatura|Campo|Carga: [carga semanal → his, carga total → ht],
+      // sin créditos ni duración en la tabla.
+      const vs = nums.map((n) => n.v);
+      facts = {
+        his: vs[0] ?? 0,
+        hit: 0,
+        hite: 0,
+        hip: 0,
+        htat: 0,
+        ht: vs[1] ?? 0,
+      };
+      credits = 0;
+    } else if (meta) {
       const byC = {};
       let tf = null;
       for (const n of nums) {
@@ -590,9 +644,17 @@ async function parseOfficialPlan(data) {
       }
     }
     const durCandidates = rows.filter((r) => r.items.some(isDurToken)).length;
+    // Dialecto Asignatura|Campo|Carga: solo cuando el modo genérico no tiene de
+    // dónde agarrarse (sin columna código ni duración: Agrario tiene "Código"
+    // y Mant. Hospitalario "Cuatr.", esos siguen por vía genérica). Las páginas
+    // de continuación sin header se detectan por filas de datos.
+    const agroPage =
+      (isAgroPage(rows) || rows.filter(isDialectDataRow).length >= 2) &&
+      !(meta && meta.codeX != null) &&
+      durCandidates < 2;
     if (
       numeric300 < 3 ||
-      (durCandidates < 2 && !(meta && meta.codeX != null))
+      (durCandidates < 2 && !(meta && meta.codeX != null) && !agroPage)
     ) {
       carry = null;
       continue;
@@ -694,6 +756,27 @@ async function parseOfficialPlan(data) {
     }
 
     const anchors = [];
+    if (agroPage) {
+      // Solo anclas dialectales (número inicial + token de Campo): las filas
+      // de prosa de estas páginas nunca generan anclas.
+      for (const row of rows) {
+        if (!isDialectDataRow(row)) continue;
+        anchors.push({
+          y: row.y,
+          duration: null,
+          num: parseInt(row.items[0].t, 10),
+          yearCol: null,
+          nameParts: [],
+          nums: [],
+          ownNums300: row.items.filter(
+            (it) => isNumber(it.t) && it.x >= 250 && it !== row.items[0],
+          ).length,
+          dialectAgro: true,
+          group: null,
+          merged: false,
+        });
+      }
+    } else
     for (const row of rows) {
       const joined = rowText(row);
       if (TAB_TOTAL_RE.test(joined) || TAB_ACA_RE.test(joined)) continue;
@@ -836,9 +919,9 @@ async function parseOfficialPlan(data) {
       const sameCell = strong
         ? gap <= 20
         : gap <= 13 && a.ownNums300 >= 1 && !topHasData;
-      if (process.env.PARSE_DEBUG && page.num === 17) {
+      if (process.env.PARSE_DEBUG && page.num === Number(process.env.PARSE_PAGE || 17)) {
         console.log(
-          `[p17][merge?] cur=${a.y} top=${top.y} gap=${gap} strong=${strong} ownN=${a.ownNums300}`,
+          `[pmerge][merge?] pag=${page.num} cur=${a.y} top=${top.y} gap=${gap} strong=${strong} ownN=${a.ownNums300}`,
         );
       }
       if (sameCell) {
@@ -914,10 +997,13 @@ async function parseOfficialPlan(data) {
       if (!selfRow && Math.abs(row.y - best.y) > W) continue;
 
       if (officialNumberRowUsable(row)) {
+        // Dialecto agro: la carga semanal vive en x>=250 (la banda de 300 la
+        // perdería) y el número de orden (x<200) no es dato. El resto de los
+        // planes mantiene el umbral original.
+        const numX = best.dialectAgro ? 250 : 300;
         for (const it of row.items) {
-          if (isNumber(it.t) && it.x >= 300) {
-            best.nums.push({ x: it.x, v: numVal(it.t), y: row.y });
-          }
+          if (!isNumber(it.t) || it.x < numX) continue;
+          best.nums.push({ x: it.x, v: numVal(it.t), y: row.y });
         }
       }
       const durTok = row.items.find(isDurToken);
@@ -1211,10 +1297,10 @@ const PERIOD_ORD = {
 };
 
 const CORREL_NOISE_RE =
-  /^(ANEXO|PLAN NUEVO|SISTEMA DE CORRELATIVIDADES|UNIDAD CURRICULAR|CORRELATIVA\/?S?|CORRELATIVIDADES\b|ACTIVIDADES CURRICULARES ACREDITABLES|EDUCACI[OÓ]N F[IÍ]SICA|LICENCIATURA EN|MATEM[ÁA]TICA|PROFESORADO\b)/i;
+  /^(ANEXO|PLAN NUEVO|SISTEMA DE CORRELATIVIDADES|UNIDAD CURRICULAR|CORRELATIVA\/?S?|CORRELATIVIDADES\b|ACTIVIDADES CURRICULARES ACREDITABLES|EDUCACI[OÓ]N F[IÍ]SICA|LICENCIATURA EN|MATEM[ÁA]TICA|PROFESORADO\b|QUE LA PRESENTE MEDIDA|HABERSE RESUELTO|LA PRESENTE RESOLUCI[ÓO]N|POR ELLO\b|EL CONSEJO SUPERIOR|UNIVERSIDAD NACIONAL DE HURLINGHAM QUE|UNIVERSITARIA EN MANTENIMIENTO HOSPITALARIO|DE ESTE CONSEJO|REGLAMENTO INTERNO|ANEXO [ÚU]NICO FORMANDO PARTE|[ÚU]NICO FORMANDO PARTE)/i;
 
 const CORREL_FRAG_NOISE_RE =
-  /CS\s*-?\s*\d+|RCS\b|REG[ÍI]STRESE|Art[íi]culo 2|40 ANIVERSARIO|CONSEJO INTERUNIVERSITARIO|ACTIVIDADES CURRICULARES ACREDITABLES|Tener aprobada al menos|con t[íi]tulo intermedio|T[EÉ]CNICO|CARRERA DENOMINADA|EXP\.[\s\d]|REMOVED|^000\d+$|SEDE|PROTOCOLO|~[\d@X]{2,}/i;
+  /CS\s*-?\s*\d+|RCS\b|REG[ÍI]STRESE|Art[íi]culo 2|40 ANIVERSARIO|CONSEJO INTERUNIVERSITARIO|ACTIVIDADES CURRICULARES ACREDITABLES|Tener aprobada al menos|con t[íi]tulo intermedio|T[EÉ]CNICO|CARRERA DENOMINADA|EXP\.[\s\d]|REMOVED|^000\d+$|SEDE|PROTOCOLO|~[\d@X]{2,}|EL CONSEJO SUPERIOR|ATRIBUCIONES|RESUELVE\b|REGLAMENTO INTERNO/i;
 
 const CORREL_ITEM_NOISE_RE =
   /^[-–—‐–\u00A0\s]{2,}$|^(CS|RCS|ANEXO|PLAN|UNIDAD|CORRELATIVA|PROFESORADO|EDUCACI)/i;
@@ -1406,6 +1492,12 @@ function fragmentGroups(rows) {
   for (const row of rows) {
     if (isAnchorRow(row)) continue;
     if (isNoiseRow(row)) continue;
+    // Fila suelta "Créditos en ACA": es requisito (o resto de encabezado),
+    // nunca parte del nombre vecino; si se pegara lo contamina y no matchea.
+    // Igual los números de página ("6/6", "7/9"): nunca son contenido.
+    const joinedFrag = row.items.map((i) => i.t).join(" ").trim();
+    if (/^cr[eé]ditos en aca$/i.test(joinedFrag)) continue;
+    if (/^\d+\s*\/\s*\d+$/.test(joinedFrag)) continue;
     const keep = row.items.filter(
       (it) => !CORREL_TOKEN_NOISE_RE.test(it.t),
     );
@@ -1555,7 +1647,10 @@ function parseCorrelativasTable(rawPages) {
         .filter((it) => it.x >= corrStart && !isNumber(it.t))
         .map((it) => it.t);
 
-      const name = cleanName(nameToks.map((i) => i.t));
+      const name = cleanName(nameToks.map((i) => i.t)).replace(
+        /^Actividad Curricular(\s+|$)/i,
+        "",
+      );
       if (!name && !s.refCode) continue;
       const key = normSubjectKey(name || s.refCode);
       if (byName.has(key)) continue;
@@ -1648,8 +1743,160 @@ function correlativasPayload(subjects) {
   };
 }
 
+// Rama dos-columnas sin números (p. ej. correlativas de Diseño Industrial):
+// columna izquierda con nombres envueltos (x≈87), columna derecha con
+// correlativas (x≈221). Cada fila con celda derecha cierra una materia; las
+// filas solo-derecha que terminan truncadas ("...Gestión del") continúan
+// hacia abajo, el resto se cuelga hacia arriba. Gated: header con
+// "Correlativas"+"Curricular" y cero anclas numeradas en todo el doc.
+const TWOCOL_TAIL_RE = /(\b(de|del|y|e|en|la|el|los|las|un|una|con|para|por|al)|[-–—])\s*$/i;
+
+function isTwoColCorrelativas(rawPages) {
+  let sawHeader = false;
+  let numbered = 0;
+  for (const page of rawPages) {
+    const rows = groupRows(page);
+    let hasCorr = false;
+    let hasCurr = false;
+    for (const row of rows) {
+      for (const it of row.items) {
+        if (it.t === "Correlativas") hasCorr = true;
+        if (it.t === "Curricular") hasCurr = true;
+      }
+      if (isAnchorRow(row) && !isNoiseRow(row)) numbered += 1;
+    }
+    if (hasCorr && hasCurr) sawHeader = true;
+  }
+  return sawHeader && numbered === 0;
+}
+
+function parseTwoColCorrelativas(rawPages) {
+  const subjects = [];
+  const byName = new Map();
+  let seq = 0;
+  const push = (nameToks, corrToks) => {
+    const name = cleanName(nameToks);
+    if (!name) return;
+    const key = normSubjectKey(name);
+    if (byName.has(key)) return;
+    const corrText = corrToks.join(" ").replace(/\s+/g, " ").trim();
+    const criteria = corrText
+      .split(/\s+-\s+/)
+      .map((p) => p.trim())
+      .filter(Boolean)
+      .flatMap((p) => splitCorrelativas(p));
+    const subject = {
+      num: null,
+      refCode: null,
+      code: `CR${String(seq + 1).padStart(3, "0")}`,
+      name,
+      year: null,
+      cuatrimestre: null,
+      duration: "C",
+      credits: 0,
+      kind: /\bACA\b/i.test(name) ? "ACA" : "Materia",
+      optional: false,
+      criteria,
+      correlativas: [],
+    };
+    subject.correlativas = (subject.criteria || [])
+      .map((c) => c.name)
+      .filter(Boolean);
+    subjects.push(subject);
+    byName.set(key, subject);
+    seq += 1;
+  };
+
+  for (const page of rawPages) {
+    const rows = groupRows(page);
+    let headerY = Infinity;
+    for (const row of rows) {
+      if (row.items.some((it) => it.t === "Correlativas")) {
+        headerY = row.y;
+        break;
+      }
+    }
+    let dashX = Infinity;
+    for (const row of rows) {
+      for (const it of row.items) {
+        if (it.t === "-" && it.x > 150 && it.x < dashX) dashX = it.x;
+      }
+    }
+    const splitX = Number.isFinite(dashX) ? dashX - 15 : 180;
+
+    let cur = { name: [], corr: [] };
+    let last = null;
+    let pendingHead = [];
+    const flush = () => {
+      if (!cur.name.length && !cur.corr.length && !pendingHead.length) return;
+      const s = { name: [...cur.name], corr: [...pendingHead, ...cur.corr] };
+      cur = { name: [], corr: [] };
+      pendingHead = [];
+      const before = subjects.length;
+      push(s.name, s.corr);
+      if (subjects.length > before) last = subjects[subjects.length - 1];
+    };
+    for (const row of rows) {
+      if (row.y >= headerY) continue;
+      if (isNoiseRow(row)) continue;
+      const joined = row.items.map((i) => i.t).join(" ").trim();
+      if (!joined || !/[A-Za-zÁÉÍÓÚÜÑñ]/.test(joined)) continue;
+      const left = row.items
+        .filter((it) => it.x < splitX && !CORREL_TOKEN_NOISE_RE.test(it.t))
+        .map((it) => it.t);
+      const right = row.items
+        .filter((it) => it.x >= splitX && !CORREL_TOKEN_NOISE_RE.test(it.t))
+        .map((it) => it.t);
+      if (!left.length && !right.length) continue;
+      if (!left.length && right.length) {
+        // Fila solo-derecha: si termina truncada ("...Gestión del") es la
+        // cabeza de lo que viene (se antepone); si no, cola de lo anterior.
+        if (TWOCOL_TAIL_RE.test(right.join(" ")) && !cur.name.length) {
+          pendingHead.push(...right);
+        } else if (cur.name.length) {
+          cur.corr.push(...right);
+        } else if (last) {
+          last.extra = [...(last.extra || []), ...right];
+        } else {
+          cur.corr.push(...right);
+        }
+        continue;
+      }
+      if (cur.corr.length) flush();
+      cur.name.push(...left);
+      if (right.length) {
+        cur.corr.push(...right);
+        flush();
+      }
+    }
+    flush();
+  }
+
+  // Reinyecta las continuaciones guardadas en sus materias.
+  for (const s of subjects) {
+    if (s.extra?.length) {
+      const more = s.extra.join(" ").replace(/\s+/g, " ").trim();
+      if (more) {
+        const extra = more
+          .split(/\s+-\s+/)
+          .map((p) => p.trim())
+          .filter(Boolean)
+          .flatMap((p) => splitCorrelativas(p));
+        s.criteria.push(...extra);
+        s.correlativas = s.criteria.map((c) => c.name).filter(Boolean);
+      }
+      delete s.extra;
+    }
+  }
+  return subjects;
+}
+
 async function parseCorrelativas(data) {
   const rawPages = await getRawItems(data);
+
+  if (isTwoColCorrelativas(rawPages)) {
+    return correlativasPayload(resolveCorrelativas(parseTwoColCorrelativas(rawPages)));
+  }
 
   if (hasCorrelativasTable(rawPages)) {
     return correlativasPayload(resolveCorrelativas(parseCorrelativasTable(rawPages)));
@@ -1679,6 +1926,9 @@ async function parseCorrelativas(data) {
     }
   }
   mode = mode || "below";
+  if (process.env.PARSE_DEBUG === "corr") {
+    console.log(`[corr] mode=${mode}`);
+  }
 
   for (const page of rawPages) {
     const rows = groupRows(page);
@@ -1686,9 +1936,40 @@ async function parseCorrelativas(data) {
     if (!anchors.length) continue;
 
     // Líneas envolventes: se asignan al ancla que la convención corresponde.
+    // Fix A (Obst/Nutr/Mant.Hosp, solo modo below): las anclas son solo el
+    // número y el nombre llega en fragmentos que pueden envolver por arriba
+    // (cabeza del sujeto de abajo) o por abajo (cola del de arriba).
+    // Redirige al ancla de abajo SOLO si las tres se cumplen: (1) el ancla
+    // de arriba ya absorbió su "-" de cierre (correlativas explícitamente
+    // vacías, x>=250: nada más puede pertenecerle); (2) su nombre en orden
+    // de lectura está completo —se excluyen cabezas de arriba por Y—
+    // ("Genética Humana" sí, "Organización de sistemas de" no); (3) el
+    // fragmento trae texto en banda de nombre (x<250), porque las
+    // continuaciones de correlativas (x>=250) son del de arriba.
     for (const g of fragmentGroups(rows)) {
       const { P, N } = nearestSides(anchors, g.y);
-      const target = mode === "below" ? P || N : N || P;
+      let target = mode === "below" ? P || N : N || P;
+      if (mode === "below" && target && target === P && N) {
+        const closed = P.items.some((it) => it.t === "-" && it.x >= 250);
+        const fragHasName = g.items.some(
+          (it) => it.x < 250 && !/^\d{1,3}$/.test(it.t) && it.t !== "-",
+        );
+        if (closed && fragHasName) {
+          const pname = P.items
+            .filter(
+              (it) =>
+                it.y <= P.y + 2 &&
+                it.x < 250 &&
+                !/^\d{1,3}$/.test(it.t) &&
+                it.t !== "-",
+            )
+            .map((it) => it.t)
+            .join(" ")
+            .replace(/\s+/g, " ")
+            .trim();
+          if (pname && !TWOCOL_TAIL_RE.test(`${pname} `)) target = N;
+        }
+      }
       if (!target) continue;
       const keep = g.items.filter((it) => !CORREL_TOKEN_NOISE_RE.test(it.t));
       if (!keep.some((it) => !/^\d{1,3}$/.test(it.t))) continue;
@@ -1704,16 +1985,17 @@ async function parseCorrelativas(data) {
 
       // La columna de correlativas empieza después del mayor salto en X cuyo
       // lado derecho está (la derecha) dentro de la banda real de correlativas
-      // (x >= 300). Sin ese filtro, un nombre partido por glifos en la celda
-      // ("Didáctica y curr" / "í" / "culum") hace que el mayor salto caiga en
-      // medio del nombre y los fragmentos se pierdan en las correlativas.
+      // (x >= 250; Obstetricia la tiene en ≈285). Un umbral mayor pierde esas
+      // columnas y todo el texto cae en el nombre. Los cortes dentro del
+      // nombre por glifos ("Didáctica y curr" / "í" / "culum") generan saltos
+      // chicos: gana el salto mayor.
       let splitX = Infinity;
       if (other.length > 1) {
         let gapIdx = -1;
         let maxGap = 30;
         for (let i = 1; i < other.length; i++) {
           const gap = other[i].x - other[i - 1].x;
-          if (gap > maxGap && other[i].x >= 300) {
+          if (gap > maxGap && other[i].x >= 250) {
             maxGap = gap;
             gapIdx = i;
           }
@@ -1730,7 +2012,10 @@ async function parseCorrelativas(data) {
         .filter((i) => i.x >= splitX)
         .sort((a, b) => b.y - a.y || a.x - b.x);
 
-      const name = cleanName(nameItems.map((i) => i.t));
+      const name = cleanName(nameItems.map((i) => i.t)).replace(
+        /^Actividad Curricular(\s+|$)/i,
+        "",
+      );
       if (!name) continue;
 
       const key = normSubjectKey(name);
@@ -1763,4 +2048,4 @@ async function parseCorrelativas(data) {
   return correlativasPayload(resolveCorrelativas(subjects));
 }
 
-module.exports = { parseOfficialPlan, parseAcademicHistory, parseCorrelativas };
+module.exports = { parseOfficialPlan, parseAcademicHistory, parseCorrelativas, extractLines };

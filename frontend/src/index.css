@@ -495,12 +495,6 @@ a {
 [data-bs-theme="dark"] .chip--warn {
   color: #fcd34d;
 }
-.chip--dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
 
 .mini-progress {
   height: 7px;

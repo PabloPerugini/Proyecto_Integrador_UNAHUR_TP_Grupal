@@ -1,13 +1,12 @@
+#!/usr/bin/env node
+/*
+ * Inspector de filas de un PDF de plan (diagnóstico del parser).
+ * Uso: node scripts/inspect-pdf.js <ruta-pdf> [aguja] [--page N]
+ * Ej:  node scripts/inspect-pdf.js "../files/UNAHUR-Oferta-Academica/Instituto de Tecnología e Ingeniería/lic-informatica-2026.pdf" "TOTAL" --page 3
+ */
 const fs = require("fs");
 const path = require("path");
-const {
-  parseOfficialPlan,
-  parseCorrelativas,
-} = require(path.join(
-  "C:\\Users\\pablo\\OneDrive\\Desktop\\Licenciatura informatica\\Cursos ACA\\ACA Proyecto integrador Programación - Informática\\Projecto_UNAHUR_TP_Grupal\\backend\\src\\services\\pdfParser.service.js",
-));
 
-// We peek at private funcs by re-implementing the raw extraction.
 let pdfjsPromise = null;
 const getPdfjs = () => {
   if (!pdfjsPromise) pdfjsPromise = import("pdfjs-dist/legacy/build/pdf.mjs");
@@ -39,6 +38,13 @@ async function getRawItems(data) {
     }
     pages.push({ num: i, items });
   }
+  if (doc.destroy) {
+    try {
+      await doc.destroy();
+    } catch {
+      /* noop */
+    }
+  }
   return pages;
 }
 
@@ -58,30 +64,32 @@ function groupRows(page) {
   return rows;
 }
 
-const FILE =
-  "C:\\Users\\pablo\\OneDrive\\Desktop\\Licenciatura informatica\\PDF de Carrera\\varios";
-
 (async () => {
-  const query = process.argv[2];
-  const file = process.argv[3];
-  const filter = process.argv[4];
-  if (!query || !file) {
-    console.error("usage: node inspect-pdf.js <plan|corr> <path> <needle>");
+  const args = process.argv.slice(2);
+  const pageIdx = args.indexOf("--page");
+  const pageArg = pageIdx !== -1 ? parseInt(args[pageIdx + 1], 10) : null;
+  const positional = args.filter(
+    (a, i) => !a.startsWith("--") && !(pageIdx !== -1 && i === pageIdx + 1),
+  );
+  const pdfPath = positional[0];
+  const needle = positional[1];
+  if (!pdfPath) {
+    console.error("uso: node scripts/inspect-pdf.js <ruta-pdf> [aguja] [--page N]");
     process.exit(1);
   }
-  const buf = fs.readFileSync(path.join(FILE, file));
+  const abs = path.isAbsolute(pdfPath) ? pdfPath : path.join(process.cwd(), pdfPath);
+  const buf = fs.readFileSync(abs);
   const rawPages = await getRawItems(buf);
+  console.log(`páginas: ${rawPages.length}`);
   for (const page of rawPages) {
+    if (pageArg && page.num !== pageArg) continue;
     const rows = groupRows(page);
     for (const row of rows) {
       const text = row.items.map((i) => i.t).join(" ").trim();
-      if (filter && text.toLowerCase().includes(filter.toLowerCase())) {
-        const items = row.items
-          .map((i) => `(${i.x},${Math.round(i.y)})${JSON.stringify(i.t)}`)
-          .join(" ");
-        console.log(`P${page.num} y=${row.y}: ${text}`);
-        console.log(`      ${items}`);
-      }
+      if (needle && !text.toLowerCase().includes(needle.toLowerCase())) continue;
+      const items = row.items.map((i) => `(${i.x},${Math.round(i.y)})${JSON.stringify(i.t)}`).join(" ");
+      console.log(`P${page.num} y=${row.y}: ${text}`);
+      console.log(`      ${items}`);
     }
   }
 })().catch((e) => {

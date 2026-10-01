@@ -1,4 +1,5 @@
 const UserProgress = require("../models/userprogress");
+const { SUBJECT_STATUS } = require("../models/userprogress");
 const Subject = require("../models/subject");
 const { parseAcademicHistory } = require("../services/pdfParser.service");
 const AppError = require("../utils/AppError");
@@ -30,7 +31,7 @@ const parseHistory = async (req, res, next) => {
   }
 };
 
-const VALID_STATUS = ["Aprobada", "Regular", "Cursando", "Pendiente"];
+const VALID_STATUS = SUBJECT_STATUS;
 
 // POST /progress  { careerId, entries: [{subjectCode,status,nota,fecha,origen,extraRequires}] }
 const saveProgress = async (req, res, next) => {

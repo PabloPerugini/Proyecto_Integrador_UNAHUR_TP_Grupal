@@ -50,6 +50,20 @@ docker compose up --build
 - Documentación Swagger: `http://localhost:3000/api-docs`
 - Frontend: `http://localhost:5173`
 
+### Validar y testear (backend)
+
+```bash
+cd backend
+npm test                  # unitarios: matcher, anti-ciclos, BUG-009, AR-3
+npm run validar           # todo: golden --check + salud + masiva (necesita API + corpus)
+npm run test:planes       # carga E2E de los 43 PDFs por la API real
+npm run test:salud        # control de correlativas de Salud + control negativo
+npm run snapshot:planes -- --check   # gate anti-regresiones del parser (diff = 0)
+```
+
+El corpus de PDFs (`../files/UNAHUR-Oferta-Academica`, 43 archivos) está fuera
+del repo: sin él los scripts masivos salen con mensaje claro (código 2).
+
 ## Integrantes
 
 | Integrante | Email | GitHub |

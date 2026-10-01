@@ -10,11 +10,6 @@ const findUserByNickName = async (nickName) => {
   return User.findOne({ nickName });
 };
 
-// Buscar usuario por ID
-const findUserById = async (id) => {
-  return User.findById(id);
-};
-
 // Obtener todos los usuarios
 const getAllUsers = async () => {
   return User.find();
@@ -102,7 +97,6 @@ const deleteUser = async (nickName) => {
 module.exports = {
   findUserByEmail,
   findUserByNickName,
-  findUserById,
   getAllUsers,
   createUser,
   updateUser,
