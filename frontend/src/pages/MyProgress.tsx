@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button, Form, Spinner, Table } from 'react-bootstrap';
 import { apiService } from '../api';
-import type { ParsedSubject, ProgressEntry, ProgressSummary, Subject, SubjectStatus } from '../types';
+import type { ParsedSubject, ProgressEntry, ProgressSummary, Subject, SubjectStatus, Sugerencias } from '../types';
 import { STATUS_LABEL } from '../utils/status';
 import { getCareerColor } from '../utils/careerColor';
 import { useCareerSelection } from '../context/CareerContext';
@@ -11,17 +11,10 @@ import { sortSubjects } from '../utils/subjects';
 import { IconBoard, IconCheck, IconCoins } from '../components/icons';
 import PageHeader from '../components/PageHeader';
 import MessageBanner from '../components/MessageBanner';
-import ImportJobList from '../components/ImportJobList';
+import ImportJobList, { type ImportJob } from '../components/ImportJobList';
+import { makeJobId } from '../utils/importJobs';
 import ColorDot from '../components/ColorDot';
 import PdfDropzone from '../components/PdfDropzone';
-
-type HistoryJob = {
-  id: string;
-  file: string;
-  status: 'parseando' | 'guardando' | 'listo' | 'error';
-  count?: number;
-  error?: string;
-};
 
 const HISTORY_JOB_LABEL = {
   parseando: 'Leyendo el PDF…',
@@ -65,7 +58,8 @@ export default function MyProgress() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [draft, setDraft] = useState<Record<string, { status: SubjectStatus; nota: string }>>({});
   const [summary, setSummary] = useState<ProgressSummary | null>(null);
-  const [jobs, setJobs] = useState<HistoryJob[]>([]);
+  const [sugerencias, setSugerencias] = useState<Sugerencias | null>(null);
+  const [jobs, setJobs] = useState<ImportJob[]>([]);
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -81,6 +75,11 @@ export default function MyProgress() {
       setSubjects(s);
       const current = await apiService.getMine(id);
       setSummary(current.summary);
+      try {
+        setSugerencias(await apiService.getSugerencias(id));
+      } catch {
+        setSugerencias(null);
+      }
       const d: Record<string, { status: SubjectStatus; nota: string }> = {};
       for (const subj of s) {
         const found = current.entries.find((p) => p.subjectCode === subj.code);
@@ -100,7 +99,7 @@ export default function MyProgress() {
   }, [careerId, loadSubjects, flashFromError]);
 
   const importHistory = async (file: File) => {
-    const id = `${file.name}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const id = makeJobId(file.name);
     setJobs((j) => [...j, { id, file: file.name, status: 'parseando' }]);
     try {
       const r = await apiService.parsePersonal(file);
@@ -267,6 +266,26 @@ export default function MyProgress() {
               </div>
             </div>
           </div>
+
+          {sugerencias && (
+            <div className="card mb-4">
+              <div className="card-header">Sugerencias de inscripción</div>
+              <div className="card-body d-grid gap-2">
+                {sugerencias.mensajes.map((m) => (
+                  <p key={m.regla} className="mb-1">
+                    <strong>{m.regla}</strong> — {m.texto}
+                  </p>
+                ))}
+                {!!sugerencias.disponibles.length && (
+                  <p className="mb-0 text-muted small">
+                    Disponibles ahora: {sugerencias.disponibles.slice(0, 6).map((d) => d.name).join('; ')}
+                    {sugerencias.disponibles.length > 6 ? ` (+${sugerencias.disponibles.length - 6} más)` : ''}.
+                    Ritmo sugerido: {sugerencias.ritmo.sugeridas} materia/s.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
 
           {yearGroups.length > 1 && (
             <div className="card mb-4">

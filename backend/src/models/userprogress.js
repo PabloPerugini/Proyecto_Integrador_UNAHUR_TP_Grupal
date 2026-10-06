@@ -1,5 +1,9 @@
 const mongoose = require("mongoose");
 
+// Única fuente de estados válidos (Fase 5 §11.7): el validador de
+// progress.controllers usa esta misma lista.
+const SUBJECT_STATUS = ["Aprobada", "Regular", "Cursando", "Pendiente"];
+
 const userProgressSchema = new mongoose.Schema(
   {
     userId: { type: String, required: true },
@@ -7,7 +11,7 @@ const userProgressSchema = new mongoose.Schema(
     subjectCode: { type: String, required: true, trim: true },
     status: {
       type: String,
-      enum: ["Aprobada", "Regular", "Cursando", "Pendiente"],
+      enum: SUBJECT_STATUS,
       default: "Pendiente",
     },
     nota: { type: Number, default: null },
@@ -22,3 +26,4 @@ userProgressSchema.index({ userId: 1, careerId: 1, subjectCode: 1 }, { unique: t
 
 const UserProgress = mongoose.model("UserProgress", userProgressSchema);
 module.exports = UserProgress;
+module.exports.SUBJECT_STATUS = SUBJECT_STATUS;

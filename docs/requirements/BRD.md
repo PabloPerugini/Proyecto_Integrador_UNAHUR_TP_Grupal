@@ -11,7 +11,7 @@
 | Institución           | Universidad Nacional de Hurlingham (UNAHUR)                          |
 | Unidad Académica      | Facultad de Informática — Proyecto Integrador Programación           |
 | Tipo de documento     | BRD — Documentación de Requerimientos de Negocio                     |
-| Versión               | 2.0                                                                   |
+| Versión               | 2.1                                                                   |
 | Fecha                 | 24 de septiembre de 2026                                              |
 | Sponsor Operación     | Secretaría Académica / Dirección de Carrera                          |
 | Sponsor Organización  | UNAHUR                                                               |
@@ -38,6 +38,7 @@
 | ------- | ------------ | ----- | ---------------- |
 | 1.0     | 10/09/2026   | Equipo | Versión inicial. |
 | 2.0     | 24/09/2026   | Equipo | Revisión mayor alineada con la implementación actual. Se retiran los requerimientos que **no corresponden** a la aplicación: módulo de autenticación (registro/login/cookie), usuarios y roles, recuperación de contraseña, IA (matching semántico por embeddings, chat orientador y su orquestador multiproveedor) y pruebas automatizadas/CI. Se documenta el acceso sin cuenta (progreso por identificador local `x-user-id`), el título intermedio y las pantallas reales de la app. |
+| 2.1     | 30/09/2026   | Equipo | Sugerencias de inscripción implementadas (R0–R6/C1–C6) + RN04 con sustento transitivo; FRD/BRD alineados. |
 
 ---
 
@@ -115,7 +116,7 @@ El alcance incluye:
 - Seguimiento del progreso por materia y por carrera, identificado por navegador (`x-user-id`).
 - Carga de planes y de historiales académicos desde PDF, con edición de materias, correlatividades y publicación del plan.
 - Soporte del **título intermedio** (créditos, materias y banner de progreso en el grafo).
-- Motor de sugerencias de inscripción basado en reglas de negocio (**pendiente de implementación**, ver FRD §3.1.2).
+- Motor de sugerencias de inscripción basado en reglas de negocio (C1–C6, R0–R6): `GET /careers/:id/sugerencias` + sección en Mi progreso (ver FRD §3.1.2).
 - Panel de estadísticas básicas del progreso del estudiante (porcentaje de carrera avanzada).
 
 ---
@@ -135,8 +136,8 @@ El alcance incluye:
 
 #### 3.1.2 Reglas de sugerencia de inscripción
 
-> [!WARNING]
-> **Estado:** requerimiento del proyecto **pendiente de implementación**. La aplicación actual no genera sugerencias de inscripción; las reglas se documentan porque definen el alcance funcional acordado.
+> [!NOTE]
+> **Estado:** implementado el 30/09/2026 (`GET /careers/:id/sugerencias` + sección en Mi progreso, con las fusiones FRD y "últimos dos cuatrimestres" ≈ 12 meses por falta de término en el modelo).
 
 | ID | Regla                 | Condición                                                                                                   | Acción                                                                       | Ref. |
 | -- | --------------------- | ----------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ---- |
@@ -148,7 +149,7 @@ El alcance incluye:
 | R5 | Orientación           | Inscripto hace más de 2 años y (< 3 materias regularizadas, no aprobó el 1er año o adeuda más de 4 finales). | Sugerirle que se dirija a la Dirección de Orientación y Acompañamiento.      | Msj5 |
 | R6 | Cierre                | Siempre.                                                                                                    | Enviar mensaje de cierre al alumno.                                          | Msj6 |
 
-> La implementación funcional de estas reglas (tabla de decisión completa y textos de los mensajes) se documenta en el **FRD, Sección 3**; hoy está **pendiente de implementación**.
+> La implementación funcional de estas reglas (tabla de decisión completa y textos de los mensajes) se documenta en el **FRD, Sección 3** e implementada en `GET /careers/:id/sugerencias`.
 
 ### 3.2 Casos de Estudio
 

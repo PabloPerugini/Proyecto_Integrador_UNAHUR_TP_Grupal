@@ -1,8 +1,8 @@
 # Plan de Pruebas
 
 **Proyecto:** Gradify — Grafo Interactivo de Correlatividades y Seguimiento de Progreso Académico
-**Versión:** 2.0
-**Fecha:** 24/09/2026
+**Versión:** 2.1
+**Fecha:** 30/09/2026
 **Sponsor Organización:** Universidad Nacional de Hurlingham (UNAHUR) — Licenciatura en Informática
 **Autor:** Equipo del proyecto integrador
 **Tutor:** Prof. Alejandra Pinto
@@ -36,7 +36,7 @@ Garantizar que la aplicación web (React) y su API REST (Node/Express + MongoDB 
 - Pruebas manuales exploratorias de los flujos de la aplicación (subir PDF, explorar grafo, marcar progreso).
 
 ### Verificación estática y de compilación
-**Descripción:** chequeo de sintaxis del backend con `node --check` sobre `src/` y verificación del frontend con las herramientas del proyecto (`eslint`, `tsc -b` y `vite build`). Se ejecutan antes de cada entrega; **el proyecto no tiene suite de tests unitarios automatizados**.
+**Descripción:** chequeo de sintaxis del backend con `node --check` sobre `src/` y verificación del frontend con las herramientas del proyecto (`eslint`, `tsc -b` y `vite build`). Se ejecutan antes de cada entrega. Suite de unitarios: **`npm test`** (`node --test tests/`, 0 dependencias, 14 tests: `bestDbMatch`, whitelist/anti-ciclos/BUG-009, RN04, AR-3).
 
 **Funcionalidades principales:**
 - Detectar errores de sintaxis en el backend sin necesidad de levantar el entorno.
@@ -44,11 +44,11 @@ Garantizar que la aplicación web (React) y su API REST (Node/Express + MongoDB 
 - Confirmar que el build de producción se completa.
 
 ### Pruebas masivas
-**Descripción:** se desarrollarán scripts de automatización en **Python + Requests** para ejecutar pruebas masivas sobre la API: enviar solicitudes con diferentes PDFs/datos y evaluar los resultados para detectar inconsistencias.
+**Descripción:** script reutilizable **`npm run test:planes`** (`backend/scripts/validaciones.js masiva`, motor `carga-masiva.test.js`) que ejecuta pruebas masivas sobre la API real: recorre los 43 PDFs de `files/UNAHUR-Oferta-Academica` de forma secuencial por el mismo camino que la UI (crear carrera → `parse-official` → `saveSubjects` → verificación, y `parse-correlativas` contra el plan par), compara contra la tabla de referencia `docs/testing/planes-referencia.json` (tipo Licenciatura/Tecnicatura/Ingeniería con rangos esperados) y vuelca un informe en `backend/scripts/informes/`.
 
 **Funcionalidades principales:**
-- Carga automática de conjuntos de PDFs de prueba (distintas carreras y formatos).
-- Envío masivo de solicitudes (carga de planes, consultas de correlativas, progreso).
+- Carga automática de conjuntos de PDFs de prueba con carreras prefijadas `[TEST-<fecha>]` (el guard anti-duplicados aborta el caso si `reused: true`, y al final se borran por `_id`: la base queda intacta).
+- Estados por PDF: `OK` (parser), `OK-IA` (rescatado por el fallback de IA), `WARN` (cierra con observaciones: sin año, créditos 0, matching < 70 %), `FAIL`, `SKIP`.
 - Análisis automático de respuestas para detectar errores o anomalías.
 
 ## Casos de Prueba
@@ -64,6 +64,7 @@ Garantizar que la aplicación web (React) y su API REST (Node/Express + MongoDB 
    - Caso 6: **PDF escaneado o ilegible.** Enviar un PDF sin texto → `400` "No se pudo leer el PDF…" y el servidor sigue operativo.
    - Caso 7: **No-PDF.** Enviar un archivo que no es PDF → `400` "Solo se aceptan archivos PDF"; superar los 10 MB → `400` por tamaño.
    - Caso 8: **PDF de correlativas.** `POST /careers/:id/parse-correlativas` → filas con `confidence` (`exact` | `compact` | `fuzzy` | `null`) y guardado con `POST /careers/:id/correlativas`.
+   - Caso 8 bis: **Carga masiva + fallback IA.** `npm run test:planes` sobre los 43 PDFs: verifica `detectedCount` dentro del rango de `docs/testing/planes-referencia.json` según el tipo (Licenciatura/Tecnicatura/Ingeniería); si el parser devuelve 0 o queda fuera de rango y hay IA configurada, la respuesta trae `aiFallback: true` + `provider` y la UI avisa "revisá las materias antes de publicar". En correlativas la IA no inventa: extrae pares literales con evidencia y el matcher determinístico los resuelve (exact+compact a `aiSuggested`, resto a revisión; umbral 0,7) y el guardado valida en servidor (whitelist, sin ciclos).
 
 3. **Progreso académico**
    - Caso 9: **Sin identificación.** `POST /progress` y `GET /progress/me` sin header `x-user-id` → `401`.
@@ -98,11 +99,12 @@ Garantizar que la aplicación web (React) y su API REST (Node/Express + MongoDB 
 4. Registrar los resultados en el [Documento de Seguimiento de Testing](./Test-Cases.md), incluyendo errores o comportamientos inesperados.
 5. Repetir las pruebas tras cada corrección para confirmar estabilidad y consistencia.
 
-## Resultados de la Última Ejecución (24/09/2026)
+## Resultados de la Última Ejecución (30/09/2026)
 
-- **Backend:** `node --check` sobre `backend/src` → **20/20 archivos OK**.
-- **Frontend:** `npm run lint` (ESLint) sin errores ni warnings; `npx tsc -b` sin errores; `npm run build` OK (build en 330 ms).
-- **Casos HTTP (1–19):** pendientes de ejecución sobre un entorno con MongoDB y Redis levantados.
+- **Backend:** `node --check` OK · `npm test` 14/14 · `snapshot --check` SIN DIFERENCIAS · `test:salud` idéntico · `test:planes` corrida 6 (OK=34+OK-IA=1+WARN=8+FAIL=0).
+- **Frontend:** `npm run lint` sin errores; `npx tsc -b` sin errores (**con `strict: true`**); `npm run build` OK.
+- **Casos HTTP (1–19):** smoke ejecutado el 30/09 sobre API real (404 raíz e ID inválido con envelope `{ success:false, error:{ message } }`, 401 sin `x-user-id`, 200 en `/careers` plano y `/sugerencias`); falta el registro caso por caso en Test-Cases.
+- **Unitarios:** `npm test` — 14 tests (matcher, anti-ciclos/BUG-009, RN04, AR-3), 0 dependencias.
 
 ## Plan de Pruebas Adicionales (Opcionales)
 

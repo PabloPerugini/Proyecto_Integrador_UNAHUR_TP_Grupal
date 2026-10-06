@@ -11,7 +11,7 @@
 | Institución           | Universidad Nacional de Hurlingham (UNAHUR)                          |
 | Unidad Académica      | Facultad de Informática — Proyecto Integrador Programación           |
 | Tipo de documento     | FRD — Documentación de Requerimientos Funcionales                    |
-| Versión               | 2.0                                                                   |
+| Versión               | 2.1                                                                   |
 | Fecha                 | 24 de septiembre de 2026                                              |
 | Sponsor Operación     | Secretaría Académica / Dirección de Carrera                          |
 | Sponsor Organización  | UNAHUR                                                               |
@@ -38,6 +38,7 @@
 | ------- | ------------ | ----- | ---------------- |
 | 1.0     | 10/09/2026   | Equipo | Versión inicial. |
 | 2.0     | 24/09/2026   | Equipo | Revisión mayor alineada con la implementación actual. Se retiran los requerimientos que **no corresponden** a la aplicación (historial 1.1–1.9): autenticación por cookie y usuarios, roles, recuperación de contraseña, chat del orientador con IA, matching semántico por embeddings, selector de carrera `?degree=`, compartir/exportar imagen y suites de tests con CI. Se documentan las pantallas reales, la identificación anónima por `x-user-id`, el título intermedio y el manejo centralizado de errores. |
+| 2.1     | 30/09/2026   | Equipo | Sugerencias AR-3, RN03/`x-user-id`, SEG-1/5 (módulo `/users` sin UI), envelope de errores, Swagger 16 paths, suite `npm test` (14 tests). |
 
 ---
 
@@ -103,7 +104,7 @@ El alcance incluye:
 - Seguimiento del progreso por materia y por carrera, identificado por navegador (`x-user-id`).
 - Carga de planes y de historiales académicos desde PDF, con edición de materias, correlatividades y publicación del plan.
 - Soporte del **título intermedio**: detección en el PDF, créditos y materias del subconjunto, y banner de progreso en el grafo.
-- Motor de sugerencias de inscripción basado en reglas de negocio (**pendiente de implementación**).
+- Motor de sugerencias de inscripción basado en reglas de negocio (C1–C6, R0–R6): `GET /careers/:id/sugerencias` + sección en Mi progreso.
 - Panel de estadísticas básicas del progreso del estudiante (porcentaje de carrera avanzada).
 - Manejo centralizado de errores en la API y en la interfaz.
 
@@ -119,13 +120,13 @@ El alcance incluye:
 | ---- | ------------------------ | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
 | RN01 | Estado inicial del nodo  | Los requisitos previos de la materia no están cumplidos en el historial del estudiante.    | La materia se muestra **bloqueada** (color gris, inhabilitada).                                                            |
 | RN02 | Habilitación por correlativas | El estudiante marca una materia como *Aprobada* o *Regular* (según exija el plan).      | El sistema evalúa el grafo y habilita las materias sucesivas (disponibles, clickeables).                                   |
-| RN03 | Persistencia de progreso | El usuario modifica el estado de un nodo.                                                 | El cambio se guarda asociado a su cuenta de usuario en la base de datos (tiempo real o guardado explícito).                |
+| RN03 | Persistencia de progreso | El usuario modifica el estado de un nodo.                                                 | El cambio se guarda asociado a su `x-user-id` (clave local por navegador, sin cuentas) en la base de datos (tiempo real o guardado explícito).                |
 | RN04 | Restricción de desmarcado | El usuario desmarca una materia como aprobada.                                           | El sistema revierte el estado de las materias dependientes subsiguientes que quedaron sin sustento correlativo.            |
 
 #### 3.1.2 Reglas de sugerencia de inscripción
 
-> [!WARNING]
-> **Estado:** requerimiento del proyecto **pendiente de implementación**. La aplicación actual no genera sugerencias de inscripción; las reglas se documentan porque definen el alcance funcional acordado.
+> [!NOTE]
+> **Estado:** implementado (Fase 6.1, 30/09/2026) en `GET /careers/:id/sugerencias` + sección *Sugerencias de inscripción* en *Mi progreso*. Con la limitación honesta de que el modelo de progreso no registra abandono/ausencia (C4/C5/C6 no observables): rigen las fusiones (sin C4 → C1–C3; sin C1/C2 → C5) y "últimos dos cuatrimestres" ≈ actividad de 12 meses.
 
 Para cada cuatrimestre se generan reglas de la forma **MATERIAS A ⇒ MATERIAS B**, calculadas sobre el historial del estudiante.
 
@@ -286,20 +287,20 @@ flowchart LR
 - **MATERIAS BLOQUEADAS:** Materias del plan cuyos requisitos previos o correlatividades no están cumplidos en el historial del estudiante; permanecen inhabilitadas para cursar.
 - **MATERIAS DISPONIBLES:** Materias que cumplen todas las condiciones correlativas necesarias en el estado actual del alumno; quedan habilitadas para su selección e inscripción en el grafo.
 - **GESTIÓN DE ESTADOS Y DINÁMICA DEL GRAFO:** Calcular y actualizar en tiempo real el desbloqueo o bloqueo de materias sucesivas en función de los cambios de estado realizados por el usuario sobre los nodos.
-- **MATERIAS A ⇒ MATERIAS B (pendiente de implementación):** Para cada cuatrimestre, generar la sugerencia conforme las reglas C1–C6 (ver Sección 3.1.2).
-- **ORDEN DE ESTADÍSTICAS (pendiente de implementación):** Mostrar las estadísticas de MATERIAS B en orden **decreciente**.
-- **FUSIÓN DE CONDICIONES (pendiente de implementación):** Si no hay materias C4 en MATERIAS A, usar solo C1, C2, C3. Si no hay materias C1/C2, fusionarlas en C5 [APROBADA] (nota ≥ 4).
+- **MATERIAS A ⇒ MATERIAS B:** Para cada cuatrimestre, generar la sugerencia conforme las reglas C1–C6 (ver Sección 3.1.2) — implementado en `GET /careers/:id/sugerencias`.
+- **ORDEN DE ESTADÍSTICAS:** Mostrar las estadísticas de MATERIAS B en orden **decreciente** — implementado (`materiasB` ordenado).
+- **FUSIÓN DE CONDICIONES:** Si no hay materias C4 en MATERIAS A, usar solo C1, C2, C3. Si no hay materias C1/C2, fusionarlas en C5 [APROBADA] (nota ≥ 4) — implementado (las aprobadas sin nota van a C5 solo si no hay C1/C2, si no a C2).
 - **CORRELATIVIDADES:** el matching entre el plan oficial y el PDF de correlativas es clásico (exacto, compacto, difuso/Levenshtein y por prefijo), con nivel de confianza devuelto en la respuesta (`exact` | `compact` | `fuzzy` | `null`).
 - **TÍTULO INTERMEDIO:** si el PDF del plan declara un título intermedio, el backend expone sus créditos y materias (`creditsIntermediate`, `intermediateTitle`, `subject.intermediate`) y el grafo muestra el banner con el avance de ese título; en carreras sin título intermedio no se muestra.
 - **MANEJO DE ERRORES:** toda falla se responde en JSON con un mensaje en español (`400` validaciones y IDs inválidos, `404` recurso inexistente, `409` duplicados, `500` genérico); la interfaz no se rompe y muestra el mensaje (`ErrorBoundary` + `api/client.ts`).
 
 ### 4.3 Requisitos de Seguridad
 
-- **Sin autenticación:** la aplicación no tiene cuentas, sesiones ni tokens; no existen endpoints de usuarios ni diferencias de permisos entre visitantes.
-- **Identificación del progreso:** el progreso se asocia al header `x-user-id`, que el frontend genera una sola vez y guarda en `localStorage`. `POST /progress` y `GET /progress/me` responden `401` si el header falta. Es una clave local por navegador, no un token de sesión.
-- **Subida de archivos:** solo se aceptan archivos PDF (mimetype o extensión `.pdf`) de hasta **10 MB**, que se procesan en memoria y no se persisten en disco.
-- **Errores:** todas las respuestas de error vienen en JSON con un mensaje en español (`400` para IDs inválidos y validaciones, `404` para recursos inexistentes, `409` para duplicados, `500` genérico); la interfaz las muestra sin romperse.
-- **Sin datos personales:** al no gestionar cuentas, la API no expone usuarios ni credenciales.
+- **Sin autenticación:** la aplicación no tiene cuentas, sesiones ni tokens; no hay diferencias de permisos entre visitantes. El módulo `/users` (registro/login JWT) existe en el código pero **ninguna pantalla lo consume** (decisión Cuerpo B §1.5: no se cablea ni se borra, solo se documenta).
+- **Identificación del progreso:** el progreso se asocia al header `x-user-id`, que el frontend genera una sola vez y guarda en `localStorage`. Las rutas con `withDeviceId` responden `401` si el identificador falta. Es una clave local por navegador, no un token de sesión.
+- **Subida de archivos:** solo se aceptan archivos PDF (firma `%PDF-` verificada en servidor, además del mimetype) de hasta **10 MB**, que se procesan en memoria y no se persisten en disco.
+- **Errores:** todas las respuestas de error vienen en JSON con un mensaje en español (`400` para IDs inválidos y validaciones, `404` para recursos inexistentes, `409` para duplicados, `500` genérico sin detalle interno); la interfaz las muestra sin romperse.
+- **Sin datos personales en uso:** al no haber UI de cuentas, la API no expone usuarios ni credenciales en ningún flujo (el modelo `User` persiste solo si se usa `/users` por API directa).
 
 ---
 

@@ -1,7 +1,14 @@
 const Career = require("../models/career");
 const Subject = require("../models/subject");
 const { parseOfficialPlan, parseCorrelativas: parseCorrelativasPdf } = require("../services/pdfParser.service");
+const { isConfigured } = require("../services/ai.service");
+const { isPdfBuffer } = require("../middlewares/upload");
+const { extractPlanWithAI } = require("../services/aiExtract.service");
+const { extractCorrelativasWithAI } = require("../services/aiCorrelativas.service");
+const path = require("path");
+const fs = require("fs");
 const { buildGraph } = require("../services/graph.service");
+const { buildSugerencias } = require("../services/sugerencias.service");
 const UserProgress = require("../models/userprogress");
 const { deriveCareerColor } = require("../utils/careerColor");
 const AppError = require("../utils/AppError");
@@ -52,14 +59,10 @@ const getAllCareers = async (req, res, next) => {
   try {
     const filter = {};
     if (req.query.status) filter.status = req.query.status;
-    const careers = await Career.find(filter).sort({ createdAt: -1 }).select("-__v");
-    const withCount = await Promise.all(
-      careers.map(async (c) => ({
-        ...c.toObject(),
-        subjectCount: await Subject.countDocuments({ careerId: c._id }),
-      })),
-    );
-    res.status(200).json(withCount);
+    // 1 query: subjectCount ya persistido en Career (saveSubjects/publish lo
+    // mantienen); evita el N+1 de un countDocuments por carrera.
+    const careers = await Career.find(filter).sort({ createdAt: -1 }).select("-__v").lean();
+    res.status(200).json(careers);
   } catch (error) {
     next(error);
   }
@@ -79,11 +82,37 @@ const getCareerSubjects = async (req, res, next) => {
   }
 };
 
+// Rango esperado [min,max] de materias según docs/testing/planes-referencia.json
+// (se matchea por nombre de archivo subido). Null si no hay referencia.
+let planesRefCache = null;
+function lookupRange(originalname) {
+  try {
+    if (!planesRefCache) {
+      const p = path.join(__dirname, "..", "..", "..", "docs", "testing", "planes-referencia.json");
+      planesRefCache = JSON.parse(fs.readFileSync(p, "utf8")).planes || [];
+    }
+    const base = String(originalname || "").toLowerCase();
+    const entry = planesRefCache.find((e) =>
+      String(e.file || "").toLowerCase().endsWith(base) ||
+      base.endsWith(String(e.file || "").toLowerCase().split("/").pop()),
+    );
+    if (entry && Array.isArray(entry.expectedSubjects)) {
+      return { min: entry.expectedSubjects[0], max: entry.expectedSubjects[1] };
+    }
+  } catch {
+    /* sin referencia: solo fallback ante 0 materias */
+  }
+  return null;
+}
+
 // POST /careers/:id/parse-official (multipart, campo "file")
 const parseOfficial = async (req, res, next) => {
   try {
     if (!req.file) {
       return res.status(400).json({ message: "Enviá el PDF en el campo 'file'" });
+    }
+    if (!isPdfBuffer(req.file.buffer)) {
+      return res.status(400).json({ message: "Solo se aceptan archivos PDF" });
     }
     let parsed;
     try {
@@ -95,6 +124,34 @@ const parseOfficial = async (req, res, next) => {
         error.message,
       );
     }
+    // Fallback IA: si el parser determinístico no detectó nada o quedó fuera
+    // del rango de referencia (tabla no soportada), se intenta la extracción
+    // con IA. La respuesta avisa con aiFallback para revisión humana.
+    let aiFallback = false;
+    let aiProvider = null;
+    const range = lookupRange(req.file.originalname);
+    const outOfRange =
+      range && (parsed.subjects.length < range.min || parsed.subjects.length > range.max);
+    if ((parsed.subjects.length === 0 || outOfRange) && isConfigured()) {
+      try {
+        const hint = String(req.file.originalname || "")
+          .replace(/\.[^.]+$/, "")
+          .replace(/[_-]+/g, " ")
+          .slice(0, 120);
+        const ai = await extractPlanWithAI(req.file.buffer, {
+          careerHint: hint,
+          expectedMin: range?.min ?? null,
+          expectedMax: range?.max ?? null,
+        });
+        parsed = ai;
+        aiFallback = true;
+        aiProvider = ai.provider;
+      } catch (error) {
+        // La IA tampoco resolvió: se responde el resultado del parser con aviso.
+        console.error(`[parse-official] fallback IA no resolvió ${req.file.originalname}: ${error.message}`);
+        parsed._aiNote = error.message;
+      }
+    }
     res.status(200).json({
       sourceKind: parsed.sourceKind,
       subjects: parsed.subjects,
@@ -102,6 +159,9 @@ const parseOfficial = async (req, res, next) => {
       intermediateTitle: parsed.intermediateTitle || null,
       creditsFinal: parsed.creditsFinal || 0,
       creditsIntermediate: parsed.creditsIntermediate || 0,
+      aiFallback,
+      aiProvider,
+      ...(parsed._aiNote ? { aiNote: parsed._aiNote } : {}),
     });
   } catch (error) {
     next(error);
@@ -202,6 +262,9 @@ const parseCorrelativas = async (req, res, next) => {
     if (!req.file) {
       return res.status(400).json({ message: "Enviá el PDF en el campo 'file'" });
     }
+    if (!isPdfBuffer(req.file.buffer)) {
+      return res.status(400).json({ message: "Solo se aceptan archivos PDF" });
+    }
     const { id } = req.params;
     const career = await Career.findById(id);
     if (!career) return res.status(404).json({ message: "Carrera no encontrada" });
@@ -245,6 +308,65 @@ const parseCorrelativas = async (req, res, next) => {
     }
 
     const matchedCount = rows.filter((r) => r.matched).length;
+    // Fallback IA lectora (BUG-004/005): si el matching determinístico queda
+    // bajo, la IA extrae pares LITERALES del PDF y bestDbMatch los resuelve
+    // contra la base: es la única vía a códigos. Solo exact+compact van a
+    // `aiSuggested` (aplicables); fuzzy/prefix a `aiReview` (lectura).
+    let aiSuggested = [];
+    let aiReview = [];
+    let aiUnresolved = [];
+    let aiFallback = false;
+    let aiProvider = null;
+    let aiCoverage = null;
+    const ratio = parsed.total ? matchedCount / parsed.total : 0;
+    if ((parsed.total === 0 || ratio < 0.7) && isConfigured()) {
+      try {
+        const ai = await extractCorrelativasWithAI(req.file.buffer, {
+          careerHint: career.name,
+        });
+        aiCoverage = { extraidos: ai.pairs.length, total: parsed.total };
+        const rank = { exact: 0, compact: 1, fuzzy: 2, prefix: 2 };
+        for (const pair of ai.pairs) {
+          const sm = bestDbMatch(pair.subject, dbSubjects);
+          if (!sm.db) {
+            aiUnresolved.push(pair.subject);
+            continue;
+          }
+          const resolved = [];
+          let worst = rank[sm.confidence] ?? 3;
+          for (const reqName of pair.requires) {
+            const rm = bestDbMatch(reqName, dbSubjects);
+            if (!rm.db) {
+              aiUnresolved.push(`${pair.subject} requiere "${reqName}" (sin coincidencia oficial)`);
+              continue;
+            }
+            worst = Math.max(worst, rank[rm.confidence] ?? 3);
+            resolved.push({ code: rm.db.code, name: rm.db.name, confidence: rm.confidence });
+          }
+          const subjConf = sm.confidence;
+          if (worst <= 1) {
+            aiSuggested.push({
+              code: sm.db.code,
+              requires: resolved.map((r) => r.code),
+              confidence: worst === 0 ? "exact" : "compact",
+              evidence: pair.evidence || null,
+            });
+          } else {
+            aiReview.push({
+              code: sm.db.code,
+              subject: sm.db.name,
+              subjectConfidence: subjConf,
+              requires: resolved,
+              evidence: pair.evidence || null,
+            });
+          }
+        }
+        aiFallback = true;
+        aiProvider = ai.provider;
+      } catch (error) {
+        console.error(`[parse-correlativas] fallback IA no resolvió ${req.file.originalname}: ${error.message}`);
+      }
+    }
     res.status(200).json({
       sourceKind: parsed.sourceKind,
       total: parsed.total,
@@ -253,6 +375,12 @@ const parseCorrelativas = async (req, res, next) => {
       partial: matchedCount < parsed.total,
       subjects: rows,
       unresolved: rows.filter((r) => !r.matched),
+      aiSuggested,
+      aiReview,
+      aiUnresolved,
+      aiFallback,
+      aiProvider,
+      aiCoverage,
     });
   } catch (error) {
     next(error);
@@ -271,26 +399,93 @@ const saveCorrelativas = async (req, res, next) => {
       return res.status(400).json({ message: "Enviá un arreglo de materias" });
     }
 
-    let saved = 0;
+    // Blindaje: solo se persisten códigos que existan en la carrera (nunca
+    // códigos inventados por IA o a mano), sin autorreferencias y sin ciclos.
+    const all = await Subject.find({ careerId: career._id }).select("_id code slug requires");
+    const validCodes = new Set(all.map((s) => s.code));
+    const byCode = new Map(all.map((s) => [s.code, s]));
+    const bySlug = new Map(all.map((s) => [s.slug, s]));
+
+    const updates = [];
+    const dropped = [];
     for (const raw of incoming) {
       const code = (raw.code || "").trim();
       const name = (raw.name || "").trim();
       if (!code && !name) continue;
-      const requires = Array.isArray(raw.requires)
-        ? raw.requires.map(String)
-        : [];
-      const filter = code
-        ? { careerId: career._id, code }
-        : { careerId: career._id, slug: normalizeName(name) };
-      const subj = await Subject.findOne(filter).select("_id code name requires");
+      const subj = (code && byCode.get(code)) || (name && bySlug.get(normalizeName(name)));
       if (!subj) continue;
-      await Subject.updateOne({ _id: subj._id }, { $set: { requires } });
-      saved++;
+      const clean = [];
+      for (const r of Array.isArray(raw.requires) ? raw.requires : []) {
+        const rc = String(r).trim();
+        if (!validCodes.has(rc)) {
+          dropped.push(`${subj.code} -> ${rc || "(vacío)"} (código inexistente)`);
+          continue;
+        }
+        if (rc === subj.code) {
+          dropped.push(`${subj.code} -> ${rc} (autorreferencia)`);
+          continue;
+        }
+        if (!clean.includes(rc)) clean.push(rc);
+      }
+      updates.push({ subj, requires: clean });
+    }
+
+    // Detección de ciclos limitada a las materias tocadas (un ciclo previo en
+    // otra parte de la carrera no bloquea este guardado). Todo ciclo nuevo
+    // incluye una arista actualizada, así que basta con DFS desde cada require
+    // nuevo buscando volver al origen.
+    const graph = new Map(all.map((s) => [s.code, [...(s.requires || [])]]));
+    for (const u of updates) graph.set(u.subj.code, u.requires);
+    let cycle = null;
+    for (const u of updates) {
+      const parent = new Map();
+      const stack = [...u.requires];
+      for (const r of u.requires) parent.set(r, u.subj.code);
+      const seen = new Set();
+      while (stack.length && !cycle) {
+        const node = stack.pop();
+        if (node === u.subj.code) {
+          const path = [node];
+          let cur = parent.get(node);
+          while (cur && cur !== u.subj.code) {
+            path.unshift(cur);
+            cur = parent.get(cur);
+          }
+          path.unshift(u.subj.code);
+          cycle = path;
+          break;
+        }
+        if (seen.has(node) || !graph.has(node)) continue;
+        seen.add(node);
+        for (const nxt of graph.get(node) || []) {
+          if (!parent.has(nxt)) parent.set(nxt, node);
+          stack.push(nxt);
+        }
+      }
+      if (cycle) break;
+    }
+    if (cycle) {
+      return res.status(400).json({
+        message: `Las correlativas forman un ciclo (${cycle.join(" -> ")}): no se guardó nada`,
+        cycle,
+      });
+    }
+
+    let saved = 0;
+    if (updates.length) {
+      await Subject.bulkWrite(
+        updates.map((u) => ({
+          updateOne: { filter: { _id: u.subj._id }, update: { $set: { requires: u.requires } } },
+        })),
+        { ordered: false },
+      );
+      saved = updates.length;
     }
 
     res.status(200).json({
       saved,
       total: await Subject.countDocuments({ careerId: career._id }),
+      dropped,
     });
   } catch (error) {
     next(error);
@@ -358,6 +553,28 @@ const saveSubjects = async (req, res, next) => {
     }
 
     const result = ops.length ? await Subject.bulkWrite(ops, { ordered: false }) : null;
+
+    // Blindaje (igual que saveCorrelativas): los requires solo pueden apuntar
+    // a códigos existentes de la carrera y nunca a sí mismos. Segunda pasada
+    // porque los códigos del mismo lote aún no existían al armar el upsert.
+    const allCodes = new Set(
+      (await Subject.find({ careerId: career._id }).select("code").lean()).map((s) => s.code),
+    );
+    const dirty = await Subject.find({
+      careerId: career._id,
+      requires: { $exists: true, $not: { $size: 0 } },
+    }).select("_id code requires");
+    let droppedRequires = 0;
+    for (const s of dirty) {
+      const clean = [...new Set((s.requires || []).map(String))].filter(
+        (rc) => rc !== s.code && allCodes.has(rc),
+      );
+      if (clean.length !== (s.requires || []).length) {
+        droppedRequires += (s.requires || []).length - clean.length;
+        // eslint-disable-next-line no-await-in-loop
+        await Subject.updateOne({ _id: s._id }, { $set: { requires: clean } });
+      }
+    }
     career.subjectCount = await Subject.countDocuments({ careerId: career._id });
 
     // Título intermedio: persistir el nombre detectado en el PDF y recalcular
@@ -393,6 +610,7 @@ const saveSubjects = async (req, res, next) => {
     res.status(200).json({
       saved: result ? result.upsertedCount + result.modifiedCount + result.matchedCount : 0,
       total: career.subjectCount,
+      droppedRequires,
     });
   } catch (error) {
     next(error);
@@ -471,6 +689,21 @@ const publishCareer = async (req, res, next) => {
   }
 };
 
+// GET /careers/:id/sugerencias — AR-3 (FRD §3.1.2–3.1.3, Cuerpo C Fase 6.1).
+// Sugerencias de inscripción R0–R6 a partir del historial (x-user-id).
+const getSugerencias = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const career = await Career.findById(id);
+    if (!career) return res.status(404).json({ message: "Carrera no encontrada" });
+    const subjects = await Subject.find({ careerId: id }).select("-__v");
+    const progress = await UserProgress.find({ careerId: id, userId: req.userId }).select("-__v");
+    res.status(200).json(buildSugerencias({ subjects, progress }));
+  } catch (error) {
+    next(error);
+  }
+};
+
 // GET /careers/:id/graph?userId=...
 const getGraph = async (req, res, next) => {
   try {
@@ -537,6 +770,57 @@ const getGraph = async (req, res, next) => {
   }
 };
 
+// Helpers puros exportados para unitarios (Fase 3): misma lógica que usa
+// saveCorrelativas, sin tocar Mongo. No cambian comportamiento en runtime.
+function cleanRequiresList(subjCode, requires, validCodes) {
+  const clean = [];
+  const dropped = [];
+  for (const r of Array.isArray(requires) ? requires : []) {
+    const rc = String(r).trim();
+    if (!validCodes.has(rc)) {
+      dropped.push(`${subjCode} -> ${rc || "(vacío)"} (código inexistente)`);
+      continue;
+    }
+    if (rc === subjCode) {
+      dropped.push(`${subjCode} -> ${rc} (autorreferencia)`);
+      continue;
+    }
+    if (!clean.includes(rc)) clean.push(rc);
+  }
+  return { clean, dropped };
+}
+
+function findCycle(allRequires, updates) {
+  const graph = new Map(Object.entries(allRequires).map(([k, v]) => [k, [...v]]));
+  for (const u of updates) graph.set(u.code, u.requires);
+  for (const u of updates) {
+    const parent = new Map();
+    const stack = [...u.requires];
+    for (const r of u.requires) parent.set(r, u.code);
+    const seen = new Set();
+    while (stack.length) {
+      const node = stack.pop();
+      if (node === u.code) {
+        const path = [node];
+        let cur = parent.get(node);
+        while (cur && cur !== u.code) {
+          path.unshift(cur);
+          cur = parent.get(cur);
+        }
+        path.unshift(u.code);
+        return path;
+      }
+      if (seen.has(node) || !graph.has(node)) continue;
+      seen.add(node);
+      for (const nxt of graph.get(node) || []) {
+        if (!parent.has(nxt)) parent.set(nxt, node);
+        stack.push(nxt);
+      }
+    }
+  }
+  return null;
+}
+
 module.exports = {
   createCareer,
   getAllCareers,
@@ -547,6 +831,10 @@ module.exports = {
   saveCorrelativas,
   publishCareer,
   getGraph,
+  getSugerencias,
   deleteCareer,
   updateCareer,
+  bestDbMatch,
+  cleanRequiresList,
+  findCycle,
 };

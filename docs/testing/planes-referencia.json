@@ -1,0 +1,534 @@
+{
+  "_meta": {
+    "version": "0.1.0",
+    "fecha": "2026-09-24",
+    "nota": "Tabla de referencia para el test masivo (npm run test:planes). Rangos iniciales por tipo de carrera; refinar expectedSubjects/expectedCredits leyendo la fila TOTAL de cada PDF tras la primera corrida. Rutas relativas a ../files/UNAHUR-Oferta-Academica con separador /.",
+    "tipos": {
+      "licenciatura": "4-5 años, rango esperado 30-60 materias",
+      "ingenieria": "5-6 años, rango esperado 35-70 materias",
+      "tecnicatura": "2-3 años, rango esperado 15-35 materias",
+      "correlativas": "PDF de correlatividades, se prueba con parse-correlativas contra el plan par",
+      "otro": "sin rango, solo se reporta lo detectado",
+      "profesorado": "4 años, 240 créditos, rango esperado 30-60 materias"
+    }
+  },
+  "planes": [
+    {
+      "file": "Instituto de Biotecnología/Agronomia/Plan-de-Estudio-de-la-carrera-Ingenieria-Agronomica-EXP.-764-2024.pdf",
+      "career": "Ingeniería Agronómica",
+      "tipo": "ingenieria",
+      "expectedSubjects": [
+        35,
+        70
+      ],
+      "expectedCredits": null,
+      "hasIntermediate": false,
+      "pairCorrelativas": null,
+      "notas": ""
+    },
+    {
+      "file": "Instituto de Biotecnología/Agronomia/Plan-de-estudios-Tecnicatura-Universitaria-en-Produccion-Agroecologica-Periurbana.pdf",
+      "career": "Tecnicatura Universitaria en Producción Agroecológica Periurbana",
+      "tipo": "tecnicatura",
+      "expectedSubjects": [
+        15,
+        35
+      ],
+      "expectedCredits": null,
+      "hasIntermediate": false,
+      "pairCorrelativas": null,
+      "notas": "Dialecto Asignatura|Campo|Carga|Correlatividad sin columna D (BUG-002): el parser devuelve 0, el fallback IA rescata 23 materias (verificado con groq y gemini)."
+    },
+    {
+      "file": "Instituto de Biotecnología/Licenciatura en Biotecnología/Licenciatura-en-Biotecnologia.pdf",
+      "career": "Licenciatura en Biotecnología",
+      "tipo": "licenciatura",
+      "expectedSubjects": [
+        30,
+        60
+      ],
+      "expectedCredits": null,
+      "hasIntermediate": false,
+      "pairCorrelativas": "Instituto de Biotecnología/Licenciatura en Biotecnología/Plan-de-correlatividades-Lic.-en-Biotecnologia-con-titulo-intermedio.pdf",
+      "notas": "Título intermedio por créditos (el PDF de correlativas lo menciona), sin tabla propia en el plan: no se marcan materias intermediate."
+    },
+    {
+      "file": "Instituto de Biotecnología/Licenciatura en Biotecnología/Plan-de-correlatividades-Lic.-en-Biotecnologia-con-titulo-intermedio.pdf",
+      "career": "Licenciatura en Biotecnología",
+      "tipo": "correlativas",
+      "expectedSubjects": null,
+      "expectedCredits": null,
+      "hasIntermediate": false,
+      "pairCorrelativas": "Instituto de Biotecnología/Licenciatura en Biotecnología/Licenciatura-en-Biotecnologia.pdf",
+      "notas": ""
+    },
+    {
+      "file": "Instituto de Biotecnología/Licenciatura-en-Gestion-Ambiental.pdf",
+      "career": "Licenciatura en Gestión Ambiental",
+      "tipo": "licenciatura",
+      "expectedSubjects": [
+        30,
+        60
+      ],
+      "expectedCredits": null,
+      "hasIntermediate": false,
+      "pairCorrelativas": null,
+      "notas": ""
+    },
+    {
+      "file": "Instituto de Biotecnología/Licenciatura-en-Tecnologia-de-los-Alimentos.pdf",
+      "career": "Licenciatura en Tecnología de los Alimentos",
+      "tipo": "licenciatura",
+      "expectedSubjects": [
+        30,
+        60
+      ],
+      "expectedCredits": null,
+      "hasIntermediate": false,
+      "pairCorrelativas": null,
+      "notas": ""
+    },
+    {
+      "file": "Instituto de Biotecnología/Plan-de-estudios-de-la-Tec.-Universitaria-en-Viverismo-EXP.-189-2020.pdf",
+      "career": "Tecnicatura Universitaria en Viverismo",
+      "tipo": "tecnicatura",
+      "expectedSubjects": [
+        15,
+        35
+      ],
+      "expectedCredits": null,
+      "hasIntermediate": false,
+      "pairCorrelativas": null,
+      "notas": ""
+    },
+    {
+      "file": "Instituto de Biotecnología/Plan-de-estudios-Licenciatura-en-Desarrollo-Agrario-EXP.-898-23.pdf",
+      "career": "Licenciatura en Desarrollo Agrario",
+      "tipo": "licenciatura",
+      "expectedSubjects": [
+        30,
+        60
+      ],
+      "expectedCredits": null,
+      "hasIntermediate": false,
+      "pairCorrelativas": null,
+      "notas": "el parser contempla este plan como caso sin columna D"
+    },
+    {
+      "file": "Instituto de Salud Comunitaria/Licenciadoa en Kinesiología y Fisiatría/Licenciatura-en-Kinesiologia-y-Fisiatria.pdf",
+      "career": "Licenciatura en Kinesiología y Fisiatría",
+      "tipo": "licenciatura",
+      "expectedSubjects": [
+        35,
+        65
+      ],
+      "expectedCredits": null,
+      "hasIntermediate": false,
+      "pairCorrelativas": "Instituto de Salud Comunitaria/Licenciadoa en Kinesiología y Fisiatría/Plan-de-correlatividades-Licenciatura-en-Kinesiologia-y-fisiatria-web-Unahur.pdf",
+      "notas": ""
+    },
+    {
+      "file": "Instituto de Salud Comunitaria/Licenciadoa en Kinesiología y Fisiatría/Plan-de-correlatividades-Licenciatura-en-Kinesiologia-y-fisiatria-web-Unahur.pdf",
+      "career": "Licenciatura en Kinesiología y Fisiatría",
+      "tipo": "correlativas",
+      "expectedSubjects": null,
+      "expectedCredits": null,
+      "hasIntermediate": false,
+      "pairCorrelativas": "Instituto de Salud Comunitaria/Licenciadoa en Kinesiología y Fisiatría/Licenciatura-en-Kinesiologia-y-Fisiatria.pdf",
+      "notas": ""
+    },
+    {
+      "file": "Instituto de Salud Comunitaria/Licenciadoa en Obstetricia/Licenciatura-en-Obstetricia.pdf",
+      "career": "Licenciatura en Obstetricia",
+      "tipo": "licenciatura",
+      "expectedSubjects": [
+        30,
+        60
+      ],
+      "expectedCredits": null,
+      "hasIntermediate": false,
+      "pairCorrelativas": "Instituto de Salud Comunitaria/Licenciadoa en Obstetricia/Plan-de-correlatividades-Licenciatura-en-Obstetricia-.pdf",
+      "notas": ""
+    },
+    {
+      "file": "Instituto de Salud Comunitaria/Licenciadoa en Obstetricia/Plan-de-correlatividades-Licenciatura-en-Obstetricia-.pdf",
+      "career": "Licenciatura en Obstetricia",
+      "tipo": "correlativas",
+      "expectedSubjects": null,
+      "expectedCredits": null,
+      "hasIntermediate": false,
+      "pairCorrelativas": "Instituto de Salud Comunitaria/Licenciadoa en Obstetricia/Licenciatura-en-Obstetricia.pdf",
+      "notas": ""
+    },
+    {
+      "file": "Instituto de Salud Comunitaria/Licenciatura en Enfermería/RCS.-246-15-10-2025-EXP.-088-2025-Modificacion-al-plan-de-correlatividad-de-la-carrera-Licenciatura-en-Enfermeria.pdf",
+      "career": "Licenciatura en Enfermería",
+      "tipo": "correlativas",
+      "expectedSubjects": null,
+      "expectedCredits": null,
+      "hasIntermediate": false,
+      "pairCorrelativas": "Instituto de Salud Comunitaria/Licenciatura en Enfermería/RCS.-385-20-11-2024-EXP.-999-2024-Plan-de-Estudios-de-la-carrera-denominada-Licenciatura-en-Enfermeria-1-1_removed.pdf",
+      "notas": "anexo tabular CÓDIGO|MATERIAS|CURSADA|CRÉDITOS|CORRELATIVAS"
+    },
+    {
+      "file": "Instituto de Salud Comunitaria/Licenciatura en Enfermería/RCS.-385-20-11-2024-EXP.-999-2024-Plan-de-Estudios-de-la-carrera-denominada-Licenciatura-en-Enfermeria-1-1_removed.pdf",
+      "career": "Licenciatura en Enfermería",
+      "tipo": "licenciatura",
+      "expectedSubjects": [
+        30,
+        60
+      ],
+      "expectedCredits": null,
+      "hasIntermediate": false,
+      "pairCorrelativas": "Instituto de Salud Comunitaria/Licenciatura en Enfermería/RCS.-246-15-10-2025-EXP.-088-2025-Modificacion-al-plan-de-correlatividad-de-la-carrera-Licenciatura-en-Enfermeria.pdf",
+      "notas": "el parser contempla nombres envueltos de este plan"
+    },
+    {
+      "file": "Instituto de Salud Comunitaria/Licenciatura en Nutrición/Licenciatura-en-Nutricion.pdf",
+      "career": "Licenciatura en Nutrición",
+      "tipo": "licenciatura",
+      "expectedSubjects": [
+        30,
+        60
+      ],
+      "expectedCredits": null,
+      "hasIntermediate": false,
+      "pairCorrelativas": "Instituto de Salud Comunitaria/Licenciatura en Nutrición/Plan-de-correlatividades-Licenciatura-en-Nutricion-.pdf",
+      "notas": ""
+    },
+    {
+      "file": "Instituto de Salud Comunitaria/Licenciatura en Nutrición/Plan-de-correlatividades-Licenciatura-en-Nutricion-.pdf",
+      "career": "Licenciatura en Nutrición",
+      "tipo": "correlativas",
+      "expectedSubjects": null,
+      "expectedCredits": null,
+      "hasIntermediate": false,
+      "pairCorrelativas": "Instituto de Salud Comunitaria/Licenciatura en Nutrición/Licenciatura-en-Nutricion.pdf",
+      "notas": ""
+    },
+    {
+      "file": "Instituto de Tecnología e Ingeniería/Ingenieria-en-Energia-Electrica.pdf",
+      "career": "Ingeniería en Energía Eléctrica",
+      "tipo": "ingenieria",
+      "expectedSubjects": [
+        35,
+        70
+      ],
+      "expectedCredits": null,
+      "hasIntermediate": false,
+      "pairCorrelativas": null,
+      "notas": ""
+    },
+    {
+      "file": "Instituto de Tecnología e Ingeniería/Ingenieria-Metalurgica.pdf",
+      "career": "Ingeniería Metalúrgica",
+      "tipo": "ingenieria",
+      "expectedSubjects": [
+        35,
+        70
+      ],
+      "expectedCredits": null,
+      "hasIntermediate": false,
+      "pairCorrelativas": null,
+      "notas": ""
+    },
+    {
+      "file": "Instituto de Tecnología e Ingeniería/lic-en-ciberseguridad-2026.pdf",
+      "career": "Licenciatura en Ciberseguridad",
+      "tipo": "licenciatura",
+      "expectedSubjects": [
+        30,
+        60
+      ],
+      "expectedCredits": null,
+      "hasIntermediate": false,
+      "pairCorrelativas": null,
+      "notas": ""
+    },
+    {
+      "file": "Instituto de Tecnología e Ingeniería/lic-en-desarrollo-de-videojuegos-y-simulaciones-2026.pdf",
+      "career": "Licenciatura en Desarrollo de Videojuegos y Simulaciones",
+      "tipo": "licenciatura",
+      "expectedSubjects": [
+        30,
+        60
+      ],
+      "expectedCredits": null,
+      "hasIntermediate": false,
+      "pairCorrelativas": null,
+      "notas": ""
+    },
+    {
+      "file": "Instituto de Tecnología e Ingeniería/lic-informatica-2026.pdf",
+      "career": "Licenciatura en Informática",
+      "tipo": "licenciatura",
+      "expectedSubjects": [
+        35,
+        60
+      ],
+      "expectedCredits": null,
+      "hasIntermediate": false,
+      "pairCorrelativas": null,
+      "notas": ""
+    },
+    {
+      "file": "Instituto de Tecnología e Ingeniería/Licenciadoa en Diseño Industrial/Plan-de-estudios-de-Licenciatura-en-Diseno-Industrial-con-titulo-intermedio.pdf",
+      "career": "Licenciatura en Diseño Industrial",
+      "tipo": "licenciatura",
+      "expectedSubjects": [
+        30,
+        60
+      ],
+      "expectedCredits": null,
+      "hasIntermediate": false,
+      "pairCorrelativas": "Instituto de Tecnología e Ingeniería/Licenciadoa en Diseño Industrial/RCS-N°-028_25-Plan-de-correlatividades-Licenciatura-en-Diseno-Industrial-con-titulo-intermedio.pdf",
+      "notas": "Título intermedio por créditos, sin tabla propia en el plan (no se marcan materias intermediate)."
+    },
+    {
+      "file": "Instituto de Tecnología e Ingeniería/Licenciadoa en Diseño Industrial/RCS-N°-028_25-Plan-de-correlatividades-Licenciatura-en-Diseno-Industrial-con-titulo-intermedio.pdf",
+      "career": "Licenciatura en Diseño Industrial",
+      "tipo": "correlativas",
+      "expectedSubjects": null,
+      "expectedCredits": null,
+      "hasIntermediate": false,
+      "pairCorrelativas": "Instituto de Tecnología e Ingeniería/Licenciadoa en Diseño Industrial/Plan-de-estudios-de-Licenciatura-en-Diseno-Industrial-con-titulo-intermedio.pdf",
+      "notas": ""
+    },
+    {
+      "file": "Instituto de Tecnología e Ingeniería/Licenciatura en Gestión del mantenimiento/Plan-de-Estudios-de-la-Lic-en-Gestion-del-Mantenimiento-con-titulo-intermedio-RCS-381_2024.pdf",
+      "career": "Licenciatura en Gestión del Mantenimiento",
+      "tipo": "licenciatura",
+      "expectedSubjects": [
+        30,
+        60
+      ],
+      "expectedCredits": null,
+      "hasIntermediate": false,
+      "pairCorrelativas": "Instituto de Tecnología e Ingeniería/Licenciatura en Gestión del mantenimiento/RCS-029_25-Plan-de-correlatividades-Licenciatura-en-Mantenimiento-con-titulo-intermedio.pdf",
+      "notas": "Título intermedio por créditos, sin tabla propia en el plan (no se marcan materias intermediate)."
+    },
+    {
+      "file": "Instituto de Tecnología e Ingeniería/Licenciatura en Gestión del mantenimiento/RCS-029_25-Plan-de-correlatividades-Licenciatura-en-Mantenimiento-con-titulo-intermedio.pdf",
+      "career": "Licenciatura en Gestión del Mantenimiento",
+      "tipo": "correlativas",
+      "expectedSubjects": null,
+      "expectedCredits": null,
+      "hasIntermediate": false,
+      "pairCorrelativas": "Instituto de Tecnología e Ingeniería/Licenciatura en Gestión del mantenimiento/Plan-de-Estudios-de-la-Lic-en-Gestion-del-Mantenimiento-con-titulo-intermedio-RCS-381_2024.pdf",
+      "notas": ""
+    },
+    {
+      "file": "Instituto de Tecnología e Ingeniería/planes-carreras-informatica-para-web-ia.pdf",
+      "career": "Tecnicatura Universitaria en Inteligencia Artificial",
+      "tipo": "tecnicatura",
+      "expectedSubjects": [
+        18,
+        24
+      ],
+      "expectedCredits": null,
+      "hasIntermediate": false,
+      "pairCorrelativas": null,
+      "notas": "tabla Nro|Materia|Hs|Créditos|Correlativas|Nombre anterior/Equivalencia con 20 filas numeradas; dialecto no soportado por el parser (nombre pegado al número, sin duración) -> caso para fallback IA"
+    },
+    {
+      "file": "Instituto de Tecnología e Ingeniería/Tec.-Univ.-en-Electromovilidad.pdf",
+      "career": "Tecnicatura Universitaria en Electromovilidad",
+      "tipo": "tecnicatura",
+      "expectedSubjects": [
+        15,
+        35
+      ],
+      "expectedCredits": null,
+      "hasIntermediate": false,
+      "pairCorrelativas": null,
+      "notas": ""
+    },
+    {
+      "file": "Instituto de Tecnología e Ingeniería/Tecnicatura Universitaria en Mantenimiento Hospitalario/Plan-de-correlatividades-Tec.-Univ.-en-Mantenimiento-Hospitalario.pdf",
+      "career": "Tecnicatura Universitaria en Mantenimiento Hospitalario",
+      "tipo": "correlativas",
+      "expectedSubjects": null,
+      "expectedCredits": null,
+      "hasIntermediate": false,
+      "pairCorrelativas": "Instituto de Tecnología e Ingeniería/Tecnicatura Universitaria en Mantenimiento Hospitalario/Tecnicatura-Universitaria-en-Mantenimiento-hospitalario-1.pdf",
+      "notas": ""
+    },
+    {
+      "file": "Instituto de Tecnología e Ingeniería/Tecnicatura Universitaria en Mantenimiento Hospitalario/Tecnicatura-Universitaria-en-Mantenimiento-hospitalario-1.pdf",
+      "career": "Tecnicatura Universitaria en Mantenimiento Hospitalario",
+      "tipo": "tecnicatura",
+      "expectedSubjects": [
+        15,
+        35
+      ],
+      "expectedCredits": null,
+      "hasIntermediate": false,
+      "pairCorrelativas": "Instituto de Tecnología e Ingeniería/Tecnicatura Universitaria en Mantenimiento Hospitalario/Plan-de-correlatividades-Tec.-Univ.-en-Mantenimiento-Hospitalario.pdf",
+      "notas": ""
+    },
+    {
+      "file": "Instituto de Educación/Licenciatura-en-Educacion-Presencial-_-A-Distancia.pdf",
+      "career": "Licenciatura en Educación",
+      "tipo": "licenciatura",
+      "expectedSubjects": [
+        15,
+        35
+      ],
+      "expectedCredits": null,
+      "hasIntermediate": false,
+      "pairCorrelativas": null,
+      "notas": "Ciclo de complementación curricular, 2 años; sin PDF de correlativas en la web"
+    },
+    {
+      "file": "Instituto de Educación/RCS.-008-18-02-2026-EXP.-870-2023-Modificacion-al-plan-de-estudios-del-Profesorado-Universitario-de-Chino.pdf",
+      "career": "Profesorado Universitario de Chino",
+      "tipo": "profesorado",
+      "expectedSubjects": [
+        30,
+        60
+      ],
+      "expectedCredits": 240,
+      "hasIntermediate": false,
+      "pairCorrelativas": null,
+      "notas": "Título intermedio por créditos, sin tabla propia; sin PDF de correlativas en la web"
+    },
+    {
+      "file": "Instituto de Educación/RCS.-431-2024-Profesorado-Universitario-de-Biologia_removed.pdf",
+      "career": "Profesorado Universitario de Biología",
+      "tipo": "profesorado",
+      "expectedSubjects": [
+        30,
+        60
+      ],
+      "expectedCredits": 240,
+      "hasIntermediate": false,
+      "pairCorrelativas": "Instituto de Educación/Plan-de-correlatividades-del-Profesorado-Universitario-de-Biologia.pdf",
+      "notas": "Título intermedio por créditos, sin tabla propia"
+    },
+    {
+      "file": "Instituto de Educación/Plan-de-correlatividades-del-Profesorado-Universitario-de-Biologia.pdf",
+      "career": "Profesorado Universitario de Biología",
+      "tipo": "correlativas",
+      "expectedSubjects": null,
+      "expectedCredits": null,
+      "hasIntermediate": false,
+      "pairCorrelativas": "Instituto de Educación/RCS.-431-2024-Profesorado-Universitario-de-Biologia_removed.pdf",
+      "notas": ""
+    },
+    {
+      "file": "Instituto de Educación/PLAN-PROFESORADO-UNIVERSITARIO-DE-EDUCACION-FISICA.docx_removed.pdf",
+      "career": "Profesorado Universitario en Educación Física",
+      "tipo": "profesorado",
+      "expectedSubjects": [
+        30,
+        60
+      ],
+      "expectedCredits": 240,
+      "hasIntermediate": false,
+      "pairCorrelativas": "Instituto de Educación/Plan-de-correlatividades-del-Profesorado-Universitario-en-Educacion-Fisica-1.pdf",
+      "notas": "Título intermedio por créditos, sin tabla propia"
+    },
+    {
+      "file": "Instituto de Educación/Plan-de-correlatividades-del-Profesorado-Universitario-en-Educacion-Fisica-1.pdf",
+      "career": "Profesorado Universitario en Educación Física",
+      "tipo": "correlativas",
+      "expectedSubjects": null,
+      "expectedCredits": null,
+      "hasIntermediate": false,
+      "pairCorrelativas": "Instituto de Educación/PLAN-PROFESORADO-UNIVERSITARIO-DE-EDUCACION-FISICA.docx_removed.pdf",
+      "notas": ""
+    },
+    {
+      "file": "Instituto de Educación/RCS-384-2024-Profesorado-Universitario-de-Ingles_removed.pdf",
+      "career": "Profesorado Universitario de Inglés",
+      "tipo": "profesorado",
+      "expectedSubjects": [
+        30,
+        60
+      ],
+      "expectedCredits": 240,
+      "hasIntermediate": false,
+      "pairCorrelativas": "Instituto de Educación/Plan-de-correlatividades-del-Profesorado-Universitario-de-Ingles.pdf",
+      "notas": "Título intermedio por créditos, sin tabla propia"
+    },
+    {
+      "file": "Instituto de Educación/Plan-de-correlatividades-del-Profesorado-Universitario-de-Ingles.pdf",
+      "career": "Profesorado Universitario de Inglés",
+      "tipo": "correlativas",
+      "expectedSubjects": null,
+      "expectedCredits": null,
+      "hasIntermediate": false,
+      "pairCorrelativas": "Instituto de Educación/RCS-384-2024-Profesorado-Universitario-de-Ingles_removed.pdf",
+      "notas": ""
+    },
+    {
+      "file": "Instituto de Educación/CS-429-2024-Profesorado-Letras.pdf",
+      "career": "Profesorado Universitario de Letras",
+      "tipo": "profesorado",
+      "expectedSubjects": [
+        30,
+        60
+      ],
+      "expectedCredits": 240,
+      "hasIntermediate": false,
+      "pairCorrelativas": "Instituto de Educación/Plan-de-correlatividades-del-Profesorado-Universitario-de-Letras-1.pdf",
+      "notas": "Título intermedio por créditos, sin tabla propia"
+    },
+    {
+      "file": "Instituto de Educación/Plan-de-correlatividades-del-Profesorado-Universitario-de-Letras-1.pdf",
+      "career": "Profesorado Universitario de Letras",
+      "tipo": "correlativas",
+      "expectedSubjects": null,
+      "expectedCredits": null,
+      "hasIntermediate": false,
+      "pairCorrelativas": "Instituto de Educación/CS-429-2024-Profesorado-Letras.pdf",
+      "notas": ""
+    },
+    {
+      "file": "Instituto de Educación/RCS-383-2024-Profesorado-Universitario-de-Matematica-2_removed.pdf",
+      "career": "Profesorado Universitario de Matemática",
+      "tipo": "profesorado",
+      "expectedSubjects": [
+        30,
+        60
+      ],
+      "expectedCredits": 240,
+      "hasIntermediate": false,
+      "pairCorrelativas": "Instituto de Educación/Plan-de-correlatividades-del-Profesorado-Universitario-de-Matematica-1.pdf",
+      "notas": "Título intermedio por créditos, sin tabla propia"
+    },
+    {
+      "file": "Instituto de Educación/Plan-de-correlatividades-del-Profesorado-Universitario-de-Matematica-1.pdf",
+      "career": "Profesorado Universitario de Matemática",
+      "tipo": "correlativas",
+      "expectedSubjects": null,
+      "expectedCredits": null,
+      "hasIntermediate": false,
+      "pairCorrelativas": "Instituto de Educación/RCS-383-2024-Profesorado-Universitario-de-Matematica-2_removed.pdf",
+      "notas": ""
+    },
+    {
+      "file": "Instituto de Educación/PLAN-PROFESORADO-UNIVERSITARIO-DE-GEOGRAFIA.docx_removed.pdf",
+      "career": "Profesorado Universitario de Geografía",
+      "tipo": "profesorado",
+      "expectedSubjects": [
+        30,
+        60
+      ],
+      "expectedCredits": 240,
+      "hasIntermediate": false,
+      "pairCorrelativas": "Instituto de Educación/Plan-de-correlatividades-del-Profesorado-Universitario-de-Geografia.pdf",
+      "notas": "Título intermedio por créditos, sin tabla propia"
+    },
+    {
+      "file": "Instituto de Educación/Plan-de-correlatividades-del-Profesorado-Universitario-de-Geografia.pdf",
+      "career": "Profesorado Universitario de Geografía",
+      "tipo": "correlativas",
+      "expectedSubjects": null,
+      "expectedCredits": null,
+      "hasIntermediate": false,
+      "pairCorrelativas": "Instituto de Educación/PLAN-PROFESORADO-UNIVERSITARIO-DE-GEOGRAFIA.docx_removed.pdf",
+      "notas": ""
+    }
+  ]
+}

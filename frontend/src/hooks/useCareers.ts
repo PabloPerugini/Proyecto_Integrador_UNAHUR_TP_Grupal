@@ -10,7 +10,6 @@ interface UseCareersOptions {
 export function useCareers({ scope = 'all', onError }: UseCareersOptions = {}) {
   const [careers, setCareers] = useState<Career[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   const onErrorRef = useRef(onError);
   useEffect(() => {
@@ -22,11 +21,8 @@ export function useCareers({ scope = 'all', onError }: UseCareersOptions = {}) {
     try {
       const list = await apiService.getAll(scope === 'published' ? 'published' : undefined);
       setCareers(list);
-      setError(null);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Error cargando los planes';
-      setError(message);
-      onErrorRef.current?.(message);
+      onErrorRef.current?.(err instanceof Error ? err.message : 'Error cargando los planes');
     } finally {
       setLoading(false);
     }
@@ -36,5 +32,5 @@ export function useCareers({ scope = 'all', onError }: UseCareersOptions = {}) {
     void load();
   }, [load]);
 
-  return { careers, setCareers, loading, error, reload: load };
+  return { careers, loading, reload: load };
 }

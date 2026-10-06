@@ -30,6 +30,7 @@ process.on("unhandledRejection", (reason) => {
 
 process.on("uncaughtException", (error) => {
   console.error("Excepción no capturada:", error);
+  process.exit(1);
 });
 
 start();

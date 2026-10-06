@@ -13,6 +13,12 @@ build/
 # Logs
 *.log
 npm-debug.log*
+backend/scripts/informes/
+frontend/dist/
+
+# Temporales de debug del parser (Fase 5.5 los borra)
+backend/*.tmp.js
+backend/scripts/tmp-debug-*.js
 
 # Sistema
 .DS_Store

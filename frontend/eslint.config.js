@@ -19,6 +19,10 @@ export default defineConfig([
       globals: globals.browser,
     },
     rules: {
+      // Desactivada a propósito (relevamiento 30/09): los 3 setState en
+      // efectos son sincronizaciones selección-contexto con guarda de loop
+      // (MyProgress default-career, PlanAdmin id-sync); migrarlas a
+      // setState-en-render no aporta y arriesga la selección persistida.
       'react-hooks/set-state-in-effect': 'off',
       'react-refresh/only-export-components': 'off',
     },

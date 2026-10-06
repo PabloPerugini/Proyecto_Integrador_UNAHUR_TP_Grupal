@@ -1,5 +1,12 @@
 import { request, uploadPdf } from './client';
-import type { Career, GraphData, ParsedSubject, ParseCorrelativasResponse, Subject } from '../types';
+import type {
+  Career,
+  GraphData,
+  ParsedSubject,
+  ParseCorrelativasResponse,
+  Subject,
+  Sugerencias,
+} from '../types';
 
 export const careersApi = {
   getAll: (status?: string) =>
@@ -29,6 +36,8 @@ export const careersApi = {
       intermediateTitle?: string | null;
       creditsFinal?: number;
       creditsIntermediate?: number;
+      aiFallback?: boolean;
+      aiProvider?: string | null;
     }>(`/careers/${id}/parse-official`, file),
 
   saveSubjects: (
@@ -52,12 +61,14 @@ export const careersApi = {
     uploadPdf<ParseCorrelativasResponse>(`/careers/${id}/parse-correlativas`, file),
 
   saveCorrelativas: (id: string, subjects: { code: string; name: string; requires: string[] }[]) =>
-    request<{ saved: number; total: number }>(`/careers/${id}/correlativas`, {
+    request<{ saved: number; total: number; dropped?: string[] }>(`/careers/${id}/correlativas`, {
       method: 'POST',
       body: JSON.stringify({ subjects }),
     }),
 
   getGraph: (id: string) => request<GraphData>(`/careers/${id}/graph`),
+
+  getSugerencias: (id: string) => request<Sugerencias>(`/careers/${id}/sugerencias`),
 
   deleteCareer: (id: string) =>
     request<{ deleted: string; deletedId: string }>(`/careers/${id}`, { method: 'DELETE' }),

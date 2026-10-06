@@ -35,6 +35,9 @@ function hashString(value: string): number {
   return hash;
 }
 
+// ESPEJO del backend (backend/src/utils/careerColor.js) — la fuente canónica
+// es el backend, que persiste el color al crear. No cambiar hex ni hash acá
+// sin cambiarlo allá: misma carrera, distinto color en admin vs lista.
 export function deriveCareerColor(institute: string | undefined, name: string | undefined): string {
   const inst = normalizeName(institute);
   if (INSTITUTE_COLORS[inst]) return INSTITUTE_COLORS[inst];

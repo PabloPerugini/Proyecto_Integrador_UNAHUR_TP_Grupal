@@ -1,6 +1,6 @@
 const jwt = require("jsonwebtoken");
 const userService = require("../services/userService");
-const { userSchema } = require("../schemas/user.schemas");
+const { userSchema, userUpdateSchema } = require("../schemas/user.schemas");
 
 const createUser = async (req, res) => {
   try {
@@ -22,6 +22,11 @@ const createUser = async (req, res) => {
       user: newUser,
     });
   } catch (error) {
+    if (error.code === 11000) {
+      return res.status(409).json({
+        message: "Email o NickName ya registrado",
+      });
+    }
     return res.status(400).json({
       message: error.message,
     });
@@ -80,9 +85,21 @@ const updateUser = async (req, res) => {
       }
     }
 
+    // Valida formato (campos opcionales) sin exigir los demás.
+    const { error, value } = userUpdateSchema.validate(updateData, {
+      abortEarly: false,
+      stripUnknown: true,
+    });
+    if (error) {
+      return res.status(400).json({
+        message: "Datos inválidos",
+        errors: error.details.map((detail) => detail.message),
+      });
+    }
+
     const updatedUser = await userService.updateUser(
       nickName,
-      updateData
+      value,
     );
 
     if (!updatedUser) {
@@ -96,6 +113,12 @@ const updateUser = async (req, res) => {
       user: updatedUser,
     });
   } catch (error) {
+    // Colisión concurrente de email/nickName: 409 en vez del crudo de Mongo.
+    if (error.code === 11000) {
+      return res.status(409).json({
+        message: "Email o NickName ya registrado",
+      });
+    }
     return res.status(400).json({
       message: error.message,
     });

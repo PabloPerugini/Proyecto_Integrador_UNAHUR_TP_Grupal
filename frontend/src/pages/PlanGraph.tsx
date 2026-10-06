@@ -15,8 +15,10 @@ import '@xyflow/react/dist/style.css';
 import { Alert, Badge, Button, Card, Form } from 'react-bootstrap';
 import { useNavigate, useParams } from 'react-router-dom';
 import { apiService } from '../api';
-import type { Career, GraphData, IntermediateProgress } from '../types';
+import type { GraphData, IntermediateProgress } from '../types';
 import { useCareerSelection } from '../context/CareerContext';
+import { useCareers } from '../hooks/useCareers';
+import { yearLabel } from '../utils/subjects';
 import { STATUS_COLOR, STATUS_BADGE, statusColor, statusLabel } from '../utils/status';
 import ColorDot from '../components/ColorDot';
 
@@ -33,17 +35,49 @@ interface PlanNodeData {
   credits: number;
 }
 
+function nodeBorder(d: Pick<PlanNodeData, 'optimal' | 'critical' | 'available'>, selected = false): string {
+  if (selected) return '3px solid #212529';
+  if (d.optimal) return '3px solid #6f42c1';
+  if (d.critical) return '3px solid #fd7e14';
+  if (d.available) return '3px solid #ffc107';
+  return '3px solid rgba(0,0,0,.15)';
+}
+
+function StatusBadges({ d }: { d: Pick<PlanNodeData, 'available' | 'optimal' | 'critical'> }) {
+  return (
+    <>
+      {d.available && <span className="badge text-bg-warning" style={{ fontSize: 9 }}>disponible</span>}
+      {d.optimal && <span className="badge" style={{ fontSize: 9, background: '#6f42c1' }}>óptima</span>}
+      {d.critical && <span className="badge text-bg-dark" style={{ fontSize: 9 }}>crítico</span>}
+    </>
+  );
+}
+
+function toPlanNodeData(
+  n: { code: string; name: string; year: number | null; cuatrimestre: number | null; duration?: string | null; status: PlanNodeData['status']; credits: number },
+  availableSet: Set<string>,
+  criticalSet: Set<string>,
+  fastSet: Set<string>,
+): PlanNodeData {
+  return {
+    code: n.code,
+    name: n.name,
+    year: n.year,
+    cuatrimestre: n.cuatrimestre,
+    duration: n.duration ?? null,
+    status: n.status,
+    available: availableSet.has(n.code),
+    critical: criticalSet.has(n.code),
+    optimal: fastSet.has(n.code),
+    credits: n.credits,
+  };
+}
+
 function PlanNode({ data }: NodeProps<Node<Record<string, unknown>>>) {
   const d = data as unknown as PlanNodeData;
   const color = statusColor(d.status);
   const label = statusLabel(d.status);
-  const border = d.optimal
-    ? '3px solid #6f42c1'
-    : d.critical
-      ? '3px solid #fd7e14'
-      : d.available
-        ? '3px solid #ffc107'
-        : '3px solid rgba(0,0,0,.15)';
+  const border = nodeBorder(d);
   return (
     <div
       style={{
@@ -65,9 +99,7 @@ function PlanNode({ data }: NodeProps<Node<Record<string, unknown>>>) {
       <div style={{ fontSize: 10, opacity: 0.95, marginTop: 2, display: 'flex', alignItems: 'center', gap: 5 }}>
         <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#fff', flexShrink: 0 }} />
         {label}
-        {d.available && <span className="badge text-bg-warning" style={{ fontSize: 9 }}>disponible</span>}
-        {d.optimal && <span className="badge" style={{ fontSize: 9, background: '#6f42c1' }}>óptima</span>}
-        {d.critical && <span className="badge text-bg-dark" style={{ fontSize: 9 }}>crítico</span>}
+        <StatusBadges d={d} />
       </div>
       <Handle type="source" position={Position.Bottom} style={{ background: '#333' }} />
     </div>
@@ -255,15 +287,9 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
   const view = initialView;
   const [pinnedCode, setPinnedCode] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  const [careers, setCareers] = useState<Career[]>([]);
+  // 5.ª copia del listado unificada al hook (Fase 5 §11.6): mismo fetch on-mount.
+  const { careers } = useCareers({ onError: (m) => setErr(m) });
   const selectedCareer = useMemo(() => careers.find((c) => c._id === id) ?? null, [careers, id]);
-
-  useEffect(() => {
-    apiService
-      .getAll()
-      .then(setCareers)
-      .catch((e) => setErr(e instanceof Error ? e.message : 'Error cargando las carreras'));
-  }, []);
 
   useEffect(() => {
     if (!id) return;
@@ -372,24 +398,13 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
     const availableSet = new Set(graph.availableNow ?? []);
     const yearGroups = new Map<number, PlanNodeData[]>();
     const planNodes: Node[] = graph.nodes.map((n) => {
-      const data = {
-        code: n.code,
-        name: n.name,
-        year: n.year,
-        cuatrimestre: n.cuatrimestre,
-        duration: n.duration ?? null,
-        status: n.status,
-        available: availableSet.has(n.code),
-        critical: criticalSet.has(n.code),
-        optimal: fastPath.set.has(n.code),
-        credits: n.credits,
-      };
+      const data = toPlanNodeData(n, availableSet, criticalSet, fastPath.set);
       if (n.year != null) {
         const arr = yearGroups.get(n.year) ?? [];
         arr.push(data);
         yearGroups.set(n.year, arr);
       }
-      return { id: n.code, type: 'plan' as const, position: n.position, data };
+      return { id: n.code, type: 'plan' as const, position: n.position, data: { ...data } };
     });
     const labels: Node[] = [];
     for (const [year, list] of yearGroups) {
@@ -447,18 +462,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
     for (const n of graph.nodes) {
       const y = n.year ?? 999;
       const g = m.get(y) ?? { year: y, c1: [], c2: [], anual: [], cuat: [], total: 0, aprobadas: 0, credits: 0, creditsAprob: 0 };
-      const data = {
-        code: n.code,
-        name: n.name,
-        year: n.year,
-        cuatrimestre: n.cuatrimestre,
-        duration: n.duration ?? null,
-        status: n.status,
-        available: availableSet.has(n.code),
-        critical: criticalSet.has(n.code),
-        optimal: fastPath.set.has(n.code),
-        credits: n.credits,
-      };
+      const data = toPlanNodeData(n, availableSet, criticalSet, fastPath.set);
       g.total += 1;
       g.credits += n.credits ?? 0;
       if (n.status === 'Aprobada') {
@@ -505,15 +509,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
   }
 
   const renderCard = (d: PlanNodeData, selected: boolean) => {
-    const border = selected
-      ? '3px solid #212529'
-      : d.optimal
-        ? '3px solid #6f42c1'
-        : d.critical
-          ? '3px solid #fd7e14'
-          : d.available
-            ? '3px solid #ffc107'
-            : '3px solid rgba(0,0,0,.18)';
+    const border = nodeBorder(d, selected);
     return (
       <button
         key={d.code}
@@ -551,9 +547,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
           {d.code} · {d.credits} cr · {statusLabel(d.status)}
         </div>
         <div style={{ fontSize: 10, opacity: 0.95, marginTop: 3 }}>
-          {d.available && <span className="badge text-bg-warning me-1" style={{ fontSize: 9 }}>disponible</span>}
-          {d.optimal && <span className="badge me-1" style={{ fontSize: 9, background: '#6f42c1' }}>óptima</span>}
-          {d.critical && <span className="badge text-bg-dark" style={{ fontSize: 9 }}>crítico</span>}
+          <StatusBadges d={d} />
         </div>
       </button>
     );
@@ -678,7 +672,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
                 >
                   <div className="card-body py-2 px-3 d-flex flex-wrap align-items-center gap-3">
                     <div className="fw-bold" style={{ color: graph.color ?? '#0d6efd', minWidth: 90 }}>
-                      {g.year === 999 ? 'Sin año' : `Año ${g.year}`}
+                      {yearLabel(g.year)}
                     </div>
                     <div className="small text-muted">
                       {g.total} materias · {g.aprobadas} aprobadas ·{' '}

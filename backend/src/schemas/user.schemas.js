@@ -46,4 +46,9 @@ const userSchema = Joi.object({
     }),  
 });
 
-module.exports = { userSchema };
+const userUpdateSchema = userSchema.fork(
+  ["nickName", "firstName", "lastName", "email", "password"],
+  (field) => field.optional(),
+);
+
+module.exports = { userSchema, userUpdateSchema };

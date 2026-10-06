@@ -122,6 +122,19 @@ paths:
         "404":
           description: Carrera no encontrada
 
+  /careers/{id}/sugerencias:
+    get:
+      tags:
+        - Careers
+      summary: Sugerencias de inscripción AR-3 (R0–R6) desde el historial
+      parameters:
+        - $ref: "#/components/parameters/id"
+      responses:
+        "200":
+          description: Materias A/B, disponibles, finales, comunes y mensajes
+        "404":
+          description: Carrera no encontrada
+
   /careers/{id}/parse-official:
     post:
       tags:
@@ -148,6 +161,8 @@ paths:
                 sourceKind: official
                 detectedCount: 3
                 subjects: []
+                aiFallback: false
+                aiProvider: null
 
   /careers/{id}/publish:
     post:
@@ -216,6 +231,104 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Progress"
+
+  /:
+    get:
+      tags:
+        - System
+      summary: Raíz de la API (nombre, estado, docs)
+      responses:
+        "200":
+          description: Info de la API
+
+  /careers/{id}/parse-correlativas:
+    post:
+      tags:
+        - Careers
+      summary: Parsea un PDF de correlativas (multipart, campo file)
+      parameters:
+        - $ref: "#/components/parameters/id"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Matching contra materias + sugerencias IA (aiSuggested/aiReview)
+        "404":
+          description: Carrera no encontrada
+
+  /careers/{id}/correlativas:
+    post:
+      tags:
+        - Careers
+      summary: Guarda correlativas (solo códigos existentes, sin ciclos)
+      parameters:
+        - $ref: "#/components/parameters/id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                subjects:
+                  type: array
+                  items:
+                    type: object
+      responses:
+        "200":
+          description: Correlativas guardadas (informa descartes en dropped)
+        "400":
+          description: Ciclo detectado (no se guarda nada) o arreglo vacío
+
+  /careers/{id}:
+    patch:
+      tags:
+        - Careers
+      summary: Actualiza datos de una carrera
+      parameters:
+        - $ref: "#/components/parameters/id"
+      responses:
+        "200":
+          description: Carrera actualizada
+        "404":
+          description: Carrera no encontrada
+    delete:
+      tags:
+        - Careers
+      summary: Borra una carrera con sus materias y avances
+      parameters:
+        - $ref: "#/components/parameters/id"
+      responses:
+        "200":
+          description: Carrera eliminada
+        "404":
+          description: Carrera no encontrada
+
+  /users/login:
+    post:
+      tags:
+        - Users (legado, sin UI)
+      summary: "[LEGADO] Login JWT — existe en código, ninguna pantalla lo usa"
+      responses:
+        "200":
+          description: Token JWT
+
+  /users/register:
+    post:
+      tags:
+        - Users (legado, sin UI)
+      summary: "[LEGADO] Registro — existe en código, ninguna pantalla lo usa"
+      responses:
+        "201":
+          description: Usuario creado
 
 components:
   parameters:
