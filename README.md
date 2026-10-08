@@ -15,11 +15,24 @@ Proyecto integrador de la materia **Programación - Informática (UNAHUR)**. El 
 
 ```
 .
+├── CHANGELOG.md    # Mejoras técnicas por fecha
+├── docs/
+│   ├── requirements/  # BRD y FRD (requerimientos de negocio y funcionales)
+│   └── adr/           # Registros de decisiones de arquitectura
 ├── backend/    # API REST (Node.js + Express + MongoDB + Redis)
 └── frontend/   # Aplicación web (React + Vite + TypeScript)
 ```
 
 Cada carpeta tiene su propio `README.md` con instrucciones de instalación y ejecución.
+
+## Documentación
+
+- [BRD — Documentación de Requerimientos de Negocio](./docs/requirements/BRD.md)
+- [FRD — Documentación de Requerimientos Funcionales](./docs/requirements/FRD.md)
+- [Plan de Pruebas](./docs/requirements/Test-Plan.md)
+- [Seguimiento de Testing (Test Cases)](./docs/requirements/Test-Cases.md)
+- [ADRs — Decisiones de arquitectura](./docs/adr/)
+- [CHANGELOG — Mejoras por fecha](./CHANGELOG.md)
 
 ## Tecnologías
 

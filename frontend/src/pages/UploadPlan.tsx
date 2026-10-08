@@ -14,6 +14,7 @@ import ImportJobList from '../components/ImportJobList';
 import { makeJobId } from '../utils/importJobs';
 import CareersTable from '../components/CareersTable';
 import ModalConfirm from '../components/ModalConfirm';
+import { confirmDeleteMessage } from '../utils/messages';
 import type { ImportJob } from '../components/ImportJobList';
 
 const JOB_STATUS_LABEL: Record<'creando' | 'parseando' | 'guardando', string> = {
@@ -166,7 +167,7 @@ export default function UploadPlan() {
       <ModalConfirm
         show={candidate !== null}
         title="Eliminar plan"
-        message={candidate ? CONFIRM_DELETE(candidate.name) : ''}
+        message={candidate ? confirmDeleteMessage(candidate.name) : ''}
         confirmLabel="Eliminar"
         loading={deleting}
         onConfirm={confirmRemove}

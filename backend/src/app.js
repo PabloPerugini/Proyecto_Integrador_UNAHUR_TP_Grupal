@@ -1,19 +1,29 @@
+require("./config/env");
 const path = require("path");
 const express = require("express");
-const cors = require("cors");
 const helmet = require("helmet");
+const cors = require("cors");
+const cookieParser = require("cookie-parser");
 const rateLimit = require("express-rate-limit");
 const swaggerUi = require("swagger-ui-express");
 const YAML = require("yamljs");
 const routes = require("./routes");
 const errorHandler = require("./middlewares/errorHandler");
+let limiterGeneral;
+let limiterLogin;
+try {
+  ({ limiterGeneral, limiterLogin } = require("./config/limits"));
+} catch {
+  limiterGeneral = rateLimit({ windowMs: 15 * 60 * 1000, max: 200 });
+  limiterLogin = rateLimit({ windowMs: 15 * 60 * 1000, max: 20 });
+}
 
 const app = express();
 
 const swaggerDocument = YAML.load(path.join(__dirname, "../docs/swagger.yaml"));
 
-// CORS whitelist: orígenes desde env, default solo el front local.
-const allowedOrigins = (process.env.CORS_ORIGIN || "http://localhost:5173")
+// CORS: whitelist desde env + credentials para cookies JWT (integración auth-cookie-ia).
+const allowedOrigins = (process.env.CORS_ORIGIN || process.env.FRONTEND_URL || "http://localhost:5173")
   .split(",")
   .map((o) => o.trim())
   .filter(Boolean);
@@ -23,14 +33,17 @@ app.use(
       if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
       return cb(new Error("Origen no permitido por CORS"));
     },
+    credentials: true,
   }),
 );
 app.use(helmet({ contentSecurityPolicy: false }));
-// Rate-limit solo en auth (las rutas IA ya tienen aiRateLimit propio).
-const authRateLimit = rateLimit({ windowMs: 15 * 60 * 1000, max: 20 });
-app.use("/users/login", authRateLimit);
-app.use("/users/register", authRateLimit);
+
+app.use(limiterGeneral);
+// Rate-limit en auth (compat: limiterLogin centralizado + ref.antiguo).
+app.use("/users/login", limiterLogin);
+app.use("/users/register", limiterLogin);
 app.use(express.json());
+app.use(cookieParser());
 
 // Envelope progresivo de errores (Cuerpo B §3.1, fase 1: solo errores).
 // Normaliza TODA respuesta con status >= 400 a

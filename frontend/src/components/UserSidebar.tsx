@@ -1,5 +1,5 @@
 import { useTheme } from '../hooks/useTheme';
-import { useCareerSelection } from '../context/CareerContext';
+import { useCareerSelection } from '../hooks/useCareerSelection';
 import ThemeToggle from './ThemeToggle';
 import SidebarBase from './SidebarBase';
 import type { NavItem } from './SidebarBase';

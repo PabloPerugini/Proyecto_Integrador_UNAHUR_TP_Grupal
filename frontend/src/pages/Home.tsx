@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
-import { useCareerSelection } from '../context/CareerContext';
+import { useCareerSelection } from '../hooks/useCareerSelection';
 import { useCareers } from '../hooks/useCareers';
 import { useFlashMessage } from '../hooks/useFlashMessage';
 import { apiService } from '../api';
@@ -24,7 +24,7 @@ const fmt = new Intl.NumberFormat('es-AR');
 export default function Home() {
   const navigate = useNavigate();
   const { setCareerId } = useCareerSelection();
-  const { msg, flash, flashFromError, clear } = useFlashMessage();
+  const { msg, flash, clear } = useFlashMessage();
   const { careers, loading } = useCareers({ onError: (m) => flash('danger', m) });
   const [stats, setStats] = useState<Record<string, GraphData | null>>({});
 
@@ -39,15 +39,13 @@ export default function Home() {
           return [c._id, null] as const;
         }
       }),
-    )
-      .then((graphs) => {
-        if (alive) setStats(Object.fromEntries(graphs));
-      })
-      .catch((err) => flashFromError(err, 'Error cargando los planes'));
+    ).then((graphs) => {
+      if (alive) setStats(Object.fromEntries(graphs));
+    });
     return () => {
       alive = false;
     };
-  }, [careers, flashFromError]);
+  }, [careers]);
 
   const entries = useMemo<CareerEntry[]>(
     () =>
