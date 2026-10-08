@@ -16,7 +16,7 @@ import { Alert, Badge, Button, Card, Form } from 'react-bootstrap';
 import { useNavigate, useParams } from 'react-router-dom';
 import { apiService } from '../api';
 import type { GraphData, IntermediateProgress } from '../types';
-import { useCareerSelection } from '../context/CareerContext';
+import { useCareerSelection } from '../hooks/useCareerSelection';
 import { useCareers } from '../hooks/useCareers';
 import { yearLabel } from '../utils/subjects';
 import { STATUS_COLOR, STATUS_BADGE, statusColor, statusLabel } from '../utils/status';
