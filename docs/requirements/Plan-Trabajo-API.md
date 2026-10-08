@@ -78,7 +78,7 @@ La API es consumida por el frontend (React + Vite) y está documentada en vivo e
 
 > **Estado a 08/10/2026:** las Fases 1–5 están **ejecutadas** (código + `npm test` en verde con 20 tests + corridas 30/09 como evidencia). Solo la Fase 6 queda **pendiente** (registro formal caso por caso en Test-Cases y E2E UI 20–23). El cronograma (§8) lo refleja como H1–H5 ejecutados / H6 pendiente a diciembre 2026. Novedades desde v1.1: sesión por cookie httpOnly en `/users` (`login` la setea además del Bearer, `logout` la limpia, `me` con caché de 60s), token JWT unificado (`id` + `sub`) y `GET /universities` montado en la API.
 
-Fuera de alcance de la API (acuerdo de equipo, ver FRD §4.3): el progreso por navegador sigue sin cuentas (`x-user-id` local). El módulo `/users` salió del congelamiento parcial: expone sesión por cookie (`POST /users/login` → cookie `token`, `POST /users/logout`, `GET /users/me`) además del Bearer, y sirve a las pantallas de Login/Registro del frontend. Las 4 rutas admin con JWT (`GET /users`, `GET/PATCH/DELETE /users/:nickName` en `src/routes/user.routes.js`) existen pero siguen fuera de alcance y no se documentan en Swagger. Igual caso: `GET /universities` (CRUD de universidades) ya responde en la API pero aún no está documentado en Swagger (pendiente).
+Fuera de alcance de la API (acuerdo de equipo, ver FRD §4.3): el progreso por navegador sigue sin cuentas (`x-user-id` local). El módulo `/users` salió del congelamiento parcial: expone sesión por cookie (`POST /users/login` → cookie `token`, `POST /users/logout`, `GET /users/me`) además del Bearer, y sirve a las pantallas de Login/Registro del frontend. Las 4 rutas admin con JWT (`GET /users`, `GET/PATCH/DELETE /users/:nickName` en `src/routes/user.routes.js`) existen pero siguen fuera de alcance y no se documentan en Swagger. El CRUD de universidades (`/universities`) ya responde en la API y está documentado en Swagger (§5.5).
 
 ---
 
@@ -97,7 +97,7 @@ Fuera de alcance de la API (acuerdo de equipo, ver FRD §4.3): el progreso por n
 - Sugerencias AR-3 (`GET /careers/:id/sugerencias`: Materias A/B, disponibles, finales, comunes, mensajes Msj0–Msj6).
 - Salud y raíz (`GET /health`, `GET /`).
 - Manejo centralizado de errores en español con envelope único `{ success: false, error: { message, details? } }` (normalizado en `src/app.js`; `src/middlewares/errorHandler.js` traduce `400 / 401 / 404 / 409 / 500`) y códigos `400 / 401 / 404 / 409 / 500`.
-- Documentación OpenAPI (`backend/docs/swagger.yaml`, 16 paths públicos) servida en `/api-docs`.
+- Documentación OpenAPI (`backend/docs/swagger.yaml`, 20 paths públicos) servida en `/api-docs`.
 
 ### 3.2 No incluye (limitaciones)
 
@@ -143,7 +143,7 @@ flowchart LR
 
 ## 5. Inventario de endpoints
 
-Fuente: `backend/src/routes/index.js`, `career.routes.js`, `progress.routes.js`, `user.routes.js`, `university.routes.js` y `backend/docs/swagger.yaml`. Base: `http://localhost:3000`. Nota: `/users/me`, `/users/logout` y `/universities` responden en la API pero aún no están en `swagger.yaml` (16 paths documentados).
+Fuente: `backend/src/routes/index.js`, `career.routes.js`, `progress.routes.js`, `user.routes.js`, `university.routes.js` y `backend/docs/swagger.yaml` (20 paths documentados). Base: `http://localhost:3000`.
 
 ### 5.1 Sistema / Salud
 
@@ -151,7 +151,7 @@ Fuente: `backend/src/routes/index.js`, `career.routes.js`, `progress.routes.js`,
 | ------ | ---- | ---- | ----------- |
 | GET | `/` | — | Raíz: `{ name, status, docs, health }`. |
 | GET | `/health` | — | Liveness: `{ status: ok }`. |
-| GET | `/api-docs` | — | Swagger UI que documenta los 16 paths del OpenAPI (`swagger.yaml`). |
+| GET | `/api-docs` | — | Swagger UI que documenta los 20 paths del OpenAPI (`swagger.yaml`). |
 
 ### 5.2 Carreras y plan de estudios (`/careers`)
 
@@ -189,7 +189,7 @@ Fuente: `backend/src/routes/index.js`, `career.routes.js`, `progress.routes.js`,
 
 > Existen además 4 rutas admin con JWT en `src/routes/user.routes.js` (`GET /users`, `GET/PATCH/DELETE /users/:nickName`) que están **fuera de alcance** y no se documentan en Swagger.
 
-### 5.5 Universidades (`/universities`, montado oct-2026, pendiente Swagger)
+### 5.5 Universidades (`/universities`)
 
 | Método | Ruta | Auth | Descripción |
 | ------ | ---- | ---- | ----------- |
@@ -226,7 +226,7 @@ Reglas de negocio aplicadas en backend (`graph.service.js`, `buildSugerencias`):
 
 | Fase | Estado | Objetivo | Tareas | Evidencia / Comando |
 | ---- | -------- | ------ | ------------------- |
-| **Fase 1 — Base API y contrato** | ✅ Ejecutada | CRUD + salud + docs estables | `GET /`, `/health`, `CRUD /careers`, envelope de errores, Swagger 16 paths, CORS/Helmet/rate-limit | `GET /health`, `GET /api-docs`, Postman casos 1–2, 14–19 |
+| **Fase 1 — Base API y contrato** | ✅ Ejecutada | CRUD + salud + docs estables | `GET /`, `/health`, `CRUD /careers`, envelope de errores, Swagger 20 paths, CORS/Helmet/rate-limit | `GET /health`, `GET /api-docs`, Postman casos 1–2, 14–19 |
 | **Fase 2 — Ingesta de planes (PDF oficial)** | ✅ Ejecutada | Crear carrera desde PDF SIU-Guaraní | `parse-official` (pdfjs-dist, filas de totales/sección descartadas, título intermedio detectado), `saveSubjects`, validación `%PDF-` + 10 MB | `npm run test:planes` (43 PDFs), `npm run snapshot:planes -- --check` (diff = 0) |
 | **Fase 3 — Correlatividades** | ✅ Ejecutada | Grafo válido sin ciclos | `parse-correlativas` + matching clásico + `confidence`, `saveCorrelativas` con whitelist/anti-ciclos, detección de ciclos + orden topológico | `npm test` (whitelist/anti-ciclos/BUG-009), `npm run test:salud` |
 | **Fase 4 — Grafo y progreso** | ✅ Ejecutada | Visualización + persistencia por navegador | `GET /:id/graph` (nodes/edges/stats/availableNow/criticalPath), `POST /progress` (`{careerId, entries}`), `GET /progress/me?careerId` (`{entries, summary}`), `parse-history`, header `x-user-id` + `401` | Casos 9–12 Postman, `tests/rn04.test.js` |
@@ -341,7 +341,7 @@ Detalle completo caso por caso: `Matriz-Trazabilidad.md` (37 puntos: 12 ✅ / 15
 ## 14. Técnicas y metodologías a emplear (plantilla de cátedra)
 
 - **Desarrollo iterativo por fases** (§7) con criterios de aceptación por hito (§12) y release objetivo diciembre 2026.
-- **API REST + contrato vivo:** OpenAPI (`swagger.yaml`, 16 paths) servido en `/api-docs` como fuente de verdad; envelope único de errores en español.
+- **API REST + contrato vivo:** OpenAPI (`swagger.yaml`, 20 paths) servido en `/api-docs` como fuente de verdad; envelope único de errores en español.
 - **Calidad continua:** `node --test` (20 tests, regresión de parser, anti-ciclos, RN04, AR-3 y auth-cookie), golden snapshot del parser (`diff = 0` sobre 43 PDFs), `npm run validar` (masiva + salud + golden) y Postman 1–19.
 - **Control de versiones:** Git/GitHub con ramas por funcionalidad e integración revisada en `develop` antes de la entrega.
 - **Datos reales:** corpus SIU-Guaraní de 43 PDFs + `planes-referencia.json` + golden commiteados como evidencia.
@@ -378,4 +378,4 @@ El plan aporta a la formación del equipo en: diseño de APIs REST con contrato 
 
 ---
 
-*Fin del Plan de Trabajo — API REST v1.2 (alineado con plantilla de cátedra: carátula, contexto organizacional, técnicas y metodologías, experiencia de aprendizaje y vinculación con la carrera). Fuente de verdad del contrato: `backend/docs/swagger.yaml` (16 paths públicos) + `backend/src/routes/` (`/users/me`, `/users/logout` y `/universities` responden en la API y están pendientes de alta en Swagger).*
+*Fin del Plan de Trabajo — API REST v1.2 (alineado con plantilla de cátedra: carátula, contexto organizacional, técnicas y metodologías, experiencia de aprendizaje y vinculación con la carrera). Fuente de verdad del contrato: `backend/docs/swagger.yaml` (20 paths públicos) + `backend/src/routes/`.*

@@ -12,6 +12,10 @@ tags:
     description: Carreras y plan de estudios
   - name: Progress
     description: Progreso del alumno
+  - name: Users
+    description: Sesión por cookie httpOnly + Bearer (Login/Registro del frontend)
+  - name: Universities
+    description: Universidades y unidades académicas
 paths:
   /health:
     get:
@@ -379,20 +383,162 @@ paths:
   /users/login:
     post:
       tags:
-        - Users (legado, sin UI)
-      summary: "[LEGADO congelado] Login JWT — existe en código, ninguna pantalla lo usa (Opción A: no ampliar, no exponer en UI)"
+        - Users
+      summary: Login — devuelve token Bearer y setea cookie httpOnly `token`
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nickName, password]
+              properties:
+                nickName:
+                  type: string
+                password:
+                  type: string
+                  format: password
       responses:
         "200":
-          description: Token JWT
+          description: Inicio de sesión correcto ({ message, token, user } + cookie `token`)
+        "400":
+          description: NickName y contraseña son obligatorios
+        "401":
+          description: Credenciales inválidas
 
   /users/register:
     post:
       tags:
-        - Users (legado, sin UI)
-      summary: "[LEGADO congelado] Registro — existe en código, ninguna pantalla lo usa (Opción A: no ampliar, no exponer en UI)"
+        - Users
+      summary: Registro de usuario (rol USUARIO)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserRegisterBody"
       responses:
         "201":
           description: Usuario creado
+        "400":
+          description: Datos inválidos (Joi)
+        "409":
+          description: Email o NickName ya registrado
+
+  /users/me:
+    get:
+      tags:
+        - Users
+      summary: Perfil de la sesión (Bearer o cookie; token unificado id+sub)
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Perfil del usuario (con caché `me:{id}` 60s)
+        "401":
+          description: Sin token (ni Bearer ni cookie)
+
+  /users/logout:
+    post:
+      tags:
+        - Users
+      summary: Cierra la sesión (limpia la cookie `token`)
+      responses:
+        "200":
+          description: Sesión cerrada
+
+  /universities:
+    get:
+      tags:
+        - Universities
+      summary: Lista las universidades
+      responses:
+        "200":
+          description: Lista de universidades
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/University"
+    post:
+      tags:
+        - Universities
+      summary: Crea una universidad (solo admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUniversityBody"
+      responses:
+        "201":
+          description: Universidad creada
+        "400":
+          description: Nombre requerido
+        "401":
+          description: Sin token (ni Bearer ni cookie)
+        "403":
+          description: Requiere rol admin
+
+  /universities/{id}:
+    get:
+      tags:
+        - Universities
+      summary: Detalle de una universidad
+      parameters:
+        - $ref: "#/components/parameters/id"
+      responses:
+        "200":
+          description: Universidad
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/University"
+        "400":
+          description: ID inválido
+        "404":
+          description: Universidad no encontrada
+    patch:
+      tags:
+        - Universities
+      summary: Actualiza una universidad (solo admin)
+      parameters:
+        - $ref: "#/components/parameters/id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUniversityBody"
+      responses:
+        "200":
+          description: Universidad actualizada
+        "400":
+          description: ID inválido
+        "401":
+          description: Sin token
+        "403":
+          description: Requiere rol admin
+        "404":
+          description: Universidad no encontrada
+    delete:
+      tags:
+        - Universities
+      summary: Elimina una universidad (solo admin)
+      parameters:
+        - $ref: "#/components/parameters/id"
+      responses:
+        "200":
+          description: Universidad eliminada
+        "400":
+          description: ID inválido
+        "401":
+          description: Sin token
+        "403":
+          description: Requiere rol admin
+        "404":
+          description: Universidad no encontrada
 
 components:
   securitySchemes:
@@ -584,3 +730,42 @@ components:
               type: string
             careerId:
               type: string
+    UserRegisterBody:
+      type: object
+      required: [nickName, firstName, lastName, email, password]
+      properties:
+        nickName:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+    University:
+      type: object
+      properties:
+        _id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    CreateUniversityBody:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
