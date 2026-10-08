@@ -48,6 +48,13 @@ test("auth-cookie: setAuthCookie espeja JWT en cookie httpOnly `token`", () => {
   assert.equal(res.calls.cookie[0].opts.httpOnly, true);
 });
 
+test("auth-cookie: token unificado trae `id` y `sub`", () => {
+  const token = signToken("u1");
+  const payload = jwt.verify(token, process.env.JWT_SECRET);
+  assert.equal(payload.sub, "u1");
+  assert.equal(payload.id, "u1");
+});
+
 test("auth-cookie: clearAuthCookie limpia `token` (logout)", () => {
   const res = mockRes();
   clearAuthCookie(res);

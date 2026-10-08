@@ -173,10 +173,11 @@ const loginUser = async (req, res) => {
       });
     }
 
-    // Generamos el token
+    // Generamos el token (unificado: `id` legado + `sub` estándar).
     const token = jwt.sign(
       {
         id: user._id,
+        sub: String(user._id),
       },
       process.env.JWT_SECRET,
       {

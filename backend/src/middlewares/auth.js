@@ -7,7 +7,8 @@ const COOKIE_SECURE =
   process.env.COOKIE_SECURE === "true" || process.env.NODE_ENV === "production";
 
 function signToken(userId) {
-  return jwt.sign({ sub: String(userId) }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+  const sub = String(userId);
+  return jwt.sign({ sub, id: sub }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 }
 
 function setAuthCookie(res, token) {
