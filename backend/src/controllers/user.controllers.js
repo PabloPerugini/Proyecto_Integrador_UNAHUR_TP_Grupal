@@ -217,6 +217,21 @@ const logoutUser = (req, res) => {
 };
 
 const getMe = async (req, res) => {
+  // Integración auth-cookie-ia: caché best-effort del perfil (TTL 60s).
+  const userId = req.userId || (req.user && req.user._id);
+  if (userId) {
+    try {
+      const { getCache, setCache } = require("../services/cache.service");
+      const hit = await getCache(`me:${userId}`);
+      if (hit) return res.status(200).json(JSON.parse(hit));
+      if (req.user) {
+        setCache(`me:${userId}`, req.user, 60).catch(() => {});
+        return res.status(200).json(req.user);
+      }
+    } catch {
+      // Sin caché: sigue con la vía directa.
+    }
+  }
   if (req.user) return res.status(200).json(req.user);
   if (req.userId) return res.status(200).json({ _id: req.userId });
   return res.status(401).json({ message: "No estás autenticado" });

@@ -55,6 +55,21 @@ test("auth-cookie: token unificado trae `id` y `sub`", () => {
   assert.equal(payload.id, "u1");
 });
 
+test("auth-cookie: getMe usa caché cuando hay hit", async () => {
+  const cacheService = require("../src/services/cache.service");
+  const origGet = cacheService.getCache;
+  cacheService.getCache = async () => JSON.stringify({ _id: "u1", cached: true });
+  try {
+    const req = { userId: "u1", user: { _id: "u1" } };
+    const res = mockRes();
+    await userController.getMe(req, res);
+    assert.equal(res.calls.status, 200);
+    assert.equal(res.calls.body.cached, true);
+  } finally {
+    cacheService.getCache = origGet;
+  }
+});
+
 test("auth-cookie: clearAuthCookie limpia `token` (logout)", () => {
   const res = mockRes();
   clearAuthCookie(res);
