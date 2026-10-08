@@ -11,8 +11,8 @@
 | Institución           | Universidad Nacional de Hurlingham (UNAHUR)                          |
 | Unidad Académica      | Facultad de Informática — Proyecto Integrador Programación           |
 | Tipo de documento     | BRD — Documentación de Requerimientos de Negocio                     |
-| Versión               | 2.1                                                                   |
-| Fecha                 | 24 de septiembre de 2026                                              |
+| Versión               | 2.2                                                                   |
+| Fecha                 | 04 de octubre de 2026                                               |
 | Sponsor Operación     | Secretaría Académica / Dirección de Carrera                          |
 | Sponsor Organización  | UNAHUR                                                               |
 | Integrantes           | Perugini, Pablo; Acuña, Marcos; Masgo Sandoval, Joaquín; Renaud, Román; Remonda, Eliel; Cotera, Dylan |
@@ -39,6 +39,7 @@
 | 1.0     | 10/09/2026   | Equipo | Versión inicial. |
 | 2.0     | 24/09/2026   | Equipo | Revisión mayor alineada con la implementación actual. Se retiran los requerimientos que **no corresponden** a la aplicación: módulo de autenticación (registro/login/cookie), usuarios y roles, recuperación de contraseña, IA (matching semántico por embeddings, chat orientador y su orquestador multiproveedor) y pruebas automatizadas/CI. Se documenta el acceso sin cuenta (progreso por identificador local `x-user-id`), el título intermedio y las pantallas reales de la app. |
 | 2.1     | 30/09/2026   | Equipo | Sugerencias de inscripción implementadas (R0–R6/C1–C6) + RN04 con sustento transitivo; FRD/BRD alineados. |
+| 2.2     | 04/10/2026   | Equipo | Ajuste doc-vs-código: RN02 precisa que solo *Aprobada* habilita sucesoras (*Regular* no). |
 
 ---
 
@@ -130,7 +131,7 @@ El alcance incluye:
 | ID   | Regla                    | Condición                                                                                 | Acción / Descripción                                                                                                       |
 | ---- | ------------------------ | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
 | RN01 | Estado inicial del nodo  | Los requisitos previos de la materia no están cumplidos en el historial del estudiante.    | La materia se muestra **bloqueada** (color gris, inhabilitada).                                                            |
-| RN02 | Habilitación por correlativas | El estudiante marca una materia como *Aprobada* o *Regular* (según exija el plan).      | El sistema evalúa el grafo y habilita las materias sucesivas (disponibles, clickeables).                                   |
+| RN02 | Habilitación por correlativas | El estudiante marca una materia como *Aprobada*.      | El sistema evalúa el grafo (aprobación efectiva con sustento transitivo, RN04) y habilita las materias sucesivas (disponibles, clickeables). *Regular* no habilita sucesoras: cuenta para finales pendientes, estadísticas y sugerencias.                                   |
 | RN03 | Persistencia de progreso | El usuario modifica el estado de un nodo.                                                 | El cambio se guarda asociado al identificador local del navegador (`x-user-id`) en la base de datos (guardado explícito).                |
 | RN04 | Restricción de desmarcado | El usuario desmarca una materia como aprobada.                                           | El sistema revierte el estado de las materias dependientes subsiguientes que quedaron sin sustento correlativo.            |
 

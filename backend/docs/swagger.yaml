@@ -83,6 +83,10 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Subject"
+        "400":
+          description: ID inválido (CastError → envelope 400)
+        "404":
+          description: Carrera no encontrada
     post:
       tags:
         - Careers
@@ -108,6 +112,10 @@ paths:
               example:
                 saved: 12
                 total: 40
+        "400":
+          description: Arreglo vacío o ID inválido
+        "404":
+          description: Carrera no encontrada
 
   /careers/{id}/graph:
     get:
@@ -116,9 +124,18 @@ paths:
       summary: Devuelve el grafo del plan de estudios (incluye el progreso del navegador)
       parameters:
         - $ref: "#/components/parameters/id"
+        - $ref: "#/components/parameters/xUserId"
       responses:
         "200":
           description: Grafo de nodos y aristas
+        "401":
+          description: Falta header x-user-id (withDeviceId)
+          content:
+            application/json:
+              example:
+                success: false
+                error:
+                  message: "Falta identificador de sesión (x-user-id)"
         "404":
           description: Carrera no encontrada
 
@@ -129,9 +146,18 @@ paths:
       summary: Sugerencias de inscripción AR-3 (R0–R6) desde el historial
       parameters:
         - $ref: "#/components/parameters/id"
+        - $ref: "#/components/parameters/xUserId"
       responses:
         "200":
           description: Materias A/B, disponibles, finales, comunes y mensajes
+        "401":
+          description: Falta header x-user-id (withDeviceId)
+          content:
+            application/json:
+              example:
+                success: false
+                error:
+                  message: "Falta identificador de sesión (x-user-id)"
         "404":
           description: Carrera no encontrada
 
@@ -163,6 +189,8 @@ paths:
                 subjects: []
                 aiFallback: false
                 aiProvider: null
+        "400":
+          description: Falta campo file, no es PDF (%PDF-) o supera 10 MB (upload.js + isPdfBuffer)
 
   /careers/{id}/publish:
     post:
@@ -178,6 +206,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Career"
+        "400":
+          description: ID inválido
         "404":
           description: Carrera no encontrada
 
@@ -199,38 +229,64 @@ paths:
       responses:
         "200":
           description: Progreso detectado en el PDF
+        "400":
+          description: Falta campo file, no es PDF o supera 10 MB
 
   /progress:
     post:
       tags:
         - Progress
-      summary: Guarda el progreso del alumno
+      summary: Guarda el progreso del alumno (masivo por carrera)
+      parameters:
+        - $ref: "#/components/parameters/xUserId"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: array
-              items:
-                $ref: "#/components/schemas/ProgressIn"
+              $ref: "#/components/schemas/ProgressSaveBody"
+            example:
+              careerId: "68e237f52ff8cebc00ef345d"
+              entries:
+                - subjectCode: "MAT-101"
+                  status: "Aprobada"
+                  nota: 8
+                - subjectCode: "FIS-102"
+                  status: "Regular"
       responses:
         "200":
           description: Progreso guardado
+          content:
+            application/json:
+              example:
+                saved: 2
+        "400":
+          description: Falta careerId/entries o entrada inválida (subjectCode + estado válido requeridos)
+        "401":
+          description: Falta header x-user-id (withDeviceId)
 
   /progress/me:
     get:
       tags:
         - Progress
       summary: Obtiene el progreso del navegador actual
+      parameters:
+        - $ref: "#/components/parameters/xUserId"
+        - name: careerId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filtra por carrera; si se envía, la respuesta incluye summary de créditos
       responses:
         "200":
-          description: Lista de progreso
+          description: Progreso del navegador ({ entries, summary })
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Progress"
+                $ref: "#/components/schemas/ProgressMe"
+        "401":
+          description: Falta header x-user-id (withDeviceId)
 
   /:
     get:
@@ -261,6 +317,8 @@ paths:
       responses:
         "200":
           description: Matching contra materias + sugerencias IA (aiSuggested/aiReview)
+        "400":
+          description: Falta campo file, no es PDF o supera 10 MB
         "404":
           description: Carrera no encontrada
 
@@ -287,6 +345,8 @@ paths:
           description: Correlativas guardadas (informa descartes en dropped)
         "400":
           description: Ciclo detectado (no se guarda nada) o arreglo vacío
+        "404":
+          description: Carrera no encontrada
 
   /careers/{id}:
     patch:
@@ -298,6 +358,8 @@ paths:
       responses:
         "200":
           description: Carrera actualizada
+        "400":
+          description: ID inválido o nombre vacío
         "404":
           description: Carrera no encontrada
     delete:
@@ -309,6 +371,8 @@ paths:
       responses:
         "200":
           description: Carrera eliminada
+        "400":
+          description: ID inválido
         "404":
           description: Carrera no encontrada
 
@@ -316,7 +380,7 @@ paths:
     post:
       tags:
         - Users (legado, sin UI)
-      summary: "[LEGADO] Login JWT — existe en código, ninguna pantalla lo usa"
+      summary: "[LEGADO congelado] Login JWT — existe en código, ninguna pantalla lo usa (Opción A: no ampliar, no exponer en UI)"
       responses:
         "200":
           description: Token JWT
@@ -325,13 +389,20 @@ paths:
     post:
       tags:
         - Users (legado, sin UI)
-      summary: "[LEGADO] Registro — existe en código, ninguna pantalla lo usa"
+      summary: "[LEGADO congelado] Registro — existe en código, ninguna pantalla lo usa (Opción A: no ampliar, no exponer en UI)"
       responses:
         "201":
           description: Usuario creado
 
 components:
   parameters:
+    xUserId:
+      name: x-user-id
+      in: header
+      required: true
+      schema:
+        type: string
+      description: Clave local por navegador (localStorage). La genera el frontend. Sin ella → 401 (withDeviceId). No es sesión ni token.
     id:
       name: id
       in: path
@@ -462,6 +533,40 @@ components:
           format: date
         origen:
           type: string
+        extraRequires:
+          type: array
+          items:
+            type: string
+    ProgressSaveBody:
+      type: object
+      required: [careerId, entries]
+      properties:
+        careerId:
+          type: string
+          description: ObjectId de la carrera (requerido, va en el body)
+        entries:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProgressIn"
+    ProgressMe:
+      type: object
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: "#/components/schemas/Progress"
+        summary:
+          type: object
+          nullable: true
+          properties:
+            creditsTotal:
+              type: number
+            creditsAprobados:
+              type: number
+            aprobadas:
+              type: number
+            total:
+              type: number
     Progress:
       allOf:
         - $ref: "#/components/schemas/ProgressIn"

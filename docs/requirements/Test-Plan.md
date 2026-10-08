@@ -1,8 +1,8 @@
 # Plan de Pruebas
 
 **Proyecto:** Gradify — Grafo Interactivo de Correlatividades y Seguimiento de Progreso Académico
-**Versión:** 2.1
-**Fecha:** 30/09/2026
+**Versión:** 2.2
+**Fecha:** 04/10/2026
 **Sponsor Organización:** Universidad Nacional de Hurlingham (UNAHUR) — Licenciatura en Informática
 **Autor:** Equipo del proyecto integrador
 **Tutor:** Prof. Alejandra Pinto
@@ -55,7 +55,7 @@ Garantizar que la aplicación web (React) y su API REST (Node/Express + MongoDB 
 
 1. **Salud y documentación**
    - Caso 1: **Salud.** `GET /health` → `200` con `{ "status": "ok" }` y `GET /` → `200` con el índice de la API.
-   - Caso 2: **Swagger.** Abrir `/api-docs` y verificar que el documento carga y que los paths listados son los reales (`/careers`, `/progress`, `/health`).
+   - Caso 2: **Swagger.** Abrir `/api-docs` y verificar que el documento carga y que los paths listados son los reales (16 paths: `/`, `/health`, `/careers` y sus subrutas incluido `/:id/sugerencias`, `/progress/*` y `/users/login|register` como legado).
 
 2. **Carga de planes de estudio**
    - Caso 3: **PDF del plan oficial.** `POST /careers/:id/parse-official` con el PDF en el campo `file` → `200` con `subjects`, `detectedCount`, `sourceKind`, `creditsFinal`, `creditsIntermediate` e `intermediateTitle`.
@@ -73,7 +73,7 @@ Garantizar que la aplicación web (React) y su API REST (Node/Express + MongoDB 
 4. **Grafo de correlatividades**
    - Caso 11: **Estructura.** `GET /careers/:id/graph` → `nodes`, `edges`, `availableNow`, `criticalPath`, `hasCycle`, `topologicalOrder` y `stats` (totales, aprobadas, disponibles, créditos).
    - Caso 12: **Título intermedio.** En una carrera con título intermedio, verificar `graph.intermediate` (`title`, `total`, `aprobadas`, `credits`, `creditsAprob`) y el banner en la interfaz; en una sin título intermedio, verificar que no se muestre.
-   - Caso 13: **IDs inválidos.** `GET /careers/abc` → `400`; `GET /careers/<id inexistente>` → `404`.
+   - Caso 13: **IDs inválidos.** `PATCH /careers/abc` o `DELETE /careers/abc` (id malformado) → `400` "ID inválido"; `GET /careers/<id inexistente válido>/subjects` → `404`; `GET /careers/abc` → `404` con envelope (no existe `GET /:id`).
 
 5. **Administración de planes**
    - Caso 14: **Alta y duplicados.** `POST /careers` sin `name` → `400`; con un nombre ya existente (ignorando mayúsculas/acentos) → `200` con `reused: true` en lugar de crear otro.

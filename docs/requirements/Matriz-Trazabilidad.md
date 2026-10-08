@@ -11,9 +11,9 @@
 | Institución           | Universidad Nacional de Hurlingham (UNAHUR)                          |
 | Unidad Académica      | Facultad de Informática — Proyecto Integrador Programación           |
 | Tipo de documento     | Matriz de trazabilidad — cruce BRD / FRD ↔ verificación existente    |
-| Versión               | 1.1                                                                  |
-| Fecha                 | 30 de septiembre de 2026                                             |
-| Documentos de origen  | `BRD.md` v2.1 · `FRD.md` v2.1 · `Test-Plan.md` v2.1 · `Test-Cases.md` v2.1 |
+| Versión               | 1.2                                                                  |
+| Fecha                 | 04 de octubre de 2026                                             |
+| Documentos de origen  | `BRD.md` v2.2 · `FRD.md` v2.2 · `Test-Plan.md` v2.2 · `Test-Cases.md` v2.1 |
 | Sponsor Operación     | Secretaría Académica / Dirección de Carrera                          |
 | Sponsor Organización  | UNAHUR                                                               |
 | Integrantes           | Perugini, Pablo; Acuña, Marcos; Masgo Sandoval, Joaquín; Renaud, Román; Remonda, Eliel; Cotera, Dylan |
@@ -139,8 +139,7 @@ existe** en el repositorio, respondiendo tres preguntas:
 | # | Requisito | Verificación | Estado |
 | - | --------- | ------------ | ------ |
 | SEG-1 | **Sin autenticación:** módulo `/users` existe sin UI consumidora (FRD:298, acuerdo equipo) | Documentado como limitación + Swagger tag legado | ✅ documentado |
-| SEG-2 | **`x-user-id`:** `401` si falta en `POST /progress` y `GET /progress/me` (FRD:299) | Caso 9 | 🟡 |
-| SEG-2 | **`x-user-id`:** `401` si falta en `POST /progress` y `GET /progress/me` (FRD:299) | Caso 9 | 🟡 |
+| SEG-2 | **`x-user-id`:** `401` si falta en `POST /progress`, `GET /progress/me`, `GET /:id/graph` y `GET /:id/sugerencias` (todas con `withDeviceId`; FRD:299) | Caso 9 (progreso) + smoke 30/09 (graph/sugerencias 401) | 🟡 |
 | SEG-3 | **Subida de archivos:** solo PDF de hasta 10 MB, en memoria (FRD:300) | Caso 7; validación implementada en `middlewares/upload.js:8-17` y `career.controllers.js:117,267` (`isPdfBuffer`) | 🟡 |
 | SEG-4 | **Errores:** JSON en español `400/404/409/500`, UI sin romperse (FRD:301) | Casos 17–19 y 22 | 🟡 |
 | SEG-5 | **Sin datos personales en uso:** sin UI de cuentas (FRD:302) | Documentado + Swagger | ✅ documentado |

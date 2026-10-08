@@ -23,6 +23,7 @@ backend/scripts/tmp-debug-*.js
 # Sistema
 .DS_Store
 Thumbs.db
+.opencode/
 
 # Artefactos de load test
 backend/loadtest/*.csv
