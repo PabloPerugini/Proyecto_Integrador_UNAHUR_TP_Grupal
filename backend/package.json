@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "nodemon src/main.js",
     "start": "node src/main.js",
-    "test": "node --test tests/unitarios.test.js tests/sugerencias.test.js tests/rn04.test.js",
+    "test": "node --test tests/unitarios.test.js tests/sugerencias.test.js tests/rn04.test.js tests/auth-cookie.test.js",
     "test:planes": "node scripts/validaciones.js masiva",
     "test:salud": "node scripts/validaciones.js salud",
     "snapshot:planes": "node scripts/validaciones.js golden",

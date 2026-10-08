@@ -42,6 +42,8 @@ async function errorMessage(response: Response, fallback: string): Promise<strin
 
 export async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
   const response = await fetchJson(`${API_URL}${url}`, {
+    // Integración auth-cookie-ia: envía la cookie httpOnly `token`.
+    credentials: 'include',
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -60,6 +62,7 @@ export async function uploadPdf<T>(url: string, file: File): Promise<T> {
   form.append('file', file);
   const response = await fetchJson(`${API_URL}${url}`, {
     method: 'POST',
+    credentials: 'include',
     headers: deviceHeaders(),
     body: form,
   });

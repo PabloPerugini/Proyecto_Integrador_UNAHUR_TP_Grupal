@@ -184,6 +184,15 @@ const loginUser = async (req, res) => {
       }
     );
 
+    // Integración auth-cookie-ia: espeja el JWT en cookie httpOnly
+    // (el header Bearer sigue siendo la vía principal).
+    try {
+      const { setAuthCookie } = require("../middlewares/auth");
+      if (typeof res.cookie === "function") setAuthCookie(res, token);
+    } catch {
+      // Sin JWT_SECRET o sin cookie-parser: no rompe el login.
+    }
+
     return res.status(200).json({
       message: "Inicio de sesión correcto",
       token,
@@ -196,6 +205,22 @@ const loginUser = async (req, res) => {
   }
 };
 
+const logoutUser = (req, res) => {
+  try {
+    const { clearAuthCookie } = require("../middlewares/auth");
+    if (typeof res.clearCookie === "function") clearAuthCookie(res);
+  } catch {
+    // Sin cookie-parser: responde igual.
+  }
+  return res.status(200).json({ message: "Sesión cerrada" });
+};
+
+const getMe = async (req, res) => {
+  if (req.user) return res.status(200).json(req.user);
+  if (req.userId) return res.status(200).json({ _id: req.userId });
+  return res.status(401).json({ message: "No estás autenticado" });
+};
+
 module.exports = {
   createUser,
   getAllUsers,
@@ -203,4 +228,6 @@ module.exports = {
   updateUser,
   deleteUser,
   loginUser,
+  logoutUser,
+  getMe,
 };

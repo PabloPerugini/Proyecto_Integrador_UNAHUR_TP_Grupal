@@ -395,6 +395,12 @@ paths:
           description: Usuario creado
 
 components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: token
+      description: JWT en cookie httpOnly `token` (integración auth-cookie-ia). Alternativa al header `Authorization: Bearer`.
   parameters:
     xUserId:
       name: x-user-id
