@@ -4,6 +4,9 @@
   "private": true,
   "description": "API REST del Proyecto Integrador UNAHUR",
   "main": "src/main.js",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "nodemon src/main.js",
     "start": "node src/main.js",
