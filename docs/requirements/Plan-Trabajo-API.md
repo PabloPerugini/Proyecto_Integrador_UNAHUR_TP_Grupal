@@ -2,17 +2,28 @@
 
 **Proyecto:** Gradify — Grafo Interactivo de Correlatividades y Seguimiento de Progreso Académico
 
+**Tema (plantilla de cátedra):** Sistema web de planificación de carreras universitarias: carga de planes de estudio desde PDF oficial, grafo interactivo de correlatividades y seguimiento del progreso académico.
+
 ---
 
-## Ficha técnica del documento
+## Ficha técnica del documento (carátula según plantilla de cátedra)
+
+| Campo | Detalle |
+| ----- | ------- |
+| Título | Gradify — Grafo Interactivo de Correlatividades y Seguimiento de Progreso Académico |
+| Grupo | Equipo Gradify (TP grupal) |
+| Estudiantes | Perugini, Pablo; Acuña, Marcos; Masgo Sandoval, Joaquín; Renaud, Román; Remonda, Eliel; Cotera, Dylan |
+| Carrera | Licenciatura en Informática — Universidad Nacional de Hurlingham (UNAHUR) |
+| Tutor de la universidad | Prof. Alejandra Pinto |
+| Unidad Académica | Facultad de Informática — Proyecto Integrador Programación |
 
 | Campo | Detalle |
 | ----- | ------- |
 | Institución | Universidad Nacional de Hurlingham (UNAHUR) |
 | Unidad Académica | Facultad de Informática — Proyecto Integrador Programación |
 | Tipo de documento | Plan de Trabajo — API REST (Backend) |
-| Versión | 1.1 |
-| Fecha | 06 de octubre de 2026 |
+| Versión | 1.2 |
+| Fecha | 08 de octubre de 2026 |
 | Sponsor Operación | Secretaría Académica / Dirección de Carrera |
 | Sponsor Organización | UNAHUR |
 | Integrantes | Perugini, Pablo; Acuña, Marcos; Masgo Sandoval, Joaquín; Renaud, Román; Remonda, Eliel; Cotera, Dylan |
@@ -25,8 +36,8 @@
 
 1. [Historial de Cambios](#1-historial-de-cambios)
 2. [Objetivo](#2-objetivo)
-3. [Alcance de la API](#3-alcance-de-la-api)
-4. [Contexto y arquitectura](#4-contexto-y-arquitectura)
+3. [Alcance, alcances y limitaciones](#3-alcance-alcances-y-limitaciones)
+4. [Contexto organizacional y arquitectura](#4-contexto-organizacional-y-arquitectura)
 5. [Inventario de endpoints](#5-inventario-de-endpoints)
 6. [Modelo de datos (resumen)](#6-modelo-de-datos-resumen)
 7. [Plan de trabajo por fases](#7-plan-de-trabajo-por-fases)
@@ -36,7 +47,10 @@
 11. [Riesgos y mitigaciones](#11-riesgos-y-mitigaciones)
 12. [Entregables y criterios de aceptación](#12-entregables-y-criterios-de-aceptación)
 13. [Trazabilidad BRD / FRD ↔ API](#13-trazabilidad-brd--frd--api)
-14. [Glosario](#14-glosario)
+14. [Técnicas y metodologías a emplear](#14-técnicas-y-metodologías-a-emplear)
+15. [Experiencia de aprendizaje](#15-experiencia-de-aprendizaje)
+16. [Vinculación con las temáticas de la carrera](#16-vinculación-con-las-temáticas-de-la-carrera)
+17. [Glosario](#17-glosario)
 
 ---
 
@@ -46,6 +60,7 @@
 | ------- | ----- | ----- | ----------- |
 | 1.0 | 05/10/2026 | Equipo | Versión inicial. Inventario real desde `backend/src/routes/*.js` y `backend/docs/swagger.yaml`. |
 | 1.1 | 06/10/2026 | Equipo | Corrección integral: contrato único de errores (envelope), contrato real de `POST /progress` (`{careerId, entries}`) y `GET /progress/me` (`{entries, summary}` + `?careerId`), `401 x-user-id` documentado en Swagger, decisión `/users` Opción A (legado congelado), fases 1–5 marcadas como ejecutadas y fase 6 como pendiente. |
+| 1.2 | 08/10/2026 | Equipo | Alineación con plantilla de cátedra (carátula Título/Grupo/Carrera/Tutor, contexto organizacional, técnicas y metodologías, experiencia de aprendizaje, vinculación con la carrera) + actualización técnica: sesión por cookie en `/users` (`login` setea cookie httpOnly, `logout`, `me` con caché), token unificado `id+sub`, `GET /universities` montado, suite en 20 tests. |
 
 ---
 
@@ -56,20 +71,20 @@ Describir el plan de trabajo de la **API REST del backend** (Node.js + Express +
 1. La **carga y parseo de planes de estudio** desde PDF oficial SIU-Guaraní (materias, créditos, título intermedio).
 2. La **carga y matching de correlatividades** (exacto, compacto, difuso y por prefijo, con nivel de confianza).
 3. El **grafo del plan** (nodos, aristas, orden topológico, camino crítico, detección de ciclos).
-4. El **seguimiento del progreso** del estudiante por navegador (`x-user-id`), sin cuentas.
+4. El **seguimiento del progreso** del estudiante por navegador (`x-user-id`), sin cuentas para el progreso.
 5. El **motor de sugerencias de inscripción** (reglas R0–R6 / C1–C6, FRD §3.1.2–3.1.3).
 
 La API es consumida por el frontend (React + Vite) y está documentada en vivo en `GET /api-docs` (Swagger UI).
 
-> **Estado a 06/10/2026:** las Fases 1–5 están **ejecutadas** (código + `npm test` + corridas 30/09 como evidencia). Solo la Fase 6 queda **pendiente** (registro formal caso por caso en Test-Cases y E2E UI 20–23). El cronograma (§8) lo refleja como H1–H5 ejecutados / H6 pendiente a diciembre 2026.
+> **Estado a 08/10/2026:** las Fases 1–5 están **ejecutadas** (código + `npm test` en verde con 20 tests + corridas 30/09 como evidencia). Solo la Fase 6 queda **pendiente** (registro formal caso por caso en Test-Cases y E2E UI 20–23). El cronograma (§8) lo refleja como H1–H5 ejecutados / H6 pendiente a diciembre 2026. Novedades desde v1.1: sesión por cookie httpOnly en `/users` (`login` la setea además del Bearer, `logout` la limpia, `me` con caché de 60s), token JWT unificado (`id` + `sub`) y `GET /universities` montado en la API.
 
-Fuera de alcance de la API (acuerdo de equipo, ver FRD §4.3): el módulo `/users` **se congela (Opción A)**: existe en código pero ninguna pantalla lo consume; no se amplía, no se expone en UI y solo `POST /users/register` y `POST /users/login` quedan documentados como legado. Las 4 rutas admin con JWT (`GET /users`, `GET/PATCH/DELETE /users/:nickName` en `src/routes/user.routes.js`) existen pero están fuera de alcance y no se documentan en Swagger.
+Fuera de alcance de la API (acuerdo de equipo, ver FRD §4.3): el progreso por navegador sigue sin cuentas (`x-user-id` local). El módulo `/users` salió del congelamiento parcial: expone sesión por cookie (`POST /users/login` → cookie `token`, `POST /users/logout`, `GET /users/me`) además del Bearer, y sirve a las pantallas de Login/Registro del frontend. Las 4 rutas admin con JWT (`GET /users`, `GET/PATCH/DELETE /users/:nickName` en `src/routes/user.routes.js`) existen pero siguen fuera de alcance y no se documentan en Swagger. Igual caso: `GET /universities` (CRUD de universidades) ya responde en la API pero aún no está documentado en Swagger (pendiente).
 
 ---
 
-## 3. Alcance de la API
+## 3. Alcance, alcances y limitaciones
 
-### 3.1 Incluye
+### 3.1 Incluye (alcance)
 
 - CRUD de carreras (`draft` / `published`): crear, listar, actualizar, publicar, eliminar.
 - Ingesta de PDF (máx. 10 MB, firma `%PDF-` verificada en servidor, en memoria, sin persistir en disco):
@@ -84,16 +99,19 @@ Fuera de alcance de la API (acuerdo de equipo, ver FRD §4.3): el módulo `/user
 - Manejo centralizado de errores en español con envelope único `{ success: false, error: { message, details? } }` (normalizado en `src/app.js`; `src/middlewares/errorHandler.js` traduce `400 / 401 / 404 / 409 / 500`) y códigos `400 / 401 / 404 / 409 / 500`.
 - Documentación OpenAPI (`backend/docs/swagger.yaml`, 16 paths públicos) servida en `/api-docs`.
 
-### 3.2 No incluye
+### 3.2 No incluye (limitaciones)
 
 - Transacción de inscripción oficial (se hace en SIU-Guaraní; la app solo asiste la planificación).
-- Autenticación / sesiones / roles en uso (sin cuentas; `x-user-id` es clave local por navegador, no token).
+- Sesiones del módulo `/users` más allá de cookie httpOnly + Bearer (sin refresh tokens ni roles nuevos; las rutas admin con JWT siguen fuera de alcance).
+- Documentación Swagger de `GET /users/me`, `POST /users/logout` y `GET /universities` (responden en la API; su alta en `swagger.yaml` queda pendiente).
 - Persistencia de archivos PDF (se procesan en memoria).
 - Chat orientador con IA, matching semántico por embeddings, orquestador multiproveedor (retirados del alcance en BRD v2.0; solo queda fallback IA puntual en parseo, con rate-limit propio).
 
 ---
 
-## 4. Contexto y arquitectura
+## 4. Contexto organizacional y arquitectura
+
+**Contexto organizacional (plantilla de cátedra):** la UNAHUR necesita que sus estudiantes planifiquen la carrera con información oficial (planes SIU-Guaraní) sin depender de planillas manuales. La Secretaría Académica / Dirección de Carrera actúa como sponsor funcional: valida reglas de correlatividades y mensajes de sugerencias (Msj0–Msj6). La API es la pieza servidora que expone esos datos validados al frontend estudiantil; la inscripción formal sigue ocurriendo en SIU-Guaraní, por lo que la app no toca sistemas administrativos (límite organizacional explícito).
 
 ```mermaid
 flowchart LR
@@ -125,7 +143,7 @@ flowchart LR
 
 ## 5. Inventario de endpoints
 
-Fuente: `backend/src/routes/index.js`, `career.routes.js`, `progress.routes.js`, `user.routes.js` y `backend/docs/swagger.yaml`. Base: `http://localhost:3000`.
+Fuente: `backend/src/routes/index.js`, `career.routes.js`, `progress.routes.js`, `user.routes.js`, `university.routes.js` y `backend/docs/swagger.yaml`. Base: `http://localhost:3000`. Nota: `/users/me`, `/users/logout` y `/universities` responden en la API pero aún no están en `swagger.yaml` (16 paths documentados).
 
 ### 5.1 Sistema / Salud
 
@@ -160,14 +178,26 @@ Fuente: `backend/src/routes/index.js`, `career.routes.js`, `progress.routes.js`,
 | POST | `/progress` | `x-user-id` (`401` si falta, `withDeviceId`) | Guarda progreso masivo por carrera. Body `{ careerId*, entries: [{ subjectCode*, status* (Aprobada\|Regular\|Cursando\|Pendiente), nota?, fecha?, origen?, extraRequires? }] }` → `{ saved }` (upsert por `userId+careerId+subjectCode`). `400` si falta `careerId/entries` o hay entrada inválida. | RN03 |
 | GET | `/progress/me?careerId=` | `x-user-id` (`401` si falta) | Obtiene progreso del navegador actual. Sin `careerId` devuelve todo; con `careerId` agrega `summary { creditsTotal, creditsAprobados, aprobadas, total }`. Responde `{ entries, summary }`. | RN03 / SC004 |
 
-### 5.4 Usuarios — legado congelado sin UI (Opción A: no ampliar, no exponer)
+### 5.4 Usuarios — sesión por cookie + Bearer (integración oct-2026)
 
 | Método | Ruta | Descripción |
 | ------ | ---- | ----------- |
-| POST | `/users/register` | [LEGADO CONGELADO] Registro. Existe en código, ninguna pantalla lo usa. Rate-limit 20/15min. |
-| POST | `/users/login` | [LEGADO CONGELADO] Login JWT. Existe en código, ninguna pantalla lo usa. Rate-limit 20/15min. |
+| POST | `/users/register` | Registro. Valida con Joi, crea con rol `USUARIO`. Rate-limit 20/15min. |
+| POST | `/users/login` | Login: devuelve `token` Bearer **y** setea cookie httpOnly `token`. `401` credenciales inválidas. Rate-limit 20/15min. |
+| POST | `/users/logout` | Limpia la cookie `token`. Responde `200`. |
+| GET | `/users/me` | Perfil de la sesión (`authUser` dual: Bearer o cookie; token unificado `id+sub`). Usa caché `me:{id}` 60s con caída a vía directa. `401` sin token. |
 
-> Existen además 4 rutas admin con JWT en `src/routes/user.routes.js` (`GET /users`, `GET/PATCH/DELETE /users/:nickName`) que están **fuera de alcance** y no se documentan en Swagger. Decisión vigente: mantener el módulo congelado hasta la entrega; no sumarle validaciones, UI ni tests nuevos.
+> Existen además 4 rutas admin con JWT en `src/routes/user.routes.js` (`GET /users`, `GET/PATCH/DELETE /users/:nickName`) que están **fuera de alcance** y no se documentan en Swagger.
+
+### 5.5 Universidades (`/universities`, montado oct-2026, pendiente Swagger)
+
+| Método | Ruta | Auth | Descripción |
+| ------ | ---- | ---- | ----------- |
+| GET | `/universities` | — | Lista universidades. |
+| GET | `/universities/:id` | — | Detalle por id. `404` si no existe. |
+| POST | `/universities` | `authUser` + `authAdmin` | Crea (`name*`). |
+| PATCH | `/universities/:id` | `authUser` + `authAdmin` | Actualiza. |
+| DELETE | `/universities/:id` | `authUser` + `authAdmin` | Elimina. |
 
 > **Contrato de errores:** `400` validaciones, IDs inválidos (`CastError`) y PDF inválido (> 10 MB o sin firma `%PDF-`), `401` falta `x-user-id` en rutas `withDeviceId` (`GET /:id/graph`, `GET /:id/sugerencias`, `POST /progress`, `GET /progress/me`), `404` recurso/ruta inexistente, `409` duplicados (índice único), `500` genérico sin detalle interno. Todo con envelope `{ success: false, error: { message, details? } }`. Swagger documenta los `401` y los `400/404` principales.
 
@@ -180,7 +210,7 @@ Colecciones MongoDB (Mongoose, ver `backend/src/models/` y `swagger.yaml#/compon
 - **Career:** `_id, name*, institute, color, planResolution, ruleCode, durationYears, creditsFinal, creditsIntermediate, intermediateTitle, status (draft|published), subjectCount`.
 - **Subject:** `_id, careerId, code, name, year, cuatrimestre, duration (C|A|TF), hours{}, credits, kind, optional, requires[string], intermediate (bool título intermedio)`.
 - **Progress:** `_id, userId (x-user-id), careerId, subjectCode, status (Aprobada|Regular|Cursando|Pendiente), nota, fecha, origen`.
-- **User (legado):** persiste solo si se usa `/users` por API directa; ningún flujo de UI lo toca.
+- **User:** cuenta con sesión por cookie httpOnly (`login` la setea, `logout` la limpia) + Bearer; `GET /users/me` con caché de 60s.
 
 Reglas de negocio aplicadas en backend (`graph.service.js`, `buildSugerencias`):
 
@@ -192,7 +222,7 @@ Reglas de negocio aplicadas en backend (`graph.service.js`, `buildSugerencias`):
 
 ## 7. Plan de trabajo por fases
 
-**Leyenda de estado a 06/10/2026:** ✅ Ejecutada (con evidencia) · 🟡 Pendiente.
+**Leyenda de estado a 08/10/2026:** ✅ Ejecutada (con evidencia) · 🟡 Pendiente.
 
 | Fase | Estado | Objetivo | Tareas | Evidencia / Comando |
 | ---- | -------- | ------ | ------------------- |
@@ -201,13 +231,13 @@ Reglas de negocio aplicadas en backend (`graph.service.js`, `buildSugerencias`):
 | **Fase 3 — Correlatividades** | ✅ Ejecutada | Grafo válido sin ciclos | `parse-correlativas` + matching clásico + `confidence`, `saveCorrelativas` con whitelist/anti-ciclos, detección de ciclos + orden topológico | `npm test` (whitelist/anti-ciclos/BUG-009), `npm run test:salud` |
 | **Fase 4 — Grafo y progreso** | ✅ Ejecutada | Visualización + persistencia por navegador | `GET /:id/graph` (nodes/edges/stats/availableNow/criticalPath), `POST /progress` (`{careerId, entries}`), `GET /progress/me?careerId` (`{entries, summary}`), `parse-history`, header `x-user-id` + `401` | Casos 9–12 Postman, `tests/rn04.test.js` |
 | **Fase 5 — Sugerencias AR-3** | ✅ Ejecutada | Recomendación de inscripción | `GET /:id/sugerencias` (C1–C6, R0–R6, Msj0–Msj6, fusiones, orden decreciente B, ritmo x+1) + sección en Mi progreso | `tests/sugerencias.test.js` (4 tests) + smoke 200/401 |
-| **Fase 6 — Endurecimiento y validación** | 🟡 Pendiente | Calidad lista para entrega | `npm test` (14 tests), `npm run validar` (golden + salud + masiva), `node --check`, lint/tipos/build frontend, corrida Postman 1–19 + UI 20–23 registrada en Test-Cases | `npm test`, `npm run validar`, Test-Cases con resultados |
+| **Fase 6 — Endurecimiento y validación** | 🟡 Pendiente | Calidad lista para entrega | `npm test` (20 tests), `npm run validar` (golden + salud + masiva), `node --check`, lint/tipos/build frontend, corrida Postman 1–19 + UI 20–23 registrada en Test-Cases | `npm test`, `npm run validar`, Test-Cases con resultados |
 
 Comandos de verificación (requieren API + corpus para los masivos; sin corpus salen con mensaje claro, código 2):
 
 ```bash
 cd backend
-npm test                  # unitarios: matcher, anti-ciclos, BUG-009, RN04, AR-3
+npm test                  # unitarios: matcher, anti-ciclos, BUG-009, RN04, AR-3, auth-cookie (20 tests)
 npm run validar           # todo: golden --check + salud + masiva
 npm run test:planes       # carga E2E de los 43 PDFs por la API real
 npm run test:salud        # control de correlativas de Salud + control negativo
@@ -218,7 +248,7 @@ npm run snapshot:planes -- --check   # gate anti-regresiones del parser (diff = 
 
 ## 8. Cronograma
 
-Release objetivo: **diciembre 2026**. Referencia de épica: **EP-1, 4 meses** (BRD §4). Estado a 06/10/2026: H1–H5 ejecutados, H6 pendiente.
+Release objetivo: **diciembre 2026**. Referencia de épica: **EP-1, 4 meses** (BRD §4). Estado a 08/10/2026: H1–H5 ejecutados, H6 pendiente.
 
 | Hito | Período | Estado | Entregable |
 | ---- | ------- | ------ | ---------- |
@@ -250,7 +280,7 @@ Release objetivo: **diciembre 2026**. Referencia de épica: **EP-1, 4 meses** (B
 | ---- | ----- |
 | Runtime | Node.js 20+, Express 5, Mongoose 9, Redis 6 (best-effort), `pdfjs-dist`, `multer` (memoria), `joi`, `helmet`, `cors`, `express-rate-limit`, `swagger-ui-express` + `yamljs` (más `bcryptjs`/`jsonwebtoken`, solo para el legado `/users`) |
 | Datos / caché | MongoDB + Redis (Docker Compose: app + Mongo + Redis) |
-| Calidad | `node --test` (14 tests, 0 dependencias), `node --check`, Postman, DevTools, `validaciones.js` (masiva/salud/golden/todo) |
+| Calidad | `node --test` (20 tests, 0 dependencias extra), `node --check`, Postman, DevTools, `validaciones.js` (masiva/salud/golden/todo) |
 | Corpus | `../files/UNAHUR-Oferta-Academica` (43 PDF, fuera del repo) + `docs/testing/planes-referencia.json` + `docs/testing/golden/` (43 JSON) + `backend/scripts/informes/` |
 | Arranque | `cp backend/.env.Ejemplo backend/.env` → `docker compose up --build` (API `:3000`, docs `/api-docs`, front `:5173`) |
 
@@ -281,7 +311,7 @@ Release objetivo: **diciembre 2026**. Referencia de épica: **EP-1, 4 meses** (B
 | Grafo | `nodes/edges/stats/availableNow/criticalPath/topologicalOrder/intermediate`; `401` sin `x-user-id`; RN04 con 3 unitarios |
 | Progreso | Guardado masivo `{careerId, entries}` → `{saved}` + `GET /me?careerId` → `{entries, summary}`; `401` sin header; `400` si falta `careerId/entries`; importación de historial PDF E2E |
 | Sugerencias | `GET /:id/sugerencias` 200 con A/B, disponibles, finales, comunes y Msj0–Msj6; 4 unitarios AR-3 |
-| Calidad | `npm test` (14 tests) en verde; `npm run validar` en verde con corpus; `node --check` sin errores |
+| Calidad | `npm test` (20 tests) en verde; `npm run validar` en verde con corpus; `node --check` sin errores |
 | Docs facultad | BRD v2.2, FRD v2.2, Test-Plan, Test-Cases, Matriz y este Plan consistentes entre sí y con el código |
 
 ---
@@ -299,7 +329,7 @@ Release objetivo: **diciembre 2026**. Referencia de épica: **EP-1, 4 meses** (B
 | AR-2 Importar y editar | `parse-official`, `parse-correlativas`, `subjects`, `correlativas`, `publish` | Verificado parcial (masiva 43 PDFs) |
 | AR-3 Sugerencias | `GET /:id/sugerencias` | Verificado parcial (falta E2E UI) |
 | Título intermedio | `parse-official` + `graph.intermediate` + `creditsIntermediate` | Verificación parcial |
-| SEG-1/SEG-5 `/users` legado | `/users/register`, `/users/login` (congelados, Opción A) | Documentado (sin UI) |
+| SEG-1/SEG-5 `/users` sesión | `/users/register`, `/users/login` (cookie + Bearer), `/users/logout`, `/users/me` | Verificado (`tests/auth-cookie.test.js`) |
 | SEG-2 `x-user-id` 401 | `POST /progress`, `GET /progress/me`, `GET /:id/graph`, `GET /:id/sugerencias` | Smoke + caso 9 |
 | SEG-3 PDF ≤ 10 MB | `parse-*` (`upload.js`, `isPdfBuffer`) | Definido (caso 7) |
 | SEG-4 Errores español | Todos (envelope + `errorHandler`) | Definido (casos 17–19, 22) |
@@ -308,7 +338,33 @@ Detalle completo caso por caso: `Matriz-Trazabilidad.md` (37 puntos: 12 ✅ / 15
 
 ---
 
-## 14. Glosario
+## 14. Técnicas y metodologías a emplear (plantilla de cátedra)
+
+- **Desarrollo iterativo por fases** (§7) con criterios de aceptación por hito (§12) y release objetivo diciembre 2026.
+- **API REST + contrato vivo:** OpenAPI (`swagger.yaml`, 16 paths) servido en `/api-docs` como fuente de verdad; envelope único de errores en español.
+- **Calidad continua:** `node --test` (20 tests, regresión de parser, anti-ciclos, RN04, AR-3 y auth-cookie), golden snapshot del parser (`diff = 0` sobre 43 PDFs), `npm run validar` (masiva + salud + golden) y Postman 1–19.
+- **Control de versiones:** Git/GitHub con ramas por funcionalidad e integración revisada en `develop` antes de la entrega.
+- **Datos reales:** corpus SIU-Guaraní de 43 PDFs + `planes-referencia.json` + golden commiteados como evidencia.
+
+---
+
+## 15. Experiencia de aprendizaje (plantilla de cátedra)
+
+El plan aporta a la formación del equipo en: diseño de APIs REST con contrato OpenAPI; modelado MongoDB y caché Redis best-effort; parseo de documentos reales (PDF) con validación y tolerancia a fallos; algoritmos aplicados (matching clásico, grafos, orden topológico, camino crítico, detección de ciclos); autenticación con JWT en doble vía (Bearer + cookie httpOnly); testing de regresión y documentación técnica trazable (BRD/FRD/Matriz/Test-Plan).
+
+---
+
+## 16. Vinculación con las temáticas de la carrera (plantilla de cátedra)
+
+- **Programación y estructuras de datos:** grafos de correlatividades, orden topológico y camino crítico.
+- **Bases de datos:** modelado documental (Career/Subject/Progress/User) y persistencia del progreso.
+- **Ingeniería de software:** requerimientos (BRD/FRD), trazabilidad, testing y plan de trabajo por fases.
+- **Desarrollo web:** API REST + frontend React con sesión por cookie y Swagger como contrato.
+- **Gestión de proyectos:** roles, cronograma EP-1 a diciembre 2026, riesgos y entregables con criterios de aceptación.
+
+---
+
+## 17. Glosario
 
 | Término | Descripción |
 | ------- | ----------- |
@@ -322,4 +378,4 @@ Detalle completo caso por caso: `Matriz-Trazabilidad.md` (37 puntos: 12 ✅ / 15
 
 ---
 
-*Fin del Plan de Trabajo — API REST v1.1. Fuente de verdad del contrato: `backend/docs/swagger.yaml` (16 paths públicos, con `401 x-user-id` y `400/404`) + `backend/src/routes/` (las 4 rutas admin de `/users` con JWT están fuera de alcance y no se documentan).*
+*Fin del Plan de Trabajo — API REST v1.2 (alineado con plantilla de cátedra: carátula, contexto organizacional, técnicas y metodologías, experiencia de aprendizaje y vinculación con la carrera). Fuente de verdad del contrato: `backend/docs/swagger.yaml` (16 paths públicos) + `backend/src/routes/` (`/users/me`, `/users/logout` y `/universities` responden en la API y están pendientes de alta en Swagger).*
