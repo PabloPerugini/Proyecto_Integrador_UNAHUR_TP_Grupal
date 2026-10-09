@@ -104,7 +104,7 @@ export default function AdminCatalog({
     setCreatingUniversity(true);
 
     try {
-      const university = await request<University>(
+      const result = await request<{ university: University } | University>(
         '/universities',
         {
           method: 'POST',
@@ -115,6 +115,7 @@ export default function AdminCatalog({
         }
       );
 
+      const university = 'university' in result ? result.university : result;
       setUniversities((current) =>
         [...current, university].sort((a, b) =>
           a.name.localeCompare(b.name, 'es')

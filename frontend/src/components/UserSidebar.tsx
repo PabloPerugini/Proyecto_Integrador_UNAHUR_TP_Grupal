@@ -1,5 +1,7 @@
+import { useAuth } from '../hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../hooks/useTheme';
-import { useCareerSelection } from '../context/CareerContext';
+import { useCareerSelection } from '../hooks/useCareerSelection';
 import ThemeToggle from './ThemeToggle';
 import SidebarBase from './SidebarBase';
 import type { NavItem } from './SidebarBase';
@@ -7,6 +9,8 @@ import { IconHome, IconChart, IconGraph, IconBoard } from './icons';
 
 export default function UserSidebar() {
   const { theme } = useTheme();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const { careerId } = useCareerSelection();
 
   const nav: NavItem[] = [
@@ -37,6 +41,8 @@ export default function UserSidebar() {
           Modo {theme === 'dark' ? 'oscuro' : 'claro'} <ThemeToggle />
         </span>
       </div>
+      <div className="sidebar__section mt-3">{user?.nickName || 'Estudiante'}</div>
+      <button type="button" className="sidebar__link border-0 bg-transparent text-start" onClick={() => { logout(); navigate('/login'); }}>Cerrar sesión</button>
     </SidebarBase>
   );
 }

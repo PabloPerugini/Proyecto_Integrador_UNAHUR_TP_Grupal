@@ -2,6 +2,7 @@
 const Career = require("../models/career");
 const University = require("../models/university");
 const AcademicUnit = require("../models/academicUnit");
+const StudyPlan = require("../models/studyPlan");
 
 // Validar universidad y unidad académica
 const validateCareerRelations = async (
@@ -124,6 +125,11 @@ const updateCareer = async (id, careerData) => {
 
 // Eliminar una carrera
 const deleteCareer = async (id) => {
+  if (await StudyPlan.exists({ career: id })) {
+    const error = new Error("No se puede borrar una carrera que tiene planes de estudio");
+    error.statusCode = 409;
+    throw error;
+  }
   return Career.findByIdAndDelete(id);
 };
 

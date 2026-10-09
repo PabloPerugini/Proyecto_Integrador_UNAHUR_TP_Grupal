@@ -20,6 +20,17 @@ router.post(
   userController.loginUser
 );
 
+router.post(
+  "/logout",
+  userController.logoutUser
+);
+
+router.get(
+  "/me",
+  authUser,
+  userController.getMe
+);
+
 router.get(
   "/",
   authUser,

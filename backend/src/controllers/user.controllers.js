@@ -173,16 +173,26 @@ const loginUser = async (req, res) => {
       });
     }
 
-    // Generamos el token
+    // Generamos el token (unificado: `id` legado + `sub` estándar).
     const token = jwt.sign(
       {
         id: user._id,
+        sub: String(user._id),
       },
       process.env.JWT_SECRET,
       {
         expiresIn: "1d",
       }
     );
+
+    // Integración auth-cookie-ia: espeja el JWT en cookie httpOnly
+    // (el header Bearer sigue siendo la vía principal).
+    try {
+      const { setAuthCookie } = require("../middlewares/auth");
+      if (typeof res.cookie === "function") setAuthCookie(res, token);
+    } catch {
+      // Sin JWT_SECRET o sin cookie-parser: no rompe el login.
+    }
 
     return res.status(200).json({
       message: "Inicio de sesión correcto",
@@ -196,6 +206,37 @@ const loginUser = async (req, res) => {
   }
 };
 
+const logoutUser = (req, res) => {
+  try {
+    const { clearAuthCookie } = require("../middlewares/auth");
+    if (typeof res.clearCookie === "function") clearAuthCookie(res);
+  } catch {
+    // Sin cookie-parser: responde igual.
+  }
+  return res.status(200).json({ message: "Sesión cerrada" });
+};
+
+const getMe = async (req, res) => {
+  // Integración auth-cookie-ia: caché best-effort del perfil (TTL 60s).
+  const userId = req.userId || (req.user && req.user._id);
+  if (userId) {
+    try {
+      const { getCache, setCache } = require("../services/cache.service");
+      const hit = await getCache(`me:${userId}`);
+      if (hit) return res.status(200).json(JSON.parse(hit));
+      if (req.user) {
+        setCache(`me:${userId}`, req.user, 60).catch(() => {});
+        return res.status(200).json(req.user);
+      }
+    } catch {
+      // Sin caché: sigue con la vía directa.
+    }
+  }
+  if (req.user) return res.status(200).json(req.user);
+  if (req.userId) return res.status(200).json({ _id: req.userId });
+  return res.status(401).json({ message: "No estás autenticado" });
+};
+
 module.exports = {
   createUser,
   getAllUsers,
@@ -203,4 +244,6 @@ module.exports = {
   updateUser,
   deleteUser,
   loginUser,
+  logoutUser,
+  getMe,
 };

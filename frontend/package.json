@@ -3,6 +3,9 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -32,7 +35,6 @@
     "vite": "^8.2.2"
   },
   "description": "Aplicación web hecha con React + Vite + TypeScript. La estructura replica el formato del TP de Construcción de Interfaces de Usuario.",
-  "main": "eslint.config.js",
   "keywords": [],
   "author": "",
   "license": "ISC"

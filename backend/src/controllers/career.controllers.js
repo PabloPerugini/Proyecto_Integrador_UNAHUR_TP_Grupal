@@ -89,8 +89,8 @@ const deleteCareer = async (req, res) => {
       message: "Carrera eliminada correctamente",
     });
   } catch (error) {
-    return res.status(500).json({
-      message: "Error al eliminar la carrera",
+    return res.status(error.statusCode || 500).json({
+      message: error.statusCode ? error.message : "Error al eliminar la carrera",
     });
   }
 };

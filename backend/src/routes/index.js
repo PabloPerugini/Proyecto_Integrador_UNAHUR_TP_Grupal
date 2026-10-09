@@ -6,6 +6,7 @@ const progressRoutes = require("./progress.routes");
 const userRoutes = require("./user.routes");
 const universityRoutes = require("./university.routes");
 const planImportRoutes = require("./planImport.routes");
+const academicUnitRoutes = require("./academicUnit.routes");
 
 const studyPlanRoutes = require("./studyPlan.routes");
 const planSubjectRoutes = require("./planSubject.routes");
@@ -35,6 +36,7 @@ router.use("/careers", careerRoutes);
 router.use("/progress", progressRoutes);
 router.use("/users", userRoutes);
 router.use("/universities", universityRoutes);
+router.use("/academic-units", academicUnitRoutes);
 router.use("/plan-imports", planImportRoutes);
 
 // NUEVO: Materias de cada plan

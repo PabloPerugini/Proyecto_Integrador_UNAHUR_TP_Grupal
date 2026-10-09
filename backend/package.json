@@ -4,17 +4,22 @@
   "private": true,
   "description": "API REST del Proyecto Integrador UNAHUR",
   "main": "src/main.js",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "nodemon src/main.js",
     "start": "node src/main.js",
-    "test": "node --test tests/unitarios.test.js tests/sugerencias.test.js tests/rn04.test.js",
+    "test": "node --test tests/unitarios.test.js tests/sugerencias.test.js tests/rn04.test.js tests/auth-cookie.test.js",
     "test:planes": "node scripts/validaciones.js masiva",
     "test:salud": "node scripts/validaciones.js salud",
     "snapshot:planes": "node scripts/validaciones.js golden",
     "validar": "node scripts/validaciones.js todo"
   },
   "dependencies": {
+    "@xenova/transformers": "^2.17.2",
     "bcryptjs": "^3.0.3",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
@@ -30,6 +35,8 @@
     "yamljs": "^0.3.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.14"
+    "jest": "^30.5.2",
+    "nodemon": "^3.1.14",
+    "supertest": "^7.3.1"
   }
 }

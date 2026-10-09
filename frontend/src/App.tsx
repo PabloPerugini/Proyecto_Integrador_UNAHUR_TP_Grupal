@@ -9,6 +9,12 @@ import AdminLayout from './layouts/AdminLayout'
 import SplashScreen from './components/SplashScreen'
 import Favicon from './components/Favicon'
 import Home from './pages/Home'
+import Login from './pages/Login'
+import Register from './pages/Register'
+import ProtectedRoute from './components/ProtectedRoute'
+import { AuthProvider } from './context/AuthContext'
+import { useAuth } from './hooks/useAuth'
+import { Navigate, Outlet } from 'react-router-dom'
 
 const PlanAdmin = lazy(() => import('./pages/PlanAdmin'))
 const MyProgress = lazy(() => import('./pages/MyProgress'))
@@ -16,6 +22,11 @@ const PlanGraph = lazy(() => import('./pages/PlanGraph'))
 const PlanBoard = lazy(() => import('./pages/PlanBoard'))
 const UploadPlan = lazy(() => import('./pages/UploadPlan'))
 const Error404 = lazy(() => import('./pages/Error404'))
+
+function AdminRoute() {
+  const { user } = useAuth();
+  return user?.rol === 'ADMIN' ? <Outlet /> : <Navigate to="/" replace />;
+}
 
 const SPLASH_DURATION_MS = 2600
 const SPLASH_FADE_MS = 600
@@ -55,10 +66,14 @@ export default function App() {
   return (
     <ThemeProvider>
       <Favicon />
+      <AuthProvider>
       <CareerSelectionProvider>
         <BrowserRouter>
           <ErrorBoundary>
             <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route element={<ProtectedRoute />}>
               <Route element={<UserLayout />}>
                 <Route path="/" element={<Home />} />
                 <Route path="/progreso" element={<PageSuspense><MyProgress /></PageSuspense>} />
@@ -66,14 +81,18 @@ export default function App() {
                 <Route path="/tablero/:id?" element={<PageSuspense><PlanBoard /></PageSuspense>} />
                 <Route path="*" element={<PageSuspense><Error404 /></PageSuspense>} />
               </Route>
+              <Route element={<AdminRoute />}>
               <Route element={<AdminLayout />}>
                 <Route path="/cargar" element={<PageSuspense><UploadPlan /></PageSuspense>} />
                 <Route path="/admin/:id?" element={<PageSuspense><PlanAdmin /></PageSuspense>} />
+              </Route>
+              </Route>
               </Route>
             </Routes>
           </ErrorBoundary>
         </BrowserRouter>
       </CareerSelectionProvider>
+      </AuthProvider>
     </ThemeProvider>
   );
 }
