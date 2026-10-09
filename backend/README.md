@@ -4,7 +4,7 @@ API REST hecha con Node.js + Express + MongoDB + Redis. Provee la carga y el par
 
 ## Requisitos
 
-- Node.js 20+
+- Node.js 22+ (único del proyecto: ver `.nvmrc` en la raíz)
 - MongoDB y Redis (local o vía Docker Compose)
 
 ## Instalación y ejecución

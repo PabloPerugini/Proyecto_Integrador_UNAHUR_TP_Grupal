@@ -6,6 +6,17 @@ El registro histórico de requisitos/alcance por versión se mantiene en [BRD.md
 
 ---
 
+## [1.17] — 2026-10-08
+
+### Integración auth-cookie + universities + Node único + docs alineadas
+- **Sesión `/users`:** `login` setea cookie httpOnly además del Bearer, `logout`, `me` con caché 60s; token unificado `id+sub`; frontend con `credentials: include`. Tests `auth-cookie` (6) → suite **20/20**.
+- **`/universities` montado** (CRUD, lectura pública + escritura admin).
+- **Swagger 16 → 20 paths** (`/users/me`, `/users/logout`, `/universities`, `/universities/{id}`, `cookieAuth`).
+- **Node único `node:22-slim`** (`.nvmrc` + `engines >=22`): repara `parse-*` en Docker (BUG-010, `withResolvers`) y carga onnx en container.
+- **Docs:** BRD/FRD v2.3, Plan-Trabajo v1.3 (plantilla de cátedra), Matriz v1.3 (39 puntos, AR-4 + SEG-6), Test-Plan v2.3 (Casos 24–25), Test-Cases v2.2 (BUG-010). Dry-run 43 PDFs sin guardar: `parse-official` 43/43, Biotecnología 41/41.
+
+---
+
 ## [1.16] — 2026-09-30
 
 ### Relevamiento total: duplicados, innecesarios y buenas prácticas (local, sin push)

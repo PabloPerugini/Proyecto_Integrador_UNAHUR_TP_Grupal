@@ -11,8 +11,8 @@
 | Institución           | Universidad Nacional de Hurlingham (UNAHUR)                          |
 | Unidad Académica      | Facultad de Informática — Proyecto Integrador Programación           |
 | Tipo de documento     | BRD — Documentación de Requerimientos de Negocio                     |
-| Versión               | 2.2                                                                   |
-| Fecha                 | 04 de octubre de 2026                                               |
+| Versión               | 2.3                                                                   |
+| Fecha                 | 08 de octubre de 2026                                               |
 | Sponsor Operación     | Secretaría Académica / Dirección de Carrera                          |
 | Sponsor Organización  | UNAHUR                                                               |
 | Integrantes           | Perugini, Pablo; Acuña, Marcos; Masgo Sandoval, Joaquín; Renaud, Román; Remonda, Eliel; Cotera, Dylan |
@@ -40,6 +40,7 @@
 | 2.0     | 24/09/2026   | Equipo | Revisión mayor alineada con la implementación actual. Se retiran los requerimientos que **no corresponden** a la aplicación: módulo de autenticación (registro/login/cookie), usuarios y roles, recuperación de contraseña, IA (matching semántico por embeddings, chat orientador y su orquestador multiproveedor) y pruebas automatizadas/CI. Se documenta el acceso sin cuenta (progreso por identificador local `x-user-id`), el título intermedio y las pantallas reales de la app. |
 | 2.1     | 30/09/2026   | Equipo | Sugerencias de inscripción implementadas (R0–R6/C1–C6) + RN04 con sustento transitivo; FRD/BRD alineados. |
 | 2.2     | 04/10/2026   | Equipo | Ajuste doc-vs-código: RN02 precisa que solo *Aprobada* habilita sucesoras (*Regular* no). |
+| 2.3     | 08/10/2026   | Equipo | Sesión `/users` reactivada a nivel API (cookie + Bearer, roles en rutas), componentes Login/Register pendientes de ruteo; `/universities` montado; Node 22 único en Docker; Swagger 20 paths; suite 20 tests. El progreso sigue sin cuentas (`x-user-id`). |
 
 ---
 
@@ -49,7 +50,7 @@
 
 Desarrollar una aplicación web interactiva que represente el plan de estudios de una carrera universitaria como un **grafo dirigido**. La plataforma permitirá que:
 
-- Los **estudiantes** visualicen el estado de sus materias (*Aprobada, Regular, Cursando, Pendiente*) y actualicen su progreso de manera interactiva sobre los nodos. No hay cuentas: el progreso se asocia al identificador local del navegador (`x-user-id`).
+- Los **estudiantes** visualicen el estado de sus materias (*Aprobada, Regular, Cursando, Pendiente*) y actualicen su progreso de manera interactiva sobre los nodos. No hay cuentas para el progreso: se asocia al identificador local del navegador (`x-user-id`).
 - El **sistema** evalúe las correlatividades y desbloquee/bloquee automáticamente las materias sucesivas según el historial del alumno.
 - El **administrador** (Dirección de Carrera) cargue una carrera, importe el plan oficial en PDF, edite correlatividades y publique el plan.
 
@@ -106,7 +107,7 @@ Los planes de estudio universitarios suelen ser complejos y estar llenos de depe
 | Docentes                     | Consulta opcional (solo lectura), si lo requiere la secretaría.      |
 
 > [!NOTE]
-> **Decisión de diseño:** la implementación actual **no tiene cuentas ni roles**. Cualquier visitante puede cargar y editar planes y consultar o actualizar su progreso; el progreso se separa por el identificador local del navegador (`x-user-id`). La tabla de actores refleja el modelo de negocio objetivo del proyecto.
+> **Decisión de diseño:** el progreso **no tiene cuentas** (cualquier visitante consulta o actualiza su progreso, separado por `x-user-id`), pero la API sí tiene sesión de usuarios con roles (`ADMIN`/`USUARIO`, cookie httpOnly + Bearer) aplicada en rutas de escritura y administración. La tabla de actores refleja el modelo de negocio objetivo del proyecto.
 
 ### 2.8 Alcance del Proyecto
 

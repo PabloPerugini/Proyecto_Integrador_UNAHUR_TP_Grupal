@@ -11,9 +11,9 @@
 | Institución           | Universidad Nacional de Hurlingham (UNAHUR)                          |
 | Unidad Académica      | Facultad de Informática — Proyecto Integrador Programación           |
 | Tipo de documento     | Matriz de trazabilidad — cruce BRD / FRD ↔ verificación existente    |
-| Versión               | 1.2                                                                  |
-| Fecha                 | 04 de octubre de 2026                                             |
-| Documentos de origen  | `BRD.md` v2.2 · `FRD.md` v2.2 · `Test-Plan.md` v2.2 · `Test-Cases.md` v2.1 |
+| Versión               | 1.3                                                                  |
+| Fecha                 | 08 de octubre de 2026                                             |
+| Documentos de origen  | `BRD.md` v2.3 · `FRD.md` v2.3 · `Test-Plan.md` v2.3 · `Test-Cases.md` v2.2 |
 | Sponsor Operación     | Secretaría Académica / Dirección de Carrera                          |
 | Sponsor Organización  | UNAHUR                                                               |
 | Integrantes           | Perugini, Pablo; Acuña, Marcos; Masgo Sandoval, Joaquín; Renaud, Román; Remonda, Eliel; Cotera, Dylan |
@@ -57,7 +57,7 @@ existe** en el repositorio, respondiendo tres preguntas:
 | **Control de salud** | `npm run test:salud` → `validaciones.js salud` (motor `verificar-salud.test.js`) | Matching de correlativas, aristas, detección de ciclos, materias disponibles. |
 | **Golden snapshot** | `npm run snapshot:planes` → `validaciones.js golden` (motor `golden-snapshot.js`) | Regresión del parser: `diff = 0` sobre los planes sanos. |
 | **Todo en uno** | `npm run validar` → `validaciones.js todo` | Golden `--check` + salud + masiva, con guard de corpus previo. |
-| **Unitarios** | `npm test` → `node --test tests/` (0 dependencias) | `bestDbMatch`, whitelist/anti-ciclos/BUG-009, RN04, AR-3 (14 tests). |
+| **Unitarios** | `npm test` → `node --test tests/` (0 dependencias) | `bestDbMatch`, whitelist/anti-ciclos/BUG-009, RN04, AR-3, auth-cookie (20 tests). |
 | **Verificación estática** | `node --check` sobre `backend/src` | Sintaxis del backend. |
 | **Frontend** | `npm run lint` · `npx tsc -b` · `npm run build` | Lint, tipos y build de producción. |
 | **HTTP manual** | Postman | Casos 1–19 del Test-Plan. |
@@ -113,6 +113,7 @@ existe** en el repositorio, respondiendo tres preguntas:
 | AR-1 | Visualizar progreso académico en un grafo | Caso 11 (estructura del grafo: `nodes`, `edges`, `stats`); Caso 10 (estados); Caso 21 (colores) | Postman / navegador | 🟡 |
 | AR-2 | Importar el plan en PDF y editar correlativas | **`test:planes`** ejecuta crear carrera → `parse-official` → `saveSubjects` → `parse-correlativas` sobre **43 documentos** (Test-Cases:59-107); `saveCorrelativas` blindado y verificado (BUG-009) | `test:planes` ✅ · Casos 3–8 🟡 | ✅ parcial |
 | AR-3 | Recibir sugerencias automáticas de inscripción | `GET /:id/sugerencias` (smoke 200+401) + sección en Mi progreso + 4 unitarios | `npm test` ✅ · smoke ✅ · caso UI 🟡 | ✅ parcial |
+| AR-4 | Gestionar universidades (CRUD) | `GET /universities` 200 en vivo + documentado en Swagger; escrituras admin sin probar | verificado 08/10 parcial | ✅ parcial |
 | US-02 | Grafo interactivo con colores por estado + banner de título intermedio | Caso 12 (`graph.intermediate`, banner) y Caso 21 (colores); `test:planes` valida `hasIntermediate` (`carga-masiva.test.js:235`) | `test:planes` ✅ parcial · Casos 12 y 21 🟡 | ⚠️ |
 | US-03 | Clic en materia disponible cambia estado y desbloquea sucesoras | Caso 21 | navegador | 🟡 |
 
@@ -138,11 +139,12 @@ existe** en el repositorio, respondiendo tres preguntas:
 
 | # | Requisito | Verificación | Estado |
 | - | --------- | ------------ | ------ |
-| SEG-1 | **Sin autenticación:** módulo `/users` existe sin UI consumidora (FRD:298, acuerdo equipo) | Documentado como limitación + Swagger tag legado | ✅ documentado |
+| SEG-1 | **Sesión `/users`:** login (Bearer + cookie httpOnly), `logout`, `me` con caché (FRD §4.3) | `tests/auth-cookie.test.js` (6 tests: cookie, dual Bearer/cookie, token `id+sub`, caché de `me`) + Casos 24 | ✅ |
 | SEG-2 | **`x-user-id`:** `401` si falta en `POST /progress`, `GET /progress/me`, `GET /:id/graph` y `GET /:id/sugerencias` (todas con `withDeviceId`; FRD:299) | Caso 9 (progreso) + smoke 30/09 (graph/sugerencias 401) | 🟡 |
 | SEG-3 | **Subida de archivos:** solo PDF de hasta 10 MB, en memoria (FRD:300) | Caso 7; validación implementada en `middlewares/upload.js:8-17` y `career.controllers.js:117,267` (`isPdfBuffer`) | 🟡 |
 | SEG-4 | **Errores:** JSON en español `400/404/409/500`, UI sin romperse (FRD:301) | Casos 17–19 y 22 | 🟡 |
-| SEG-5 | **Sin datos personales en uso:** sin UI de cuentas (FRD:302) | Documentado + Swagger | ✅ documentado |
+| SEG-5 | **Datos personales:** el progreso no expone credenciales; las cuentas solo aparecen en `/users/me` (perfil propio) | `GET /users/me` 401 sin token + Swagger | ✅ documentado |
+| SEG-6 | **Roles en rutas:** escritura de `/universities` y admin de `/users` exigen `ADMIN` (`403` si no) | Caso 25 definido, pendiente de ejecución | 🟡 |
 
 ---
 
@@ -188,7 +190,7 @@ hasta la API; la capa de interfaz (Casos 20–23) no tiene resultado registrado.
 | BUG-008 | Groq 413 / Gemini 503-429 | Mitigado | Observado en corrida; **sin test automatizado** (depende de cuota externa) | ❌ |
 | BUG-009 | `saveCorrelativas` persistía cualquier `requires` (ciclos, autorreferencias) | Resuelto | Regresión automática `npm test` (whitelist + anti-ciclos) | ✅ |
 
-**Cobertura de regresión de bugs: 8/9 automatizados.** Falta BUG-008 (cuota externa, aceptado).
+**Cobertura de regresión de bugs: 9/10 automatizados.** Falta BUG-008 (cuota externa, aceptado); BUG-010 (Docker/Node) se resolvió con cambio de imagen, verificado en vivo.
 
 ---
 
@@ -198,14 +200,14 @@ hasta la API; la capa de interfaz (Casos 20–23) no tiene resultado registrado.
 | --------- | ----- | -- | -- | -- | -- | -- |
 | Reglas de negocio (RN01–RN04) | 4 | 1 | 1 | 2 | 0 | 0 |
 | Reglas de sugerencia (R0–R6, C1–C6, orden) | 3 | 3 | 0 | 0 | 0 | 0 |
-| Historias de usuario (AR/US) | 5 | 2 | 2 | 1 | 0 | 0 |
+| Historias de usuario (AR/US) | 6 | 3 | 2 | 1 | 0 | 0 |
 | Criterios de bondad | 9 | 4 | 2 | 3 | 0 | 0 |
-| Requisitos de seguridad | 5 | 2 | 3 | 0 | 0 | 0 |
+| Requisitos de seguridad | 6 | 2 | 4 | 0 | 0 | 0 |
 | Pantallas (SC) | 6 | 0 | 5 | 1 | 0 | 0 |
 | Casos de estudio (CS) | 5 | 0 | 2 | 3 | 0 | 0 |
-| **TOTAL** | **37** | **12** | **15** | **10** | **0** | **0** |
+| **TOTAL** | **39** | **13** | **16** | **10** | **0** | **0** |
 
-> De 37 puntos: **12 verificados**, **15 definidos pero sin ejecutar** (casi todos, casos
+> De 39 puntos: **13 verificados**, **16 definidos pero sin ejecutar** (casi todos, casos
 > manuales HTTP/UI), **10 parciales** y **0 pendientes**: no quedan requisitos sin
 > implementar ni sin caso. **Ninguna pantalla está verificada end-to-end** (Casos 20–23).
 
@@ -219,9 +221,9 @@ real (404 raíz e ID inválido con envelope, 401 sin `x-user-id`, 200 en `/caree
 `/sugerencias`) + `test:salud`/`test:planes` como E2E: la brecha formal pasa a 🟠,
 queda el registro caso por caso en Test-Cases.
 
-### 11.2 Tests unitarios ✅ (cerrada 30/09)
-`npm test` (node:test, 0 dependencias, 14 tests): `bestDbMatch`, whitelist/anti-ciclos/
-BUG-009, RN04 y AR-3. El matching, los ciclos y las reglas ahora tienen casos
+### 11.2 Tests unitarios ✅ (cerrada 30/09, ampliada 08/10)
+`npm test` (node:test, 0 dependencias, 20 tests): `bestDbMatch`, whitelist/anti-ciclos/
+BUG-009, RN04, AR-3 y auth-cookie (sesión, token unificado, caché de `me`). El matching, los ciclos, las reglas y la sesión ahora tienen casos
 aislados además de la verificación masiva/E2E.
 
 ### 11.3 RN04 ✅ (cerrada 30/09)
@@ -256,13 +258,12 @@ Corregida en `Test-Plan.md:47,67` y `Test-Cases.md:59`.
 ### 12.1 RN03 ✅
 FRD:122 ahora dice `x-user-id`, igual que BRD:133.
 
-### 12.2 §4.3 Seguridad ✅
-FRD:298/302 ahora dicen que el módulo `/users` existe sin UI consumidora (acuerdo
-de equipo: no se borra, solo se documenta) + Swagger lo marca como legado.
+### 12.2 §4.3 Seguridad ✅ (actualizada 08/10)
+FRD §4.3 ahora describe sesión `/users` (cookie + Bearer, `me`, `logout`, roles en rutas) y Login/Register pendientes de ruteo; el progreso sigue con `x-user-id`.
 
-### 12.3 Swagger ✅
-`swagger.yaml` pasó de 9 a 16 paths (incl. `parse-correlativas`, `correlativas`,
-`PATCH/DELETE /careers/{id}`, `sugerencias`, `/users/*` legado, `/` raíz).
+### 12.3 Swagger ✅ (20 paths el 08/10)
+`swagger.yaml` pasó de 9 a 16 paths el 30/09 y a **20 paths** el 08/10
+(`+ /users/me`, `/users/logout`, `/universities`, `/universities/{id}`, esquema `cookieAuth`, tags Users/Universities).
 
 ### 12.4 Fila BUG-009 ✅
 Repegada a la tabla (sin líneas en blanco intermedias).
@@ -276,15 +277,15 @@ Repegada a la tabla (sin líneas en blanco intermedias).
 | 1 | **Ejecutar los casos HTTP 1–19** y registrar en Test-Cases | 🟠 smoke ejecutado (404/401/200 + sugerencias); falta registro caso por caso | 🟡 medio |
 | 2 | **Regresión `saveCorrelativas`** (ciclo, inexistente, autorreferencia) | ✅ en `npm test` | 🟢 bajo |
 | 3 | **FRD RN03** → `x-user-id` | ✅ | 🟢 bajo |
-| 4 | **FRD SEG-1/SEG-5** (módulo existe, sin UI) | ✅ | 🟢 bajo |
+| 4 | **FRD SEG-1/SEG-5** (sesión documentada, Login sin ruta) | ✅ | 🟢 bajo |
 | 5 | **29 → 43 PDFs** | ✅ | 🟢 bajo |
 | 6 | **Repegar BUG-009** | ✅ | 🟢 bajo |
 | 7 | **Guard de corpus** en scripts | ✅ `requireCorpus()` + `validaciones` | 🟢 bajo |
 | 8 | **Casos 20–23 de interfaz** | ⬜ pendiente (0/6 pantallas E2E) | 🟡 medio |
 | 9 | **Caso RN04** | ✅ `tests/rn04.test.js` (más implementación de sustento transitivo) | 🟢 bajo |
-| 10 | **Unitarios** (matching + ciclos) | ✅ `npm test`, 14 tests, 0 deps | 🟢 bajo (era medio) |
+| 10 | **Unitarios** (matching + ciclos + sesión) | ✅ `npm test`, 20 tests, 0 deps | 🟢 bajo (era medio) |
 | 11 | **Documentar herramientas** (FRD/Test-Plan/README) | ✅ | 🟢 bajo |
-| 12 | **Swagger completo** | ✅ 16 paths | 🟡 medio |
+| 12 | **Swagger completo** | ✅ 20 paths | 🟢 bajo (era medio) |
 
 > Los ítems 3–6, 7, 9 y 11 son **solo de documentación** y pueden resolverse en la misma
 > corrida de edición de `docs/requirements`.
@@ -297,3 +298,4 @@ Repegada a la tabla (sin líneas en blanco intermedias).
 | ------- | ----- | ----- | ----------- |
 | 1.0 | 28/09/2026 | Equipo | Primera matriz de trazabilidad: 37 puntos cruzados (BRD/FRD ↔ verificación), 11 brechas y 4 inconsistencias documentales detectadas. |
 | 1.1 | 30/09/2026 | Equipo + agente | Cierre: AR-3 implementado (R0–R6/C1–C6), RN04 con test, 14 unitarios, Swagger 16 paths, FRD/29→43/BUG-009 corregidos, guard de corpus, Fix A medido (Obst 23/35, Nutr 41/48). Cobertura 12✅/15🟡/10⚠️/0❌/0⛔. Restan: registro HTTP 1–19 caso por caso y E2E de interfaz (0/6). |
+| 1.2 | 08/10/2026 | Equipo + agente | Sesión `/users` (cookie+Bearer, `me`/`logout`, token `id+sub`) + 6 tests auth-cookie, `/universities` montado, Swagger 20 paths, suite 20 tests, Docker `node:22-slim` (BUG-010), dry-run 43 PDFs sin guardar, Casos 24–25, AR-4 + SEG-6. Cobertura 13✅/16🟡/10⚠️/0❌/0⛔ (39 puntos). |

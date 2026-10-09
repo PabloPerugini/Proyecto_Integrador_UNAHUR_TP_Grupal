@@ -11,8 +11,8 @@
 | Institución           | Universidad Nacional de Hurlingham (UNAHUR)                          |
 | Unidad Académica      | Facultad de Informática — Proyecto Integrador Programación           |
 | Tipo de documento     | FRD — Documentación de Requerimientos Funcionales                    |
-| Versión               | 2.2                                                                   |
-| Fecha                 | 04 de octubre de 2026                                               |
+| Versión               | 2.3                                                                   |
+| Fecha                 | 08 de octubre de 2026                                               |
 | Sponsor Operación     | Secretaría Académica / Dirección de Carrera                          |
 | Sponsor Organización  | UNAHUR                                                               |
 | Integrantes           | Perugini, Pablo; Acuña, Marcos; Masgo Sandoval, Joaquín; Renaud, Román; Remonda, Eliel; Cotera, Dylan |
@@ -40,6 +40,7 @@
 | 2.0     | 24/09/2026   | Equipo | Revisión mayor alineada con la implementación actual. Se retiran los requerimientos que **no corresponden** a la aplicación (historial 1.1–1.9): autenticación por cookie y usuarios, roles, recuperación de contraseña, chat del orientador con IA, matching semántico por embeddings, selector de carrera `?degree=`, compartir/exportar imagen y suites de tests con CI. Se documentan las pantallas reales, la identificación anónima por `x-user-id`, el título intermedio y el manejo centralizado de errores. |
 | 2.1     | 30/09/2026   | Equipo | Sugerencias AR-3, RN03/`x-user-id`, SEG-1/5 (módulo `/users` sin UI), envelope de errores, Swagger 16 paths, suite `npm test` (14 tests). |
 | 2.2     | 04/10/2026   | Equipo | Ajuste doc-vs-código: AR-3 marcada implementada, confianza suma `prefix`, RN02 precisa que solo *Aprobada* habilita (*Regular* no), RN03 sin "tiempo real". |
+| 2.3     | 08/10/2026   | Equipo | Sesión `/users` reactivada (cookie httpOnly + Bearer, token unificado `id+sub`, `logout`/`me` con caché; componentes Login/Register aún sin ruta), `/universities` montado, Swagger 20 paths, suite 20 tests, Node 22 único en Docker. |
 
 ---
 
@@ -94,7 +95,7 @@ Los planes de estudio universitarios suelen ser complejos y estar llenos de depe
 | Docentes                     | Consulta opcional (solo lectura), si lo requiere la secretaría.      |
 
 > [!NOTE]
-> La implementación actual **no tiene cuentas ni roles**: cualquier visitante puede cargar y editar planes, y el progreso se separa por el identificador local del navegador (`x-user-id`). La tabla anterior refleja el modelo de negocio objetivo.
+> La implementación actual **no usa cuentas para el progreso** (se separa por `x-user-id`), pero sí tiene sesión de usuarios a nivel API (cookie httpOnly + Bearer, roles `ADMIN`/`USUARIO` aplicados en rutas). La tabla anterior refleja el modelo de negocio objetivo.
 
 ### 2.8 Alcance del Proyecto
 
@@ -297,11 +298,11 @@ flowchart LR
 
 ### 4.3 Requisitos de Seguridad
 
-- **Sin autenticación:** la aplicación no tiene cuentas, sesiones ni tokens; no hay diferencias de permisos entre visitantes. El módulo `/users` (registro/login JWT) existe en el código pero **ninguna pantalla lo consume** (decisión Cuerpo B §1.5: no se cablea ni se borra, solo se documenta).
+- **Sesión de usuarios:** `POST /users/login` devuelve el token Bearer y setea cookie httpOnly `token`; `POST /users/logout` la limpia; `GET /users/me` devuelve el perfil (caché 60s). `authUser` acepta Bearer o cookie y el JWT lleva `id` + `sub`. Roles `ADMIN`/`USUARIO` exigidos en rutas (ej. escritura de `/universities`, admin de `/users`). Los componentes Login/Register existen en el frontend pero **aún no tienen ruta** en `App.tsx` (pendiente).
 - **Identificación del progreso:** el progreso se asocia al header `x-user-id`, que el frontend genera una sola vez y guarda en `localStorage`. Las rutas con `withDeviceId` responden `401` si el identificador falta. Es una clave local por navegador, no un token de sesión.
 - **Subida de archivos:** solo se aceptan archivos PDF (firma `%PDF-` verificada en servidor, además del mimetype) de hasta **10 MB**, que se procesan en memoria y no se persisten en disco.
 - **Errores:** todas las respuestas de error vienen en JSON con un mensaje en español (`400` para IDs inválidos y validaciones, `404` para recursos inexistentes, `409` para duplicados, `500` genérico sin detalle interno); la interfaz las muestra sin romperse.
-- **Sin datos personales en uso:** al no haber UI de cuentas, la API no expone usuarios ni credenciales en ningún flujo (el modelo `User` persiste solo si se usa `/users` por API directa).
+- **Sin datos personales en uso:** el progreso no expone credenciales (clave local `x-user-id`); las cuentas solo aparecen en los flujos de sesión `/users` (perfil propio vía `/users/me`).
 
 ---
 
@@ -309,7 +310,7 @@ flowchart LR
 
 ### SC001 · Inicio (`/`)
 
-- **Campos:** ninguno (no hay login).
+- **Campos:** ninguno en esta pantalla (el login existe como componente pero aún sin ruta en `App.tsx`).
 - **Comportamiento:** listado de carreras en tarjetas con su color e instituto, diferenciando las **publicadas** de los **borradores**, con accesos a *Cargar plan* y *Editar plan*. Si todavía no hay planes cargados, muestra un estado vacío con la acción para crear uno.
 
 ### SC002 · Grafo del plan (`/grafo/:id`)

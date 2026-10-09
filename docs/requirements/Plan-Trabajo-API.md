@@ -22,12 +22,12 @@
 | Institución | Universidad Nacional de Hurlingham (UNAHUR) |
 | Unidad Académica | Facultad de Informática — Proyecto Integrador Programación |
 | Tipo de documento | Plan de Trabajo — API REST (Backend) |
-| Versión | 1.2 |
+| Versión | 1.3 |
 | Fecha | 08 de octubre de 2026 |
 | Sponsor Operación | Secretaría Académica / Dirección de Carrera |
 | Sponsor Organización | UNAHUR |
 | Integrantes | Perugini, Pablo; Acuña, Marcos; Masgo Sandoval, Joaquín; Renaud, Román; Remonda, Eliel; Cotera, Dylan |
-| Documentos relacionados | `BRD.md` v2.2 · `FRD.md` v2.2 · `Test-Plan.md` · `Test-Cases.md` · `Matriz-Trazabilidad.md` · `backend/docs/swagger.yaml` |
+| Documentos relacionados | `BRD.md` v2.3 · `FRD.md` v2.3 · `Test-Plan.md` v2.3 · `Test-Cases.md` v2.2 · `Matriz-Trazabilidad.md` v1.3 · `backend/docs/swagger.yaml` (20 paths) |
 | Release | Diciembre 2026 |
 
 ---
@@ -61,6 +61,7 @@
 | 1.0 | 05/10/2026 | Equipo | Versión inicial. Inventario real desde `backend/src/routes/*.js` y `backend/docs/swagger.yaml`. |
 | 1.1 | 06/10/2026 | Equipo | Corrección integral: contrato único de errores (envelope), contrato real de `POST /progress` (`{careerId, entries}`) y `GET /progress/me` (`{entries, summary}` + `?careerId`), `401 x-user-id` documentado en Swagger, decisión `/users` Opción A (legado congelado), fases 1–5 marcadas como ejecutadas y fase 6 como pendiente. |
 | 1.2 | 08/10/2026 | Equipo | Alineación con plantilla de cátedra (carátula Título/Grupo/Carrera/Tutor, contexto organizacional, técnicas y metodologías, experiencia de aprendizaje, vinculación con la carrera) + actualización técnica: sesión por cookie en `/users` (`login` setea cookie httpOnly, `logout`, `me` con caché), token unificado `id+sub`, `GET /universities` montado, suite en 20 tests. |
+| 1.3 | 08/10/2026 | Equipo | Corrección total doc-vs-app: BRD/FRD v2.3, Matriz v1.3 (39 puntos: 13✅/16🟡/10⚠️, AR-4 + SEG-6, BUG-010), Test-Plan v2.3 (Casos 24–25, dry-run 43 PDFs), Test-Cases v2.2 (BUG-010), Docker `node:22-slim` único, Swagger 20 paths. |
 
 ---
 
@@ -278,7 +279,7 @@ Release objetivo: **diciembre 2026**. Referencia de épica: **EP-1, 4 meses** (B
 
 | Capa | Stack |
 | ---- | ----- |
-| Runtime | Node.js 20+, Express 5, Mongoose 9, Redis 6 (best-effort), `pdfjs-dist`, `multer` (memoria), `joi`, `helmet`, `cors`, `express-rate-limit`, `swagger-ui-express` + `yamljs` (más `bcryptjs`/`jsonwebtoken`, solo para el legado `/users`) |
+| Runtime | Node.js 22+ (único: `node:22-slim` en backend y frontend, `.nvmrc` + `engines >=22`), Express 5, Mongoose 9, Redis 6 (best-effort), `pdfjs-dist`, `multer` (memoria), `joi`, `helmet`, `cors`, `express-rate-limit`, `swagger-ui-express` + `yamljs` (más `bcryptjs`/`jsonwebtoken` para la sesión `/users`) |
 | Datos / caché | MongoDB + Redis (Docker Compose: app + Mongo + Redis) |
 | Calidad | `node --test` (20 tests, 0 dependencias extra), `node --check`, Postman, DevTools, `validaciones.js` (masiva/salud/golden/todo) |
 | Corpus | `../files/UNAHUR-Oferta-Academica` (43 PDF, fuera del repo) + `docs/testing/planes-referencia.json` + `docs/testing/golden/` (43 JSON) + `backend/scripts/informes/` |
@@ -334,7 +335,7 @@ Release objetivo: **diciembre 2026**. Referencia de épica: **EP-1, 4 meses** (B
 | SEG-3 PDF ≤ 10 MB | `parse-*` (`upload.js`, `isPdfBuffer`) | Definido (caso 7) |
 | SEG-4 Errores español | Todos (envelope + `errorHandler`) | Definido (casos 17–19, 22) |
 
-Detalle completo caso por caso: `Matriz-Trazabilidad.md` (37 puntos: 12 ✅ / 15 🟡 / 10 ⚠️).
+Detalle completo caso por caso: `Matriz-Trazabilidad.md` (39 puntos: 13 ✅ / 16 🟡 / 10 ⚠️).
 
 ---
 
@@ -378,4 +379,4 @@ El plan aporta a la formación del equipo en: diseño de APIs REST con contrato 
 
 ---
 
-*Fin del Plan de Trabajo — API REST v1.2 (alineado con plantilla de cátedra: carátula, contexto organizacional, técnicas y metodologías, experiencia de aprendizaje y vinculación con la carrera). Fuente de verdad del contrato: `backend/docs/swagger.yaml` (20 paths públicos) + `backend/src/routes/`.*
+*Fin del Plan de Trabajo — API REST v1.3 (BRD/FRD v2.3, Matriz v1.3, Test-Plan v2.3, Test-Cases v2.2). Fuente de verdad del contrato: `backend/docs/swagger.yaml` (20 paths públicos) + `backend/src/routes/`.*

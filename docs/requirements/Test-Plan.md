@@ -1,8 +1,8 @@
 # Plan de Pruebas
 
 **Proyecto:** Gradify — Grafo Interactivo de Correlatividades y Seguimiento de Progreso Académico
-**Versión:** 2.2
-**Fecha:** 04/10/2026
+**Versión:** 2.3
+**Fecha:** 08/10/2026
 **Sponsor Organización:** Universidad Nacional de Hurlingham (UNAHUR) — Licenciatura en Informática
 **Autor:** Equipo del proyecto integrador
 **Tutor:** Prof. Alejandra Pinto
@@ -36,7 +36,7 @@ Garantizar que la aplicación web (React) y su API REST (Node/Express + MongoDB 
 - Pruebas manuales exploratorias de los flujos de la aplicación (subir PDF, explorar grafo, marcar progreso).
 
 ### Verificación estática y de compilación
-**Descripción:** chequeo de sintaxis del backend con `node --check` sobre `src/` y verificación del frontend con las herramientas del proyecto (`eslint`, `tsc -b` y `vite build`). Se ejecutan antes de cada entrega. Suite de unitarios: **`npm test`** (`node --test tests/`, 0 dependencias, 14 tests: `bestDbMatch`, whitelist/anti-ciclos/BUG-009, RN04, AR-3).
+**Descripción:** chequeo de sintaxis del backend con `node --check` sobre `src/` y verificación del frontend con las herramientas del proyecto (`eslint`, `tsc -b` y `vite build`). Se ejecutan antes de cada entrega. Suite de unitarios: **`npm test`** (`node --test tests/`, 0 dependencias, 20 tests: `bestDbMatch`, whitelist/anti-ciclos/BUG-009, RN04, AR-3, auth-cookie).
 
 **Funcionalidades principales:**
 - Detectar errores de sintaxis en el backend sin necesidad de levantar el entorno.
@@ -55,7 +55,7 @@ Garantizar que la aplicación web (React) y su API REST (Node/Express + MongoDB 
 
 1. **Salud y documentación**
    - Caso 1: **Salud.** `GET /health` → `200` con `{ "status": "ok" }` y `GET /` → `200` con el índice de la API.
-   - Caso 2: **Swagger.** Abrir `/api-docs` y verificar que el documento carga y que los paths listados son los reales (16 paths: `/`, `/health`, `/careers` y sus subrutas incluido `/:id/sugerencias`, `/progress/*` y `/users/login|register` como legado).
+   - Caso 2: **Swagger.** Abrir `/api-docs` y verificar que el documento carga y que los paths listados son los reales (20 paths: `/`, `/health`, `/careers` y sus subrutas incluido `/:id/sugerencias`, `/progress/*`, `/users/*` y `/universities/*`).
 
 2. **Carga de planes de estudio**
    - Caso 3: **PDF del plan oficial.** `POST /careers/:id/parse-official` con el PDF en el campo `file` → `200` con `subjects`, `detectedCount`, `sourceKind`, `creditsFinal`, `creditsIntermediate` e `intermediateTitle`.
@@ -91,6 +91,10 @@ Garantizar que la aplicación web (React) y su API REST (Node/Express + MongoDB 
    - Caso 22: **Errores en la interfaz.** Detener el backend y realizar una acción → mensaje "No se pudo conectar con el servidor" sin que la pantalla se rompa (`ErrorBoundary`).
    - Caso 23: **Accesibilidad.** Verificar que los selectores y campos de *Mi progreso* y *Admin* tengan `aria-label` descriptivos, que la zona de arrastre sea operable por teclado (`role="button"`), que los loaders usen `role="status"`, que los mensajes usen `role="alert"` y que las barras de progreso expongan `role="progressbar"`.
 
+8. **Sesión y universidades**
+   - Caso 24: **Sesión por cookie.** `POST /users/login` → `200` con `token` + cookie httpOnly `token`; `GET /users/me` con cookie → `200` (con caché); sin token → `401`; `POST /users/logout` → `200` y limpia la cookie.
+   - Caso 25: **Universidades.** `GET /universities` → `200` (lista, pública); `POST /universities` sin token → `401`; con token no-admin → `403`; `GET /universities/:id` inexistente → `404`.
+
 ## Plan de Ejecución
 
 1. Configurar un entorno de prueba (backend en puerto 3000, frontend en puerto 5173, MongoDB y Redis locales).
@@ -104,7 +108,12 @@ Garantizar que la aplicación web (React) y su API REST (Node/Express + MongoDB 
 - **Backend:** `node --check` OK · `npm test` 14/14 · `snapshot --check` SIN DIFERENCIAS · `test:salud` idéntico · `test:planes` corrida 6 (OK=34+OK-IA=1+WARN=8+FAIL=0).
 - **Frontend:** `npm run lint` sin errores; `npx tsc -b` sin errores (**con `strict: true`**); `npm run build` OK.
 - **Casos HTTP (1–19):** smoke ejecutado el 30/09 sobre API real (404 raíz e ID inválido con envelope `{ success:false, error:{ message } }`, 401 sin `x-user-id`, 200 en `/careers` plano y `/sugerencias`); falta el registro caso por caso en Test-Cases.
-- **Unitarios:** `npm test` — 14 tests (matcher, anti-ciclos/BUG-009, RN04, AR-3), 0 dependencias.
+- **Unitarios:** `npm test` — 20 tests (matcher, anti-ciclos/BUG-009, RN04, AR-3, auth-cookie), 0 dependencias.
+
+## Verificación 08/10/2026 (dry-run sin guardar + Node 22)
+
+- Corrida dry-run sobre los 43 PDFs (solo `parse-*`, carrera temporal eliminada, nada persistido): `parse-official` 43/43 (`200`, 1422 materias; 10 con `aiFallback`, 5 con `det=0` por ser PDFs de correlativas); `parse-correlativas` 14/14 `200` (Biotecnología 41/41 contra su carrera).
+- Docker unificado a `node:22-slim` (antes `parse-*` devolvía `400` `Promise.withResolvers is not a function` con Node 20, y onnx no cargaba en Alpine).
 
 ## Plan de Pruebas Adicionales (Opcionales)
 

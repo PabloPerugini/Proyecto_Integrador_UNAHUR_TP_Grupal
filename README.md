@@ -38,7 +38,7 @@ Cada carpeta tiene su propio `README.md` con instrucciones de instalación y eje
 
 | Capa     | Stack                                                       |
 | -------- | ----------------------------------------------------------- |
-| Backend  | Node.js 20+, Express, MongoDB (Mongoose), Redis           |
+| Backend  | Node.js 22+ (`node:22-slim` en Docker, `.nvmrc`), Express, MongoDB (Mongoose), Redis           |
 | Frontend | React 19, TypeScript, Vite, React Router 7, Bootstrap 5     |
 
 ## Arranque rápido

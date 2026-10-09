@@ -1,12 +1,12 @@
 # Documento de Seguimiento de Testing
 
 **Proyecto:** Gradify — Grafo Interactivo de Correlatividades y Seguimiento de Progreso Académico
-**Versión:** 2.1
-**Fecha:** 2026-09-30
+**Versión:** 2.2
+**Fecha:** 2026-10-08
 **Sponsor Organización:** Universidad Nacional de Hurlingham (UNAHUR) — Licenciatura en Informática
 **Autor:** Equipo del proyecto integrador
 **Tutor:** Prof. Alejandra Pinto
-**Release:** Septiembre 2026
+**Release:** Diciembre 2026
 
 ---
 
@@ -17,7 +17,7 @@ El Documento de Seguimiento de Testing tiene como objetivo principal registrar y
 La metodología de prueba se describe en el [Plan de Pruebas](./Test-Plan.md).
 
 > [!NOTE]
-> El registro cubre solo los bugs de la **implementación actual**. Los hallazgos correspondientes a funcionalidades que ya no forman parte de la aplicación (autenticación, roles, recuperación de contraseña, chat con IA, matching por embeddings, Docker Compose, suites de tests) se retiraron en la versión 2.0 de este documento.
+> El registro cubre solo los bugs de la **implementación actual**. Los hallazgos correspondientes a funcionalidades que ya no forman parte de la aplicación (recuperación de contraseña, chat con IA, matching por embeddings en producción, suites de tests con CI) se retiraron en la versión 2.0 de este documento. La sesión `/users` y los tests Jest volvieron al alcance en v2.2.
 
 ## Formato del Documento
 
@@ -52,6 +52,7 @@ El Documento de Seguimiento se organiza en forma de tabla, con las siguientes co
 | BUG-007 | El script masivo marcaba SKIP la correlativa de Mantenimiento por un typo en la ruta par de `planes-referencia.json`. | 1. `npm run test:planes`.<br>2. Ver `SKIP: sin plan par`. | Baja | Resuelto | Equipo | 2026-09-24 | 2026-09-24 | Corregida la ruta en la referencia; ahora matchea 26/33. |
 | BUG-008 | Groq responde 413 ante extracciones de ~25 mil caracteres y Gemini 503/429 intermitente (modelo saturado / cuota gratuita). | 1. Subir un plan de dialecto no soportado con IA configurada.<br>2. Ver `aiFallback: false` y el log `[parse-official]`. | Media | Mitigado | Equipo | 2026-09-24 | 2026-09-24 | Se envían solo las páginas con pinta de tabla (máx. 40 mil caracteres), se prueba Gemini primero en extracción y se reintento una vez ante 429/5xx. Con las keys gratuitas saturadas (~15 llamadas/hora) el fallback puede fallar en forma transitoria: reintentar más tarde. |
 | BUG-009 | `POST /careers/:id/correlativas` persistía cualquier código en `requires` sin validar (un código inventado por IA o a mano rompía el grafo) y aceptaba ciclos y autorreferencias. | 1. Guardar `requires` con un código inexistente o un ciclo A→B→A.<br>2. Ver el grafo resultante. | Alta | Resuelto | Equipo | 2026-09-24 | 2026-09-24 | `saveCorrelativas` valida en servidor: descarta códigos inexistentes y autorreferencias (los lista en `dropped`) y rechaza con 400 el lote si crea un ciclo, sin guardar nada. Regresión automática en `npm test` (Fase 3: whitelist + anti-ciclos + BUG-009). |
+| BUG-010 | `parse-official` y `parse-correlativas` devolvían `400` (`Promise.withResolvers is not a function`) en Docker, y `@xenova/transformers` no cargaba (Alpine sin glibc): la carga quedaba inoperativa en el entorno de entrega. | 1. `docker compose up --build` con `node:20-alpine`.<br>2. `POST .../parse-official` con cualquier PDF. | Alta | Resuelto | Equipo | 2026-10-08 | 2026-10-08 | Docker unificado a `node:22-slim` (+ `.nvmrc` y `engines >=22`): `parse-official` 200 y `parse-correlativas` 200 (41/41 Biotecnología) verificados en container; onnx carga OK. |
 ## Resultados de la Carga Masiva de Planes (2026-09-24)
 
 Corrida `npm run test:planes` sobre los 43 PDFs de `files/UNAHUR-Oferta-Academica`, contra la API real y con limpieza total de carreras `[TEST]` (cero huérfanas al final). Referencia de rangos por tipo en `docs/testing/planes-referencia.json`. Estados: OK (parser), OK-IA (rescatado por IA), WARN (cierra con observaciones), FAIL, SKIP.
