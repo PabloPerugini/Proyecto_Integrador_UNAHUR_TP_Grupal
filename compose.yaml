@@ -1,13 +1,19 @@
-
-name: backend
+# Gradify: todo el proyecto con un comando.
+#   docker compose up --build
+# Servicios: backend (Express + nodemon, hot-reload) + frontend (Vite dev con
+# HMR) + database (MongoDB) + cache (Redis). El código se monta por volumen:
+# lo que editás en ./backend y ./frontend se refleja sin rebuild.
+# Sin `name:` a propósito: el proyecto por defecto (nombre del directorio)
+# reutiliza el volumen mongo_data existente con los datos.
 
 services:
-  app:
+  backend:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: unahur_tp_app
+    container_name: unahur_tp_backend
     restart: unless-stopped
+    command: npm run dev -- --legacy-watch
 
     ports:
       - "127.0.0.1:3000:3000"
@@ -22,14 +28,45 @@ services:
       REDIS_URL: redis://cache:6379
 
     volumes:
+      # Código en vivo por bind + dependencias nativas de Linux en volumen
+      # nombrado (Docker lo siembra desde la imagen en el primer arranque;
+      # sin esto se verían los node_modules de Windows del host y rompe).
       - ./backend:/app
-      - node_modules:/app/node_modules
+      - backend_modules:/app/node_modules
 
     depends_on:
       database:
         condition: service_healthy
       cache:
         condition: service_healthy
+
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+    networks:
+      - unahur_network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: unahur_tp_frontend
+    restart: unless-stopped
+
+    ports:
+      - "127.0.0.1:5173:5173"
+
+    environment:
+      VITE_API_URL: http://localhost:3000
+
+    volumes:
+      # Idem backend: bind de código + volumen para node_modules de Linux.
+      - ./frontend:/app
+      - frontend_modules:/app/node_modules
 
     networks:
       - unahur_network
@@ -40,7 +77,9 @@ services:
     restart: unless-stopped
 
     ports:
-      - "127.0.0.1:27017:27017"
+      # 27018 en host: el 27017 lo ocupa un mongod local de Windows.
+      # Dentro de la red compose sigue siendo 27017 (MONGODB_URI intacto).
+      - "127.0.0.1:27018:27017"
 
     volumes:
       - mongo_data:/data/db
@@ -81,9 +120,12 @@ services:
       - unahur_network
 
 volumes:
+  # mongo_data resuelve al volumen existente con los datos
+  # (projecto_integrador_aca_unahur_tp_grupal_v_10_mongo_data).
   mongo_data:
   redis_data:
-  node_modules:
+  backend_modules:
+  frontend_modules:
 
 networks:
   unahur_network:

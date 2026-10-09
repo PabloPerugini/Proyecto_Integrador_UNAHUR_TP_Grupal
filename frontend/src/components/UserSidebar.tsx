@@ -1,7 +1,7 @@
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../hooks/useTheme';
-import { useCareerSelection } from '../hooks/useCareerSelection';
+import { useCareerSelection } from '../context/CareerContext';
 import ThemeToggle from './ThemeToggle';
 import SidebarBase from './SidebarBase';
 import type { NavItem } from './SidebarBase';

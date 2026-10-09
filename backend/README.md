@@ -1,11 +1,11 @@
 # Backend - Proyecto Integrador UNAHUR
 
-API REST hecha con Node.js + Express + MongoDB + Redis. Provee la carga y el parseo de planes de estudio, y los datos de progreso que consume el frontend.
+API REST hecha con Node.js + Express + MongoDB + Redis. Provee la carga y el parseo de planes de estudio (preview sin guardar + confirm con resolución de correlativas), grafo y sugerencias AR-3, y el progreso por usuario con auth JWT (roles USUARIO/ADMIN).
 
 ## Requisitos
 
-- Node.js 20+
-- MongoDB y Redis (local o vía Docker Compose)
+- Node.js 22+
+- MongoDB y Redis (los levanta el compose de la raíz) o Docker Compose
 
 ## Instalación y ejecución
 
@@ -13,17 +13,17 @@ API REST hecha con Node.js + Express + MongoDB + Redis. Provee la carga y el par
 npm install
 cp .env.Ejemplo .env
 
-# Opción 1: con Docker Compose (sube app + Mongo + Redis)
+# Opción 1: todo el proyecto con un comando (desde la raíz del repo)
 docker compose up --build
 
-# Opción 2: local (necesitás Mongo y Redis corriendo)
+# Opción 2: solo este servicio (necesitás Mongo y Redis corriendo)
 npm run dev
 ```
 
 Una vez iniciado:
 
 - API en `http://localhost:3000`
-- Documentación Swagger en `http://localhost:3000/api-docs`
+- Documentación Swagger en `http://localhost:3000/api-docs` (v2.0, ~30 paths)
 
 ## Estructura
 
@@ -41,6 +41,6 @@ src/
 
 ## Reglas de estilo
 
-- Mensajes de error en español, con formato `{ message, error }` o `{ error }`.
+- Mensajes de error en español, con formato `{ success: false, error: { message, details? } }`.
 - Nombres de archivo: `recurso.controllers.js`, `recurso.routes.js`, modelos en minúscula singular (`career.js`).
-- El progreso se separa por navegador con el header `x-user-id` (no hay login).
+- Auth JWT (Bearer + cookie `token`): mutaciones de catálogo solo ADMIN, planes e importaciones con dueño (`authStudyPlanOwnerOrAdmin` / `Viewer`).

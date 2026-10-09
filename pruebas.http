@@ -1,9 +1,19 @@
-
-### COMPROBAR BACKEND
+### 0. COMPROBAR BACKEND
 GET http://localhost:3000/health
 
+### 1. REGISTRO (campos reales: firstName/lastName; correr una sola vez, luego da 409)
+POST http://localhost:3000/users/register
+Content-Type: application/json
 
-### LOGIN
+{
+  "nickName": "usuarioPrueba100",
+  "password": "PruebaGradify2026!",
+  "email": "usuarioPrueba100@example.com",
+  "firstName": "Usuario",
+  "lastName": "Prueba"
+}
+
+### 2. LOGIN
 # @name login
 POST http://localhost:3000/users/login
 Content-Type: application/json
@@ -13,12 +23,15 @@ Content-Type: application/json
   "password": "PruebaGradify2026!"
 }
 
-
-### CONSULTAR IMPORTACIONES
-GET http://localhost:3000/plan-imports
+### 3. MI PERFIL (requiere auth)
+GET http://localhost:3000/users/me
 Authorization: Bearer {{login.response.body.$.token}}
 
-### SUBIR PDF A GRADIFY
+### 4. CATALOGO DE CARRERAS (publico)
+GET http://localhost:3000/careers
+
+### 5. SUBIR PDF A GRADIFY (preview: parsea sin guardar; copiar fileHash y subjects de la respuesta)
+# @name preview
 POST http://localhost:3000/plan-imports/preview
 Authorization: Bearer {{login.response.body.$.token}}
 Content-Type: multipart/form-data; boundary=----GradifyBoundary12345
@@ -29,3 +42,52 @@ Content-Type: application/pdf
 
 < ./plan.pdf
 ------GradifyBoundary12345--
+
+### 6. CONFIRMAR IMPORTACION (pegar fileHash, careerId del paso 4 y subjects del paso 5)
+POST http://localhost:3000/plan-imports/confirm
+Authorization: Bearer {{login.response.body.$.token}}
+Content-Type: application/json
+
+{
+  "fileHash": "PEGAR_fileHash_DEL_PREVIEW",
+  "careerId": "PEGAR_careerId_DE_CAREERS",
+  "name": "Mi plan desde pruebas.http",
+  "fileName": "plan.pdf",
+  "subjects": []
+}
+
+### 7. MIS PLANES (pegar studyPlanId del paso 6 donde se indica)
+GET http://localhost:3000/study-plans
+Authorization: Bearer {{login.response.body.$.token}}
+
+### 8. MATERIAS DEL PLAN (tablero + grafo leen de aca)
+GET http://localhost:3000/study-plans/PEGAR_studyPlanId/subjects
+Authorization: Bearer {{login.response.body.$.token}}
+
+### 9. INSCRIBIRME AL PLAN (progreso)
+# @name enroll
+POST http://localhost:3000/user-study-plans
+Authorization: Bearer {{login.response.body.$.token}}
+Content-Type: application/json
+
+{
+  "studyPlanId": "PEGAR_studyPlanId"
+}
+
+### 10. GUARDAR PROGRESO (pegar subjectId del paso 8)
+PUT http://localhost:3000/user-study-plans/{{enroll.response.body.$.userStudyPlan._id}}/progress/PEGAR_subjectId
+Authorization: Bearer {{login.response.body.$.token}}
+Content-Type: application/json
+
+{
+  "status": "APROBADA",
+  "grade": 8
+}
+
+### 11. VER PROGRESO
+GET http://localhost:3000/user-study-plans/{{enroll.response.body.$.userStudyPlan._id}}/progress
+Authorization: Bearer {{login.response.body.$.token}}
+
+### 12. HISTORIAL DE IMPORTACIONES
+GET http://localhost:3000/plan-imports
+Authorization: Bearer {{login.response.body.$.token}}

@@ -61,8 +61,10 @@ npm run test:salud        # control de correlativas de Salud + control negativo
 npm run snapshot:planes -- --check   # gate anti-regresiones del parser (diff = 0)
 ```
 
-El corpus de PDFs (`../files/UNAHUR-Oferta-Academica`, 43 archivos) está fuera
-del repo: sin él los scripts masivos salen con mensaje claro (código 2).
+El corpus de PDFs (`files/UNAHUR-Oferta-Academica`, 43 archivos, ignorado
+por git) vive en la raíz del repo: sin él los scripts masivos salen con
+mensaje claro (código 2). También se acepta la carpeta histórica hermana
+`../files/UNAHUR-Oferta-Academica` o `PLANES_DIR` explícito.
 
 ## Integrantes
 

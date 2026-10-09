@@ -14,10 +14,9 @@ const path = require("path");
 
 const REPO_ROOT = path.join(__dirname, "..", "..");
 const REF_PATH = path.join(REPO_ROOT, "docs", "testing", "planes-referencia.json");
-const PLANES_DIR = process.env.PLANES_DIR ||
-  path.join(REPO_ROOT, "..", "files", "UNAHUR-Oferta-Academica");
+const { requireCorpus, resolvePlanesDir } = require("./lib/requireCorpus");
+const PLANES_DIR = resolvePlanesDir(REPO_ROOT);
 const GOLDEN_DIR = path.join(REPO_ROOT, "docs", "testing", "golden");
-const { requireCorpus } = require("./lib/requireCorpus");
 
 // Guard de corpus (plan maestro §1.5.3 C6/C7): sin los PDFs el gate diff=0
 // queda mudo. Falla con mensaje claro en vez de 0 archivos silencioso.

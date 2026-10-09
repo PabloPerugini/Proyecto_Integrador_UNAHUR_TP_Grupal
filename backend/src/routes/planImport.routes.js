@@ -15,13 +15,17 @@ const {
   uploadSinglePdf,
 } = require("../middlewares/upload");
 
+const { aiRateLimit } = require("../middlewares/rateLimitAi");
+
 const router = express.Router();
 
 router.use(authUser);
 
-// Leer un PDF sin guardar un StudyPlan.
+// Leer un PDF sin guardar un StudyPlan (con cota de IA: el fallback
+// consume créditos externos; redes privadas/LAN exentas por defecto).
 router.post(
   "/preview",
+  aiRateLimit,
   uploadSinglePdf,
   planImportController.previewPlanPdf
 );

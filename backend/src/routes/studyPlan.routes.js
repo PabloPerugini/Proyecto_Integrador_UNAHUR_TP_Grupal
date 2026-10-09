@@ -2,6 +2,8 @@ const express = require("express");
 
 const authStudyPlanOwnerOrAdmin =
   require("../middlewares/authStudyPlanOwnerOrAdmin");
+const authStudyPlanViewer =
+  require("../middlewares/authStudyPlanViewer");
 const studyPlanController = require("../controllers/studyPlan.controllers");
 const authUser = require("../middlewares/authUser");
 
@@ -17,6 +19,22 @@ router.get(
     "/:id",
     authUser,
     studyPlanController.getStudyPlanById
+);
+
+// Grafo de correlatividades (solo lectura: viewer).
+router.get(
+  "/:id/graph",
+  authUser,
+  authStudyPlanViewer,
+  studyPlanController.getGraph
+);
+
+// Sugerencias de inscripción AR-3 (solo lectura: viewer).
+router.get(
+  "/:id/sugerencias",
+  authUser,
+  authStudyPlanViewer,
+  studyPlanController.getSugerencias
 );
 //NOTA AL HACER POST FIAJRSE SI SE REPITE
 router.post(

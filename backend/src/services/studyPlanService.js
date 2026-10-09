@@ -3,6 +3,7 @@ const StudyPlan = require("../models/studyPlan");
 const Career = require("../models/career");
 const PlanSubject = require("../models/planSubject");
 const UserStudyPlan = require("../models/userStudyPlan");
+const SubjectProgress = require("../models/subjectProgress");
 const PlanImport = require("../models/planImport");
 
 // Obtener todos los planes accesibles
@@ -148,45 +149,48 @@ const createConflictError = (message) => {
   return error;
 };
 
-// Eliminar un plan de estudios
-const deleteStudyPlan = async (id) => {
+// Eliminar un plan de estudios con cascada propia:
+// borra inscripciones, progreso, materias e importaciones del plan.
+// Si hay inscriptos distintos del solicitante y no es ADMIN -> 409.
+const deleteStudyPlan = async (id, user) => {
   const studyPlan = await StudyPlan.findById(id);
 
   if (!studyPlan) return null;
 
-  // Comprobar relaciones existentes
-  const [
-    hasSubjects,
-    hasUsers,
-    hasImports,
-  ] = await Promise.all([
-    PlanSubject.exists({ studyPlan: id }),
-    UserStudyPlan.exists({ studyPlan: id }),
-    PlanImport.exists({ studyPlan: id }),
+  const enrollments = await UserStudyPlan.find({ studyPlan: id }).select("user");
+  const otherEnrollments = enrollments.filter(
+    (e) => String(e.user) !== String(user?._id),
+  );
+  if (otherEnrollments.length && user?.rol !== "ADMIN") {
+    throw createConflictError(
+      "No se puede eliminar el plan porque hay otros estudiantes utilizándolo",
+    );
+  }
+
+  const subjectIds = (
+    await PlanSubject.find({ studyPlan: id }).select("_id")
+  ).map((s) => s._id);
+
+  const [progress, removedEnrollments, subjects, imports] = await Promise.all([
+    subjectIds.length
+      ? SubjectProgress.deleteMany({ planSubject: { $in: subjectIds } })
+      : { deletedCount: 0 },
+    UserStudyPlan.deleteMany({ studyPlan: id }),
+    PlanSubject.deleteMany({ studyPlan: id }),
+    PlanImport.deleteMany({ studyPlan: id }),
   ]);
 
-  // Evitar eliminar planes con materias
-  if (hasSubjects) {
-    throw createConflictError(
-      "No se puede eliminar el plan porque contiene materias"
-    );
-  }
+  await StudyPlan.findByIdAndDelete(id);
 
-  // Evitar eliminar planes utilizados por estudiantes
-  if (hasUsers) {
-    throw createConflictError(
-      "No se puede eliminar el plan porque hay estudiantes utilizándolo"
-    );
-  }
-
-  // Evitar eliminar planes asociados a importaciones
-  if (hasImports) {
-    throw createConflictError(
-      "No se puede eliminar el plan porque tiene importaciones asociadas"
-    );
-  }
-
-  return StudyPlan.findByIdAndDelete(id);
+  return {
+    deleted: true,
+    removed: {
+      subjects: subjects.deletedCount,
+      enrollments: removedEnrollments.deletedCount,
+      progress: progress.deletedCount,
+      imports: imports.deletedCount,
+    },
+  };
 };
 
 module.exports = {

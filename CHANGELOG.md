@@ -6,6 +6,18 @@ El registro histórico de requisitos/alcance por versión se mantiene en [BRD.md
 
 ---
 
+## [1.17] — 2026-10-09
+
+### Nueva arquitectura operativa + docs v2.2
+- **Correlativas resueltas:** matcher pre-merge portado a `src/services/correlativas.service.js` + resolución en el `confirm` (exact/compact, anti-ciclos 400): 15/19 en plan de prueba, grafo con aristas. `npm test` 14/14.
+- **Endpoints nuevos:** `GET /study-plans/:id/graph` y `/study-plans/:id/sugerencias` (viewer) sobre los motores `graph`/`sugerencias`.
+- **Borrado en cascada:** `DELETE /study-plans/:id` borra inscripciones+progreso+materias+importaciones propias (409 con otros inscriptos no-ADMIN); `DELETE` materia referenciada 500→409.
+- **Scripts E2E con JWT** (`lib/testAuth.js`, retry 429, `STRICT_IA`, `resolvePlanesDir` con `files/` local preferido): `validar` todo OK (masiva 27+1+15+0, salud OK).
+- **Infra:** `compose.yaml` único de 4 servicios (backend nodemon + frontend HMR + mongo:27018 + redis), `.dockerignore` en frontend, `mongo_data` preservado.
+- **Limpieza:** 9 archivos muertos fuera (dup `pdf.js`, `withDeviceId`, 10 tests jest stale, `CareersTable`, `subjectMappers`, `messages`, `useAdminActions`, shim `useCareerSelection`) + `jest`/`supertest` fuera de devDeps; `aiRateLimit` cableado al preview; `.opencode` y menciones fuera.
+- **Docs:** Swagger v2.0 (~30 paths), BRD/FRD/Test-Plan/Test-Cases/Matriz v2.2/1.2, `pruebas.http` (12 pasos), READMEs, `Gradify_Documentacion.md` v1.2.
+- **Verificado E2E 12/12** con usuario temporal (register→…→cascada→delete), DB restaurada. BUG-010–013 cerrados.
+
 ## [1.16] — 2026-09-30
 
 ### Relevamiento total: duplicados, innecesarios y buenas prácticas (local, sin push)
@@ -47,7 +59,7 @@ El registro histórico de requisitos/alcance por versión se mantiene en [BRD.md
 - **Fase 3:** `npm test` (node:test, 0 deps nuevas): `bestDbMatch`, `cleanRequiresList` (BUG-009), `findCycle` — 7/7. `parseJsonStrict` unificado en `services/aiJson.js`; N+1 de `GET /careers` → 1 query; borrados `*.tmp.js` y `tmp-debug-corr.js`.
 - **Gates:** `node --check` OK · `npm test` 7/7 · `snapshot --check` SIN DIFERENCIAS · frontend `tsc`+`lint` limpios.
 - **E2E `test:salud` (30/09, backend local sin Redis):** Kinesiología 41/41 = · Enfermería 39/39 = · **Obstetricia 6/35 → 23/35** · **Nutrición 17/48 → 41/48** (solo matching determinístico; el resto va a IA lectora + revisión) · control negativo 0/52 sin falsos positivos · limpieza OK.
-- **Consejeros:** los 3 denegados por el guardián (contexto 900%, sin alternativas permitidas); se ejecutó con invariantes §1 como árbitro, consta en `.opencode/plan/ejecucion-plan-maestro.md`.
+- **Consejeros:** los 3 denegados por el guardián (contexto 900%, sin alternativas permitidas); se ejecutó con invariantes §1 como árbitro.
 
 ## [1.12] — 2026-09-25
 

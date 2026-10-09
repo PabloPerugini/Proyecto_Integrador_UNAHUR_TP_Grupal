@@ -23,3 +23,6 @@ backend/scripts/tmp-debug-*.js
 # Sistema
 .DS_Store
 Thumbs.db
+
+# Corpus local de PDFs (43 archivos UNAHUR, fuera del versionado)
+files/

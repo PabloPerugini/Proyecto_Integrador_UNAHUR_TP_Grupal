@@ -7,6 +7,10 @@ const Subject = require("../models/subject");
 const PlanSubject = require("../models/planSubject");
 const PlanImport = require("../models/planImport");
 const PdfExtractionCache = require("../models/pdfExtractionCache");
+const {
+  resolvePrerequisites,
+  findCycle,
+} = require("./correlativas.service");
 
 function httpError(message, statusCode = 400) {
   const error = new Error(message);
@@ -134,6 +138,9 @@ function normalizeSubject(item, index) {
     credits: numberOrNull(item.credits, `créditos de ${name}`) ?? 0,
     optional: item.optional === true,
     intermediate: item.intermediate === true,
+    // Texto libre de correlativas del preview (solo memoria: se resuelve
+    // a prerequisites luego del insert; no se persiste en PlanSubject).
+    correlativasTexto: text(item.correlativasTexto, 500) || null,
   };
 }
 
@@ -305,6 +312,51 @@ async function confirmPlanImport(userId, data) {
 
     await PlanSubject.insertMany(planSubjects);
 
+    // Resolver correlativasTexto -> prerequisites (solo coincidencias
+    // exactas/compactas; lo dudoso va a review, nunca se inventa).
+    // Blindaje histórico: sin autorreferencias y sin ciclos (400 sin guardar).
+    const { resolved, review, dropped } = resolvePrerequisites(
+      subjects.map((s) => ({
+        code: s.code,
+        name: s.name,
+        correlativasTexto: s.correlativasTexto,
+      })),
+    );
+    const cycle = findCycle(
+      {},
+      resolved,
+    );
+    if (cycle) {
+      throw httpError(
+        `Las correlativas forman un ciclo (${cycle.join(" -> ")}): no se guardó nada`,
+      );
+    }
+    if (resolved.length) {
+      const created = await PlanSubject.find({
+        studyPlan: studyPlan._id,
+      }).select("_id code");
+      const idByCode = new Map(created.map((ps) => [ps.code, ps._id]));
+      await PlanSubject.bulkWrite(
+        resolved.map((u) => ({
+          updateOne: {
+            filter: { studyPlan: studyPlan._id, code: u.code },
+            update: {
+              $set: {
+                prerequisites: u.requires
+                  .map((rc) => idByCode.get(rc))
+                  .filter(Boolean)
+                  .map((refId) => ({
+                    planSubject: refId,
+                    requiredStatus: "APROBADA",
+                  })),
+              },
+            },
+          },
+        })),
+        { ordered: false },
+      );
+    }
+
     importRecord.status = "COMPLETADA";
     importRecord.studyPlan = studyPlan._id;
     importRecord.errorMessage = null;
@@ -318,6 +370,9 @@ async function confirmPlanImport(userId, data) {
       name: studyPlan.name,
       status: studyPlan.status,
       saved: planSubjects.length,
+      prerequisitesResolved: resolved.reduce((a, u) => a + u.requires.length, 0),
+      prerequisitesReview: review,
+      prerequisitesDropped: dropped,
     };
   } catch (error) {
     // Limpieza compensatoria: MongoDB standalone

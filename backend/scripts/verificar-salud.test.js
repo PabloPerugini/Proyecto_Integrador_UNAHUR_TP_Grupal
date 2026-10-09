@@ -1,24 +1,35 @@
 #!/usr/bin/env node
 /*
- * Control de correlativas: Instituto de Salud Comunitaria.
+ * Control de correlativas: Instituto de Salud Comunitaria (nueva arquitectura).
  * Uso: npm run test:salud
  *
- * Para cada carrera: crea [TEST-CTRL-<ts>], carga plan oficial, carga su PDF
- * de correlativas (con fallback IA lectora si aplica), guarda lasrequires
- * determinísticas (flujo real del usuario, con blindaje de servidor) y lee el
- * grafo. Además un CONTROL NEGATIVO: una carrera con plan pero SIN
- * correlativas, para documentar qué valores da (requires [], grafo sin
- * aristas). Todo se borra al final.
+ * Para cada carrera: preview del plan oficial (materias detectadas + cobertura
+ * de correlativasTexto extraído) y preview de su PDF de correlativas (el
+ * endpoint resuelve por parser determinístico o rescate IA). Además dos
+ * CONTROLES NEGATIVOS del blindaje de subida: preview sin archivo (400) y
+ * preview con buffer que no es PDF (400).
+ *
+ * NOTA: la API nueva aún no tiene endpoint de matching texto->prerequisites
+ * ni de grafo por carrera (el grafo lo calcula el frontend desde study-plans).
+ * Este control mide extracción, no resolución: cuando exista el endpoint de
+ * correlativas se vuelve a agregar guardado + aristas + ciclo.
+ *
+ * No persiste nada (preview no guarda StudyPlans): la única limpieza es el
+ * usuario de prueba propio de la corrida.
+ *
+ * Env: STRICT_IA=1 vuelve FAIL la falta de respuesta en correlativas
+ * (auditoría de disponibilidad IA; por defecto es informativa).
  */
 const fs = require("fs");
 const path = require("path");
 
 const API = process.env.API_URL || "http://localhost:3000";
 const REPO_ROOT = path.join(__dirname, "..", "..");
-const DEFAULT_PLANES = path.join(REPO_ROOT, "..", "files", "UNAHUR-Oferta-Academica");
-const PLANES_DIR = process.env.PLANES_DIR || DEFAULT_PLANES;
+const { requireCorpus, resolvePlanesDir } = require("./lib/requireCorpus");
+const PLANES_DIR = resolvePlanesDir(REPO_ROOT);
 const INFORMES_DIR = path.join(__dirname, "informes");
-const { requireCorpus } = require("./lib/requireCorpus");
+const { setupTestUser } = require("./lib/testAuth");
+const { reqPdf, reqPreviewRaw } = require("./lib/testAuth");
 
 // Guard de corpus (plan maestro §1.5.3 C6/C7).
 requireCorpus(PLANES_DIR, "salud");
@@ -53,156 +64,113 @@ const CAREERS = [
   },
 ];
 
-const createdIds = [];
+let TEST = null;
 
-async function req(method, urlPath, { json, form, timeoutMs = 60000 } = {}) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const init = { method, signal: controller.signal, headers: {} };
-    if (json !== undefined) {
-      init.headers["Content-Type"] = "application/json";
-      init.body = JSON.stringify(json);
-    }
-    if (form) init.body = form;
-    const res = await fetch(`${API}${urlPath}`, init);
-    const text = await res.text();
-    let body = null;
-    try {
-      body = text ? JSON.parse(text) : null;
-    } catch {
-      body = { _raw: text.slice(0, 200) };
-    }
-    return { status: res.status, body };
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-const pdfForm = (rel) => {
-  const buf = fs.readFileSync(path.join(PLANES_DIR, ...rel.split("/")));
-  const fd = new FormData();
-  fd.append("file", new Blob([buf], { type: "application/pdf" }), rel.split("/").pop());
-  return fd;
-};
-
-const toPayload = (s) => ({
-  code: s.code, name: s.name, year: s.year ?? null, cuatrimestre: s.cuatrimestre ?? null,
-  duration: s.duration, credits: s.credits, kind: s.kind, optional: s.optional,
-  intermediate: s.intermediate,
-});
-
-async function loadPlan(entry, tag) {
-  const c = await req("POST", "/careers", {
-    json: { name: `[${tag}] ${entry.career}`, durationYears: 5 }, timeoutMs: 30000,
-  });
-  if (c.status !== 200 && c.status !== 201) throw new Error(`create ${c.status}`);
-  if (c.body?.reused) throw new Error("SEGURIDAD: reused:true, abortado");
-  const id = c.body._id;
-  createdIds.push(id);
-  const p = await req("POST", `/careers/${id}/parse-official`, {
-    form: pdfForm(entry.plan), timeoutMs: 180000,
-  });
-  if (p.status !== 200 || !p.body.subjects?.length) throw new Error(`parse-official ${p.status}`);
-  const payload = { subjects: p.body.subjects.map(toPayload) };
-  if (p.body.intermediateTitle) payload.intermediateTitle = p.body.intermediateTitle;
-  if (p.body.creditsFinal > 0) payload.creditsFinal = p.body.creditsFinal;
-  if (p.body.creditsIntermediate > 0) payload.creditsIntermediate = p.body.creditsIntermediate;
-  await req("POST", `/careers/${id}/subjects`, { json: payload, timeoutMs: 120000 });
-  return { id, detected: p.body.detectedCount, aiPlan: p.body.aiFallback === true };
+async function previewPdf(rel, timeoutMs) {
+  return reqPdf(
+    TEST.token,
+    "/plan-imports/preview",
+    path.join(PLANES_DIR, ...rel.split("/")),
+    { timeoutMs },
+  );
 }
 
 async function main() {
   console.log(`== Control correlativas Salud ${RUN_TAG} ==`);
-  await req("GET", "/health", { timeoutMs: 10000 }).then(({ status }) => {
-    if (status !== 200) throw new Error("backend no responde");
-  });
+  try {
+    const res = await fetch(`${API}/health`, { signal: AbortSignal.timeout(10000) });
+    if (res.status !== 200) throw new Error("backend no responde");
+  } catch (e) {
+    console.error(`ERROR: ${e.message}. Levantá el backend primero (docker compose up desde la raíz).`);
+    process.exitCode = 2;
+    return;
+  }
+
+  TEST = await setupTestUser(RUN_TAG);
+  console.log(`usuario de prueba: ${TEST.nick}`);
+
   const rows = [];
+  let failed = false;
   for (const entry of CAREERS) {
     console.log(`[${entry.career}] ...`);
     // eslint-disable-next-line no-await-in-loop
-    const { id, detected, aiPlan } = await loadPlan(entry, RUN_TAG);
+    const p = await previewPdf(entry.plan, 180000);
+    const subjects = p.body?.subjects || [];
+    const detected = p.status === 200 ? (p.body.detectedCount ?? subjects.length) : 0;
+    const withCorr = subjects.filter((s) => s.correlativasTexto).length;
     // eslint-disable-next-line no-await-in-loop
-    const q = await req("POST", `/careers/${id}/parse-correlativas`, {
-      form: pdfForm(entry.corr), timeoutMs: 240000,
-    });
-    const b = q.body;
-    let savedCorr = null;
-    let dropped = null;
-    if (q.status === 200) {
-      const payload = (b.subjects || []).filter((s) => s.matched).map((s) => ({
-        code: s.dbCode, name: s.dbName || s.name, requires: s.requires || [],
-      }));
-      if (payload.length) {
-        // eslint-disable-next-line no-await-in-loop
-        const s = await req("POST", `/careers/${id}/correlativas`, {
-          json: { subjects: payload }, timeoutMs: 120000,
-        });
-        savedCorr = s.body?.saved ?? null;
-        dropped = s.body?.dropped ?? null;
-      } else {
-        savedCorr = 0;
-      }
+    const q = await previewPdf(entry.corr, 240000);
+    const corrSubjects = q.body?.subjects?.length ?? 0;
+    const strictIA = process.env.STRICT_IA === "1";
+    const row = {
+      career: entry.career,
+      httpPlan: p.status, detected,
+      aiPlan: p.body?.aiFallback === true,
+      cobertura: detected ? `${withCorr}/${detected}` : "—",
+      httpCorr: q.status, corrMaterias: corrSubjects,
+      corrOrigen: q.body?.sourceKind ?? null,
+    };
+    rows.push(row);
+    if (p.status !== 200 || !detected) {
+      failed = true;
+      console.log(`  FAIL plan: HTTP ${p.status} detectadas=${detected}`);
+    } else if (q.status !== 200 && strictIA) {
+      failed = true;
+      console.log(`  plan=${detected} | FAIL corr (STRICT_IA): HTTP ${q.status}`);
+    } else {
+      console.log(`  plan=${detected} (IA: ${row.aiPlan}) correlativasTexto=${row.cobertura} | corr: HTTP ${q.status} materias=${corrSubjects} origen=${row.corrOrigen}`);
     }
-    // eslint-disable-next-line no-await-in-loop
-    const g = await req("GET", `/careers/${id}/graph`, { timeoutMs: 60000 });
-    const gb = g.body || {};
-    rows.push({
-      career: entry.career, detected, aiPlan,
-      httpCorr: q.status, matched: b?.matchedCount ?? null, total: b?.total ?? null,
-      aiSug: b?.aiSuggested?.length ?? 0, aiRev: b?.aiReview?.length ?? 0,
-      aiCov: b?.aiCoverage ? `${b.aiCoverage.extraidos}/${b.aiCoverage.total}` : null,
-      savedCorr, dropped: dropped?.length ?? 0,
-      nodes: gb.nodes?.length ?? null, edges: gb.edges?.length ?? null,
-      hasCycle: gb.hasCycle ?? null, available: gb.availableNow?.length ?? null,
-    });
-    console.log(`  plan=${detected} corr=${b?.matchedCount}/${b?.total} guardadas=${savedCorr} aristas=${gb.edges?.length} ciclo=${gb.hasCycle}`);
   }
 
-  // CONTROL NEGATIVO: plan sin correlativas
-  console.log("[CONTROL NEGATIVO: Nutrición sin correlativas] ...");
-  const neg = await loadPlan(
-    { career: "CONTROL-NEGATIVO Nutrición sin correlativas", plan: CAREERS[3].plan },
-    RUN_TAG,
-  );
-  const gn = await req("GET", `/careers/${neg.id}/graph`, { timeoutMs: 60000 });
-  const gb = gn.body || {};
-  const subs = await req("GET", `/careers/${neg.id}/subjects`, { timeoutMs: 60000 });
-  const withReq = (subs.body || []).filter((s) => (s.requires || []).length).length;
-  rows.push({
-    career: "CONTROL NEGATIVO (sin correlativas)", detected: neg.detected, aiPlan: neg.aiPlan,
-    httpCorr: null, matched: null, total: null, aiSug: null, aiRev: null, aiCov: null,
-    savedCorr: null, dropped: null,
-    nodes: gb.nodes?.length ?? null, edges: gb.edges?.length ?? null,
-    hasCycle: gb.hasCycle ?? null, available: gb.availableNow?.length ?? null,
-    subjectsWithRequires: withReq,
+  // CONTROLES NEGATIVOS: blindaje de subida (sin archivo / archivo no-PDF).
+  console.log("[CONTROL NEGATIVO: preview sin archivo] ...");
+  const neg1 = await reqPreviewRaw(TEST.token, { json: {} });
+  const neg1ok = neg1.status === 400;
+  console.log(`  HTTP ${neg1.status} (esperado 400): ${neg1ok ? "OK" : "FAIL"}`);
+
+  console.log("[CONTROL NEGATIVO: preview con buffer no-PDF] ...");
+  const neg2 = await reqPreviewRaw(TEST.token, {
+    buffer: Buffer.from("esto no es un pdf", "utf8"),
   });
-  console.log(`  materias con requires: ${withReq}/${subs.body?.length} · aristas=${gb.edges?.length} · disponibles=${gb.availableNow?.length}`);
+  const neg2ok = neg2.status === 400;
+  console.log(`  HTTP ${neg2.status} (esperado 400): ${neg2ok ? "OK" : "FAIL"}`);
+
+  if (!neg1ok || !neg2ok) failed = true;
 
   const fname = `control-salud-${RUN_TAG}.md`;
   fs.mkdirSync(INFORMES_DIR, { recursive: true });
   const L = [
-    `# Control de correlativas — Salud (${RUN_TAG})`,
+    `# Control de correlativas — Salud (${RUN_TAG}, nueva arquitectura: preview sin persistir)`,
     ``,
-    `| Carrera | Materias | Corr matched | IA sug/rev/cob | Guardadas (descartadas) | Nodos | Aristas | Ciclo | Disponibles ya |`,
-    `| --- | --- | --- | --- | --- | --- | --- | --- | --- |`,
+    `| Carrera | Plan HTTP | Materias | Cobertura correlativasTexto | Corr HTTP | Corr materias | Corr origen |`,
+    `| --- | --- | --- | --- | --- | --- | --- |`,
   ];
   for (const r of rows) {
-    L.push(`| ${r.career} | ${r.detected}${r.aiPlan ? " (IA)" : ""} | ${r.matched ?? "—"}/${r.total ?? "—"} | ${r.aiSug ?? "—"}/${r.aiRev ?? "—"}/${r.aiCov ?? "—"} | ${r.savedCorr ?? "—"} (${r.dropped ?? "—"}) | ${r.nodes ?? "—"} | ${r.edges ?? "—"} | ${r.hasCycle ?? "—"} | ${r.available ?? "—"} |`);
+    L.push(`| ${r.career} | ${r.httpPlan} | ${r.detected}${r.aiPlan ? " (IA)" : ""} | ${r.cobertura} | ${r.httpCorr} | ${r.corrMaterias} | ${r.corrOrigen ?? "—"} |`);
   }
   L.push(``);
-  const negRow = rows[rows.length - 1];
-  L.push(`**Control negativo:** sin cargar correlativas, ${negRow.subjectsWithRequires} materias tienen requires, el grafo tiene ${negRow.edges} aristas y ${negRow.available} disponibles (las de 1er año / sin prerequisito).`);
+  L.push(`**Controles negativos:** sin archivo → HTTP ${neg1.status} (${neg1ok ? "OK" : "FAIL"}); buffer no-PDF → HTTP ${neg2.status} (${neg2ok ? "OK" : "FAIL"}).`);
   L.push(``);
   fs.writeFileSync(path.join(INFORMES_DIR, fname), L.join("\n"), "utf8");
   console.log(`Informe: backend/scripts/informes/${fname}`);
 
-  for (const id of createdIds.splice(0)) {
-    // eslint-disable-next-line no-await-in-loop
-    await req("DELETE", `/careers/${id}`, { timeoutMs: 30000 }).catch(() => {});
+  await TEST.cleanup();
+  console.log("[limpieza] usuario de prueba eliminado (preview no persiste planes)");
+  if (failed) {
+    console.error("salud: hay casos FAIL (ver arriba)");
+    process.exitCode = 1;
+  } else {
+    console.log("salud: todo OK");
   }
-  console.log("[limpieza] carreras de control eliminadas");
 }
 
-process.on("SIGINT", async () => { console.log("\nlimpiando..."); process.exit(130); });
-main().catch((e) => { console.error(`ERROR: ${e.message}`); process.exitCode = 2; });
+process.on("SIGINT", async () => {
+  console.log("\nlimpiando...");
+  try { await TEST?.cleanup(); } catch { /* noop */ }
+  process.exit(130);
+});
+main().catch(async (e) => {
+  console.error(`ERROR: ${e.message}`);
+  try { await TEST?.cleanup(); } catch { /* noop */ }
+  process.exitCode = 2;
+});

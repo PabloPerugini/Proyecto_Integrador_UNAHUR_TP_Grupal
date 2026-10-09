@@ -11,8 +11,8 @@
 | Institución           | Universidad Nacional de Hurlingham (UNAHUR)                          |
 | Unidad Académica      | Facultad de Informática — Proyecto Integrador Programación           |
 | Tipo de documento     | Matriz de trazabilidad — cruce BRD / FRD ↔ verificación existente    |
-| Versión               | 1.1                                                                  |
-| Fecha                 | 30 de septiembre de 2026                                             |
+| Versión               | 1.2                                                                  |
+| Fecha                 | 09 de octubre de 2026                                              |
 | Documentos de origen  | `BRD.md` v2.1 · `FRD.md` v2.1 · `Test-Plan.md` v2.1 · `Test-Cases.md` v2.1 |
 | Sponsor Operación     | Secretaría Académica / Dirección de Carrera                          |
 | Sponsor Organización  | UNAHUR                                                               |
@@ -89,7 +89,7 @@ existe** en el repositorio, respondiendo tres preguntas:
 | -- | ----- | ------------------------- | ----------- | ------ |
 | RN01 | Estado inicial: materia **bloqueada** sin requisitos previos | `test:salud` verifica la regla de control *"aristas > 0 y disponibles < total"* (Test-Cases:109); Caso 11 (`availableNow` en `GET /:id/graph`); Caso 21 (colores en la UI) | `test:salud` ✅ indirecto · Casos 11 y 21 🟡 | ⚠️ |
 | RN02 | Habilitación automática de materias sucesivas al marcar *Aprobada/Regular* | `test:salud` recalcula disponibles desde el historial; Caso 10 (desbloqueo + créditos); Caso 21 (hijos desbloqueados en pantalla) | `test:salud` ⚠️ · Casos 10 y 21 🟡 | ⚠️ |
-| RN03 | Persistencia del cambio asociado a `x-user-id` | Caso 9 (`401` sin header) y Caso 10 (guardado); **ninguna verificación automatizada** de persistencia | Postman | 🟡 |
+| RN03 | Persistencia del cambio asociado a la inscripción del usuario | Caso 9 (`401` sin header) y Caso 10 (guardado); **ninguna verificación automatizada** de persistencia | Postman | 🟡 |
 | RN04 | Desmarcado: dependientes sin sustento pierden disponibilidad (el estado guardado se conserva) | `tests/rn04.test.js` (3 tests: habilitación, pérdida de sustento, stats intactos) + `graph.service.js` (aprobación efectiva transitiva) | `npm test` ✅ | ✅ |
 
 ### 3.2 Reglas de sugerencia de inscripción (R0–R6, C1–C6)
@@ -112,7 +112,7 @@ existe** en el repositorio, respondiendo tres preguntas:
 | -- | -------- | ------------------------- | ----------- | ------ |
 | AR-1 | Visualizar progreso académico en un grafo | Caso 11 (estructura del grafo: `nodes`, `edges`, `stats`); Caso 10 (estados); Caso 21 (colores) | Postman / navegador | 🟡 |
 | AR-2 | Importar el plan en PDF y editar correlativas | **`test:planes`** ejecuta crear carrera → `parse-official` → `saveSubjects` → `parse-correlativas` sobre **43 documentos** (Test-Cases:59-107); `saveCorrelativas` blindado y verificado (BUG-009) | `test:planes` ✅ · Casos 3–8 🟡 | ✅ parcial |
-| AR-3 | Recibir sugerencias automáticas de inscripción | `GET /:id/sugerencias` (smoke 200+401) + sección en Mi progreso + 4 unitarios | `npm test` ✅ · smoke ✅ · caso UI 🟡 | ✅ parcial |
+| AR-3 | Recibir sugerencias automáticas de inscripción | `GET /study-plans/:id/sugerencias` (E2E 200) + sección en Mi progreso + 4 unitarios | `npm test` ✅ · smoke ✅ · caso UI 🟡 | ✅ parcial |
 | US-02 | Grafo interactivo con colores por estado + banner de título intermedio | Caso 12 (`graph.intermediate`, banner) y Caso 21 (colores); `test:planes` valida `hasIntermediate` (`carga-masiva.test.js:235`) | `test:planes` ✅ parcial · Casos 12 y 21 🟡 | ⚠️ |
 | US-03 | Clic en materia disponible cambia estado y desbloquea sucesoras | Caso 21 | navegador | 🟡 |
 
@@ -138,12 +138,11 @@ existe** en el repositorio, respondiendo tres preguntas:
 
 | # | Requisito | Verificación | Estado |
 | - | --------- | ------------ | ------ |
-| SEG-1 | **Sin autenticación:** módulo `/users` existe sin UI consumidora (FRD:298, acuerdo equipo) | Documentado como limitación + Swagger tag legado | ✅ documentado |
-| SEG-2 | **`x-user-id`:** `401` si falta en `POST /progress` y `GET /progress/me` (FRD:299) | Caso 9 | 🟡 |
-| SEG-2 | **`x-user-id`:** `401` si falta en `POST /progress` y `GET /progress/me` (FRD:299) | Caso 9 | 🟡 |
-| SEG-3 | **Subida de archivos:** solo PDF de hasta 10 MB, en memoria (FRD:300) | Caso 7; validación implementada en `middlewares/upload.js:8-17` y `career.controllers.js:117,267` (`isPdfBuffer`) | 🟡 |
-| SEG-4 | **Errores:** JSON en español `400/404/409/500`, UI sin romperse (FRD:301) | Casos 17–19 y 22 | 🟡 |
-| SEG-5 | **Sin datos personales en uso:** sin UI de cuentas (FRD:302) | Documentado + Swagger | ✅ documentado |
+| SEG-1 | **Con autenticación:** cuentas JWT con roles; catálogo público, mutaciones ADMIN, planes por dueño | E2E 12 pasos + `validar` | ✅ |
+| SEG-2 | **JWT:** `401` sin token; `403`/`404` sin permiso (dueño o ADMIN) | E2E 12 pasos | ✅ |
+| SEG-3 | **Subida de archivos:** solo PDF de hasta 10 MB, en memoria, con cota IA (`aiRateLimit`) | Controles negativos 400/400 + `test:salud` | ✅ |
+| SEG-4 | **Errores:** JSON en español `400/401/404/409/500`, UI sin romperse | E2E + envelope middleware | ✅ |
+| SEG-5 | **Datos personales:** `User` con hash `bcrypt`, `password` nunca expuesto en JSON | `toJSON` + E2E | ✅ |
 
 ---
 
@@ -214,11 +213,11 @@ hasta la API; la capa de interfaz (Casos 20–23) no tiene resultado registrado.
 
 ## 11. Brechas de cobertura
 
-### 11.1 Los casos HTTP 1–19 siguen sin corrida formal 🟠
-`Test-Plan.md:106` pedía la corrida completa. El 30/09 se ejecutó un smoke sobre API
-real (404 raíz e ID inválido con envelope, 401 sin `x-user-id`, 200 en `/careers` y
-`/sugerencias`) + `test:salud`/`test:planes` como E2E: la brecha formal pasa a 🟠,
-queda el registro caso por caso en Test-Cases.
+### 11.1 Casos HTTP con corrida formal (cerrada 09/10)
+Corrida completa 09/10: E2E 12/12 con JWT (register->login->me->careers->preview->confirm->subjects->graph->sugerencias->enroll->progress->cascada->delete) registrado en Test-Cases (Corrida 7).
+
+
+
 
 ### 11.2 Tests unitarios ✅ (cerrada 30/09)
 `npm test` (node:test, 0 dependencias, 14 tests): `bestDbMatch`, whitelist/anti-ciclos/
@@ -254,14 +253,14 @@ Corregida en `Test-Plan.md:47,67` y `Test-Cases.md:59`.
 
 ## 12. Inconsistencias documentales (todas cerradas el 30/09)
 
-### 12.1 RN03 ✅
-FRD:122 ahora dice `x-user-id`, igual que BRD:133.
+### 12.1 RN03 (actualizada 09/10: progreso por inscripcion con JWT)
+FRD/BRD v2.2: RN03 con cuenta JWT e inscripcion al plan (era x-user-id anonimo).
 
-### 12.2 §4.3 Seguridad ✅
+### 12.2 4.3 Seguridad (actualizada 09/10: JWT con roles)
 FRD:298/302 ahora dicen que el módulo `/users` existe sin UI consumidora (acuerdo
 de equipo: no se borra, solo se documenta) + Swagger lo marca como legado.
 
-### 12.3 Swagger ✅
+### 12.3 Swagger v2.0 (09/10: ~30 paths de la arquitectura real)
 `swagger.yaml` pasó de 9 a 16 paths (incl. `parse-correlativas`, `correlativas`,
 `PATCH/DELETE /careers/{id}`, `sugerencias`, `/users/*` legado, `/` raíz).
 
@@ -276,7 +275,7 @@ Repegada a la tabla (sin líneas en blanco intermedias).
 | - | ------ | ------------- | -------- |
 | 1 | **Ejecutar los casos HTTP 1–19** y registrar en Test-Cases | 🟠 smoke ejecutado (404/401/200 + sugerencias); falta registro caso por caso | 🟡 medio |
 | 2 | **Regresión `saveCorrelativas`** (ciclo, inexistente, autorreferencia) | ✅ en `npm test` | 🟢 bajo |
-| 3 | **FRD RN03** → `x-user-id` | ✅ | 🟢 bajo |
+| 3 | **FRD RN03** con JWT e inscripcion | E2E 12/12 (cerrada 09/10) | listo |
 | 4 | **FRD SEG-1/SEG-5** (módulo existe, sin UI) | ✅ | 🟢 bajo |
 | 5 | **29 → 43 PDFs** | ✅ | 🟢 bajo |
 | 6 | **Repegar BUG-009** | ✅ | 🟢 bajo |
@@ -298,3 +297,4 @@ Repegada a la tabla (sin líneas en blanco intermedias).
 | ------- | ----- | ----- | ----------- |
 | 1.0 | 28/09/2026 | Equipo | Primera matriz de trazabilidad: 37 puntos cruzados (BRD/FRD ↔ verificación), 11 brechas y 4 inconsistencias documentales detectadas. |
 | 1.1 | 30/09/2026 | Equipo + agente | Cierre: AR-3 implementado (R0–R6/C1–C6), RN04 con test, 14 unitarios, Swagger 16 paths, FRD/29→43/BUG-009 corregidos, guard de corpus, Fix A medido (Obst 23/35, Nutr 41/48). Cobertura 12✅/15🟡/10⚠️/0❌/0⛔. Restan: registro HTTP 1–19 caso por caso y E2E de interfaz (0/6). |
+| 1.2 | 09/10/2026 | Equipo + agente | Nueva arquitectura: JWT con roles; `graph`/`sugerencias` por plan; correlativas resueltas en confirm; borrado en cascada; E2E 12/12; `validar` todo OK (masiva 27+1+15+0); Swagger v2.0; BUG-010–013 cerrados. |

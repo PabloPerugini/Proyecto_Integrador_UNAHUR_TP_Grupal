@@ -11,8 +11,8 @@
 | Institución           | Universidad Nacional de Hurlingham (UNAHUR)                          |
 | Unidad Académica      | Facultad de Informática — Proyecto Integrador Programación           |
 | Tipo de documento     | BRD — Documentación de Requerimientos de Negocio                     |
-| Versión               | 2.1                                                                   |
-| Fecha                 | 24 de septiembre de 2026                                              |
+| Versión               | 2.2                                                                   |
+| Fecha                 | 09 de octubre de 2026                                               |
 | Sponsor Operación     | Secretaría Académica / Dirección de Carrera                          |
 | Sponsor Organización  | UNAHUR                                                               |
 | Integrantes           | Perugini, Pablo; Acuña, Marcos; Masgo Sandoval, Joaquín; Renaud, Román; Remonda, Eliel; Cotera, Dylan |
@@ -39,6 +39,7 @@
 | 1.0     | 10/09/2026   | Equipo | Versión inicial. |
 | 2.0     | 24/09/2026   | Equipo | Revisión mayor alineada con la implementación actual. Se retiran los requerimientos que **no corresponden** a la aplicación: módulo de autenticación (registro/login/cookie), usuarios y roles, recuperación de contraseña, IA (matching semántico por embeddings, chat orientador y su orquestador multiproveedor) y pruebas automatizadas/CI. Se documenta el acceso sin cuenta (progreso por identificador local `x-user-id`), el título intermedio y las pantallas reales de la app. |
 | 2.1     | 30/09/2026   | Equipo | Sugerencias de inscripción implementadas (R0–R6/C1–C6) + RN04 con sustento transitivo; FRD/BRD alineados. |
+| 2.2     | 09/10/2026   | Equipo | Nueva arquitectura: cuentas JWT con roles USUARIO/ADMIN; universidades, carreras, planes de estudio y progreso por usuario; correlativas resueltas en el confirm (`prerequisites`); grafo y sugerencias por plan (`/study-plans/:id/graph`, `/study-plans/:id/sugerencias`); borrado en cascada; compose único de 4 servicios. |
 
 ---
 
@@ -48,7 +49,7 @@
 
 Desarrollar una aplicación web interactiva que represente el plan de estudios de una carrera universitaria como un **grafo dirigido**. La plataforma permitirá que:
 
-- Los **estudiantes** visualicen el estado de sus materias (*Aprobada, Regular, Cursando, Pendiente*) y actualicen su progreso de manera interactiva sobre los nodos. No hay cuentas: el progreso se asocia al identificador local del navegador (`x-user-id`).
+- Los **estudiantes** visualicen el estado de sus materias (*Aprobada, Regular, Cursando, Pendiente*) y actualicen su progreso de manera interactiva sobre los nodos. Cada usuario tiene cuenta (registro/login con JWT): el progreso se asocia a su inscripción al plan.
 - El **sistema** evalúe las correlatividades y desbloquee/bloquee automáticamente las materias sucesivas según el historial del alumno.
 - El **administrador** (Dirección de Carrera) cargue una carrera, importe el plan oficial en PDF, edite correlatividades y publique el plan.
 
@@ -71,7 +72,7 @@ Los planes de estudio universitarios suelen ser complejos y estar llenos de depe
 ### 2.3 Hipótesis
 
 - **H1:** Una visualización gráfica e intuitiva reduce la incertidumbre del estudiante al armar su cursada cuatrimestral.
-- **H2:** El almacenamiento del progreso asociado a un identificador local por navegador garantiza la persistencia de datos entre sesiones, sin depender de sistemas externos o planillas manuales.
+- **H2:** El progreso asociado a la cuenta del usuario garantiza la persistencia de datos entre sesiones y dispositivos, sin depender de planillas manuales.
 
 ### 2.4 Restricciones
 
@@ -87,7 +88,7 @@ Los planes de estudio universitarios suelen ser complejos y estar llenos de depe
 ### 2.5 Supuestos
 
 - El formato del PDF "Plan de Estudios" de SIU-Guaraní se mantiene estable durante el ciclo lectivo.
-- El progreso se guarda por identificador local de navegador (`x-user-id`), generado la primera vez que se usa la app.
+- El progreso se guarda asociado a la cuenta del usuario (registro/login con JWT, roles USUARIO/ADMIN).
 - Los planes de las carreras soportadas siguen el modelo año/cuatrimestre con créditos numéricos (entero o vacío).
 
 ### 2.6 Dependencias
@@ -105,7 +106,7 @@ Los planes de estudio universitarios suelen ser complejos y estar llenos de depe
 | Docentes                     | Consulta opcional (solo lectura), si lo requiere la secretaría.      |
 
 > [!NOTE]
-> **Decisión de diseño:** la implementación actual **no tiene cuentas ni roles**. Cualquier visitante puede cargar y editar planes y consultar o actualizar su progreso; el progreso se separa por el identificador local del navegador (`x-user-id`). La tabla de actores refleja el modelo de negocio objetivo del proyecto.
+> **Decisión de diseño:** la implementación actual tiene cuentas con roles (`USUARIO`/`ADMIN`, auth JWT con Bearer + cookie httpOnly). Cargar y publicar planes y administrar el catálogo requiere `ADMIN`; cada usuario gestiona sus planes e inscripciones. El progreso se asocia a la inscripción del usuario al plan.
 
 ### 2.8 Alcance del Proyecto
 
@@ -113,10 +114,10 @@ El alcance incluye:
 
 - Visualizador gráfico del plan de estudios en forma de nodos interactivos (grafo) y en vista de tablero.
 - Lógica backend de validación de correlatividades (matching clásico: exacto, compacto, difuso y por prefijo) junto con camino crítico, orden topológico y detección de ciclos.
-- Seguimiento del progreso por materia y por carrera, identificado por navegador (`x-user-id`).
+- Seguimiento del progreso por materia y por plan, asociado a la cuenta del usuario.
 - Carga de planes y de historiales académicos desde PDF, con edición de materias, correlatividades y publicación del plan.
 - Soporte del **título intermedio** (créditos, materias y banner de progreso en el grafo).
-- Motor de sugerencias de inscripción basado en reglas de negocio (C1–C6, R0–R6): `GET /careers/:id/sugerencias` + sección en Mi progreso (ver FRD §3.1.2).
+- Motor de sugerencias de inscripción basado en reglas de negocio (C1–C6, R0–R6): `GET /study-plans/:id/sugerencias` + sección en Mi progreso (ver FRD §3.1.2).
 - Panel de estadísticas básicas del progreso del estudiante (porcentaje de carrera avanzada).
 
 ---
@@ -131,13 +132,13 @@ El alcance incluye:
 | ---- | ------------------------ | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
 | RN01 | Estado inicial del nodo  | Los requisitos previos de la materia no están cumplidos en el historial del estudiante.    | La materia se muestra **bloqueada** (color gris, inhabilitada).                                                            |
 | RN02 | Habilitación por correlativas | El estudiante marca una materia como *Aprobada* o *Regular* (según exija el plan).      | El sistema evalúa el grafo y habilita las materias sucesivas (disponibles, clickeables).                                   |
-| RN03 | Persistencia de progreso | El usuario modifica el estado de un nodo.                                                 | El cambio se guarda asociado al identificador local del navegador (`x-user-id`) en la base de datos (guardado explícito).                |
+| RN03 | Persistencia de progreso | El usuario modifica el estado de un nodo.                                                 | El cambio se guarda asociado a su inscripción al plan en la base de datos (guardado explícito).                |
 | RN04 | Restricción de desmarcado | El usuario desmarca una materia como aprobada.                                           | El sistema revierte el estado de las materias dependientes subsiguientes que quedaron sin sustento correlativo.            |
 
 #### 3.1.2 Reglas de sugerencia de inscripción
 
 > [!NOTE]
-> **Estado:** implementado el 30/09/2026 (`GET /careers/:id/sugerencias` + sección en Mi progreso, con las fusiones FRD y "últimos dos cuatrimestres" ≈ 12 meses por falta de término en el modelo).
+> **Estado:** implementado el 30/09/2026 (`GET /study-plans/:id/sugerencias` + sección en Mi progreso, con las fusiones FRD y "últimos dos cuatrimestres" ≈ 12 meses por falta de término en el modelo).
 
 | ID | Regla                 | Condición                                                                                                   | Acción                                                                       | Ref. |
 | -- | --------------------- | ----------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ---- |
@@ -149,7 +150,7 @@ El alcance incluye:
 | R5 | Orientación           | Inscripto hace más de 2 años y (< 3 materias regularizadas, no aprobó el 1er año o adeuda más de 4 finales). | Sugerirle que se dirija a la Dirección de Orientación y Acompañamiento.      | Msj5 |
 | R6 | Cierre                | Siempre.                                                                                                    | Enviar mensaje de cierre al alumno.                                          | Msj6 |
 
-> La implementación funcional de estas reglas (tabla de decisión completa y textos de los mensajes) se documenta en el **FRD, Sección 3** e implementada en `GET /careers/:id/sugerencias`.
+> La implementación funcional de estas reglas (tabla de decisión completa y textos de los mensajes) se documenta en el **FRD, Sección 3** e implementada en `GET /study-plans/:id/sugerencias`.
 
 ### 3.2 Casos de Estudio
 

@@ -11,8 +11,8 @@
 | Institución           | Universidad Nacional de Hurlingham (UNAHUR)                          |
 | Unidad Académica      | Facultad de Informática — Proyecto Integrador Programación           |
 | Tipo de documento     | FRD — Documentación de Requerimientos Funcionales                    |
-| Versión               | 2.1                                                                   |
-| Fecha                 | 24 de septiembre de 2026                                              |
+| Versión               | 2.2                                                                  |
+| Fecha                 | 09 de octubre de 2026                                              |
 | Sponsor Operación     | Secretaría Académica / Dirección de Carrera                          |
 | Sponsor Organización  | UNAHUR                                                               |
 | Integrantes           | Perugini, Pablo; Acuña, Marcos; Masgo Sandoval, Joaquín; Renaud, Román; Remonda, Eliel; Cotera, Dylan |
@@ -39,6 +39,7 @@
 | 1.0     | 10/09/2026   | Equipo | Versión inicial. |
 | 2.0     | 24/09/2026   | Equipo | Revisión mayor alineada con la implementación actual. Se retiran los requerimientos que **no corresponden** a la aplicación (historial 1.1–1.9): autenticación por cookie y usuarios, roles, recuperación de contraseña, chat del orientador con IA, matching semántico por embeddings, selector de carrera `?degree=`, compartir/exportar imagen y suites de tests con CI. Se documentan las pantallas reales, la identificación anónima por `x-user-id`, el título intermedio y el manejo centralizado de errores. |
 | 2.1     | 30/09/2026   | Equipo | Sugerencias AR-3, RN03/`x-user-id`, SEG-1/5 (módulo `/users` sin UI), envelope de errores, Swagger 16 paths, suite `npm test` (14 tests). |
+| 2.2     | 09/10/2026   | Equipo | Nueva arquitectura: cuentas JWT (USUARIO/ADMIN); universidades, carreras, planes e inscripciones; correlativas resueltas en el confirm; `GET /study-plans/:id/graph` y `/study-plans/:id/sugerencias`; borrado en cascada; scripts E2E con auth; compose único de 4 servicios; Swagger v2.0. |
 
 ---
 
@@ -48,7 +49,7 @@
 
 Desarrollar una aplicación web interactiva que represente el plan de estudios de una carrera universitaria como un **grafo dirigido**. La plataforma permitirá que:
 
-- Los **estudiantes** visualicen el estado de sus materias (*Aprobada, Regular, Cursando, Pendiente*) y actualicen su progreso de manera interactiva sobre los nodos, sin necesidad de crear una cuenta (el progreso se asocia al identificador local del navegador, `x-user-id`).
+- Los **estudiantes** visualicen el estado de sus materias (*Aprobada, Regular, Cursando, Pendiente*) y actualicen su progreso de manera interactiva sobre los nodos, con cuenta propia (registro/login con JWT).
 - El **sistema** evalúe las correlatividades y desbloquee/bloquee automáticamente las materias sucesivas según el historial del alumno.
 - El **administrador** (Dirección de Carrera) cargue una carrera, importe el plan oficial en PDF, edite correlatividades y publique el plan.
 
@@ -59,7 +60,7 @@ Los planes de estudio universitarios suelen ser complejos y estar llenos de depe
 ### 2.3 Hipótesis
 
 - **H1:** Una visualización gráfica e intuitiva reduce la incertidumbre del estudiante al armar su cursada cuatrimestral.
-- **H2:** El almacenamiento del progreso asociado a un identificador local por navegador garantiza la persistencia de datos entre sesiones, sin depender de sistemas externos o planillas manuales.
+- **H2:** El progreso asociado a la cuenta del usuario garantiza la persistencia de datos entre sesiones y dispositivos, sin depender de planillas manuales.
 
 ### 2.4 Restricciones
 
@@ -75,7 +76,7 @@ Los planes de estudio universitarios suelen ser complejos y estar llenos de depe
 ### 2.5 Supuestos
 
 - El formato del PDF "Plan de Estudios" de SIU-Guaraní se mantiene estable durante el ciclo lectivo.
-- El progreso se guarda por identificador local de navegador (`x-user-id`), generado la primera vez que se usa la app.
+- El progreso se guarda asociado a la cuenta del usuario (auth JWT), generado al registrarse en la app.
 - Los planes de las carreras soportadas siguen el modelo año/cuatrimestre con créditos numéricos (entero o vacío).
 
 ### 2.6 Dependencias
@@ -93,7 +94,7 @@ Los planes de estudio universitarios suelen ser complejos y estar llenos de depe
 | Docentes                     | Consulta opcional (solo lectura), si lo requiere la secretaría.      |
 
 > [!NOTE]
-> La implementación actual **no tiene cuentas ni roles**: cualquier visitante puede cargar y editar planes, y el progreso se separa por el identificador local del navegador (`x-user-id`). La tabla anterior refleja el modelo de negocio objetivo.
+> La implementación actual tiene cuentas con roles (`USUARIO`/`ADMIN`, JWT): cargar y administrar el catálogo requiere `ADMIN`; cada usuario gestiona sus planes, inscripciones y progreso.
 
 ### 2.8 Alcance del Proyecto
 
@@ -101,10 +102,10 @@ El alcance incluye:
 
 - Visualizador gráfico del plan de estudios en forma de nodos interactivos (grafo) y en vista de tablero.
 - Lógica backend de validación de correlatividades (matching clásico: exacto, compacto, difuso y por prefijo), con camino crítico, orden topológico y detección de ciclos.
-- Seguimiento del progreso por materia y por carrera, identificado por navegador (`x-user-id`).
+- Seguimiento del progreso por materia y por plan, asociado a la cuenta del usuario.
 - Carga de planes y de historiales académicos desde PDF, con edición de materias, correlatividades y publicación del plan.
 - Soporte del **título intermedio**: detección en el PDF, créditos y materias del subconjunto, y banner de progreso en el grafo.
-- Motor de sugerencias de inscripción basado en reglas de negocio (C1–C6, R0–R6): `GET /careers/:id/sugerencias` + sección en Mi progreso.
+- Motor de sugerencias de inscripción basado en reglas de negocio (C1–C6, R0–R6): `GET /study-plans/:id/sugerencias` + sección en Mi progreso.
 - Panel de estadísticas básicas del progreso del estudiante (porcentaje de carrera avanzada).
 - Manejo centralizado de errores en la API y en la interfaz.
 
@@ -120,13 +121,13 @@ El alcance incluye:
 | ---- | ------------------------ | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
 | RN01 | Estado inicial del nodo  | Los requisitos previos de la materia no están cumplidos en el historial del estudiante.    | La materia se muestra **bloqueada** (color gris, inhabilitada).                                                            |
 | RN02 | Habilitación por correlativas | El estudiante marca una materia como *Aprobada* o *Regular* (según exija el plan).      | El sistema evalúa el grafo y habilita las materias sucesivas (disponibles, clickeables).                                   |
-| RN03 | Persistencia de progreso | El usuario modifica el estado de un nodo.                                                 | El cambio se guarda asociado a su `x-user-id` (clave local por navegador, sin cuentas) en la base de datos (tiempo real o guardado explícito).                |
+| RN03 | Persistencia de progreso | El usuario modifica el estado de un nodo.                                                 | El cambio se guarda asociado a su inscripción al plan en la base de datos (tiempo real o guardado explícito).                |
 | RN04 | Restricción de desmarcado | El usuario desmarca una materia como aprobada.                                           | El sistema revierte el estado de las materias dependientes subsiguientes que quedaron sin sustento correlativo.            |
 
 #### 3.1.2 Reglas de sugerencia de inscripción
 
 > [!NOTE]
-> **Estado:** implementado (Fase 6.1, 30/09/2026) en `GET /careers/:id/sugerencias` + sección *Sugerencias de inscripción* en *Mi progreso*. Con la limitación honesta de que el modelo de progreso no registra abandono/ausencia (C4/C5/C6 no observables): rigen las fusiones (sin C4 → C1–C3; sin C1/C2 → C5) y "últimos dos cuatrimestres" ≈ actividad de 12 meses.
+> **Estado:** implementado (Fase 6.1, 30/09/2026; migrado a planes el 09/10/2026) en `GET /study-plans/:id/sugerencias` + sección *Sugerencias de inscripción* en *Mi progreso*. Con la limitación honesta de que el modelo de progreso no registra abandono/ausencia (C4/C5/C6 no observables): rigen las fusiones (sin C4 → C1–C3; sin C1/C2 → C5) y "últimos dos cuatrimestres" ≈ actividad de 12 meses.
 
 Para cada cuatrimestre se generan reglas de la forma **MATERIAS A ⇒ MATERIAS B**, calculadas sobre el historial del estudiante.
 
@@ -287,7 +288,7 @@ flowchart LR
 - **MATERIAS BLOQUEADAS:** Materias del plan cuyos requisitos previos o correlatividades no están cumplidos en el historial del estudiante; permanecen inhabilitadas para cursar.
 - **MATERIAS DISPONIBLES:** Materias que cumplen todas las condiciones correlativas necesarias en el estado actual del alumno; quedan habilitadas para su selección e inscripción en el grafo.
 - **GESTIÓN DE ESTADOS Y DINÁMICA DEL GRAFO:** Calcular y actualizar en tiempo real el desbloqueo o bloqueo de materias sucesivas en función de los cambios de estado realizados por el usuario sobre los nodos.
-- **MATERIAS A ⇒ MATERIAS B:** Para cada cuatrimestre, generar la sugerencia conforme las reglas C1–C6 (ver Sección 3.1.2) — implementado en `GET /careers/:id/sugerencias`.
+- **MATERIAS A ⇒ MATERIAS B:** Para cada cuatrimestre, generar la sugerencia conforme las reglas C1–C6 (ver Sección 3.1.2) — implementado en `GET /study-plans/:id/sugerencias`.
 - **ORDEN DE ESTADÍSTICAS:** Mostrar las estadísticas de MATERIAS B en orden **decreciente** — implementado (`materiasB` ordenado).
 - **FUSIÓN DE CONDICIONES:** Si no hay materias C4 en MATERIAS A, usar solo C1, C2, C3. Si no hay materias C1/C2, fusionarlas en C5 [APROBADA] (nota ≥ 4) — implementado (las aprobadas sin nota van a C5 solo si no hay C1/C2, si no a C2).
 - **CORRELATIVIDADES:** el matching entre el plan oficial y el PDF de correlativas es clásico (exacto, compacto, difuso/Levenshtein y por prefijo), con nivel de confianza devuelto en la respuesta (`exact` | `compact` | `fuzzy` | `null`).
@@ -296,11 +297,11 @@ flowchart LR
 
 ### 4.3 Requisitos de Seguridad
 
-- **Sin autenticación:** la aplicación no tiene cuentas, sesiones ni tokens; no hay diferencias de permisos entre visitantes. El módulo `/users` (registro/login JWT) existe en el código pero **ninguna pantalla lo consume** (decisión Cuerpo B §1.5: no se cablea ni se borra, solo se documenta).
-- **Identificación del progreso:** el progreso se asocia al header `x-user-id`, que el frontend genera una sola vez y guarda en `localStorage`. Las rutas con `withDeviceId` responden `401` si el identificador falta. Es una clave local por navegador, no un token de sesión.
-- **Subida de archivos:** solo se aceptan archivos PDF (firma `%PDF-` verificada en servidor, además del mimetype) de hasta **10 MB**, que se procesan en memoria y no se persisten en disco.
-- **Errores:** todas las respuestas de error vienen en JSON con un mensaje en español (`400` para IDs inválidos y validaciones, `404` para recursos inexistentes, `409` para duplicados, `500` genérico sin detalle interno); la interfaz las muestra sin romperse.
-- **Sin datos personales en uso:** al no haber UI de cuentas, la API no expone usuarios ni credenciales en ningún flujo (el modelo `User` persiste solo si se usa `/users` por API directa).
+- **Con autenticación:** la aplicación tiene cuentas con roles (`USUARIO`/`ADMIN`, JWT Bearer + cookie httpOnly de 1 día). El catálogo es público; mutaciones de catálogo y administración requieren `ADMIN`; planes, importaciones e inscripciones son por dueño.
+- **Identificación del progreso:** el progreso se asocia a la inscripción del usuario al plan. Las rutas exigen JWT (`401` sin token, `403`/`404` sin permiso).
+- **Subida de archivos:** solo se aceptan archivos PDF (firma `%PDF-` verificada en servidor, además del mimetype) de hasta **10 MB**, que se procesan en memoria y no se persisten en disco; el preview tiene cota de IA (`aiRateLimit`, redes privadas exentas).
+- **Errores:** todas las respuestas de error vienen en JSON con un mensaje en español (`400` para IDs inválidos y validaciones, `401` sin auth, `404` para recursos inexistentes, `409` para duplicados y conflictos de borrado, `500` genérico sin detalle interno); la interfaz las muestra sin romperse.
+- **Datos personales:** el modelo `User` guarda nick, nombre, apellido, email y hash `bcrypt`; el JSON nunca expone `password`.
 
 ---
 
@@ -308,8 +309,13 @@ flowchart LR
 
 ### SC001 · Inicio (`/`)
 
-- **Campos:** ninguno (no hay login).
+- **Acceso:** requiere login (`/login`); registro en `/register`.
 - **Comportamiento:** listado de carreras en tarjetas con su color e instituto, diferenciando las **publicadas** de los **borradores**, con accesos a *Cargar plan* y *Editar plan*. Si todavía no hay planes cargados, muestra un estado vacío con la acción para crear uno.
+
+### SC000 · Acceso (`/login`, `/register`)
+
+- **Campos login:** nickName + password → JWT (Bearer + cookie httpOnly, 1 día).
+- **Campos registro:** nickName, firstName, lastName, email, password (mín. 6); el rol siempre es `USUARIO` (el `ADMIN` lo asigna otro admin o directo en DB).
 
 ### SC002 · Grafo del plan (`/grafo/:id`)
 

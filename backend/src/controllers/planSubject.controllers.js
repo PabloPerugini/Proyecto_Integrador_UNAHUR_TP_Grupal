@@ -172,6 +172,14 @@ const deletePlanSubject = async (req, res) => {
       });
     }
 
+    // Guardas de integridad con mensaje propio (materia referenciada como
+    // correlativa o con progreso): 409, no 500.
+    if (error.message && error.message.startsWith("No se puede eliminar")) {
+      return res.status(409).json({
+        message: error.message,
+      });
+    }
+
     if (error instanceof mongoose.Error.CastError) {
       return res.status(400).json({
         message: "ID inválido",

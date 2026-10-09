@@ -1,8 +1,8 @@
 # Plan de Pruebas
 
 **Proyecto:** Gradify — Grafo Interactivo de Correlatividades y Seguimiento de Progreso Académico
-**Versión:** 2.1
-**Fecha:** 30/09/2026
+**Versión:** 2.2
+**Fecha:** 09/10/2026
 **Sponsor Organización:** Universidad Nacional de Hurlingham (UNAHUR) — Licenciatura en Informática
 **Autor:** Equipo del proyecto integrador
 **Tutor:** Prof. Alejandra Pinto
@@ -20,7 +20,7 @@ Garantizar que la aplicación web (React) y su API REST (Node/Express + MongoDB 
 - Validación de la carga de PDF: plan oficial, PDF de correlativas y archivo con estructura inesperada; descarte de filas de totales y de títulos de sección.
 - Verificación del **matching clásico** de correlativas (exacto, compacto, difuso y por prefijo) y del nivel de confianza devuelto (`exact` | `compact` | `fuzzy` | `null`).
 - Verificación del **título intermedio**: detección en el PDF, `creditsIntermediate` / `intermediateTitle`, materias marcadas `intermediate` y banner de progreso en el grafo.
-- Verificación de la identificación anónima del progreso (header `x-user-id`: `401` si falta en `/progress`).
+- Verificación de la identificación del progreso (JWT: `401` sin token; `403`/`404` sin permiso del dueño o ADMIN).
 - Verificación del manejo centralizado de errores (`400` IDs/validaciones/archivos, `404` inexistente, `500` genérico) y de que el proceso no se cae.
 - Verificación de planes extensos y de formatos inesperados.
 - Verificación de la interfaz: navegación entre layouts, estados de materia, camino crítico, accesibilidad básica y comportamiento de `ErrorBoundary`.
@@ -28,10 +28,10 @@ Garantizar que la aplicación web (React) y su API REST (Node/Express + MongoDB 
 ## Herramientas para el Testing
 
 ### Pruebas individuales
-**Descripción:** se utilizará **Postman** como herramienta complementaria para pruebas durante el desarrollo de la API: enviar solicitudes HTTP (incluido el header `x-user-id`) y revisar las respuestas de forma interactiva. También se usará el navegador con DevTools para las vistas del frontend.
+**Descripción:** se utiliza **`pruebas.http`** (12 pasos: register → login → preview → confirm → subjects → graph → sugerencias → enroll → progress → cascada) como herramienta complementaria durante el desarrollo de la API: enviar solicitudes HTTP (con Bearer JWT y multipart) y revisar las respuestas de forma interactiva. También se usa el navegador con DevTools para las vistas del frontend.
 
 **Funcionalidades principales:**
-- Envío de solicitudes HTTP con y sin el header `x-user-id`.
+- Envío de solicitudes HTTP con y sin JWT.
 - Visualización de respuestas JSON de forma estructurada.
 - Pruebas manuales exploratorias de los flujos de la aplicación (subir PDF, explorar grafo, marcar progreso).
 
@@ -44,41 +44,45 @@ Garantizar que la aplicación web (React) y su API REST (Node/Express + MongoDB 
 - Confirmar que el build de producción se completa.
 
 ### Pruebas masivas
-**Descripción:** script reutilizable **`npm run test:planes`** (`backend/scripts/validaciones.js masiva`, motor `carga-masiva.test.js`) que ejecuta pruebas masivas sobre la API real: recorre los 43 PDFs de `files/UNAHUR-Oferta-Academica` de forma secuencial por el mismo camino que la UI (crear carrera → `parse-official` → `saveSubjects` → verificación, y `parse-correlativas` contra el plan par), compara contra la tabla de referencia `docs/testing/planes-referencia.json` (tipo Licenciatura/Tecnicatura/Ingeniería con rangos esperados) y vuelca un informe en `backend/scripts/informes/`.
+**Descripción:** script reutilizable **`npm run test:planes`** (motor `carga-masiva.test.js` con usuario JWT propio) que ejecuta pruebas masivas sobre la API real: recorre los 43 PDFs de `files/UNAHUR-Oferta-Academica` por el mismo camino que la UI (`preview` sin persistir), compara contra la tabla de referencia `docs/testing/planes-referencia.json` (tipo Licenciatura/Tecnicatura/Ingeniería con rangos esperados) y vuelca un informe en `backend/scripts/informes/`.
 
 **Funcionalidades principales:**
-- Carga automática de conjuntos de PDFs de prueba con carreras prefijadas `[TEST-<fecha>]` (el guard anti-duplicados aborta el caso si `reused: true`, y al final se borran por `_id`: la base queda intacta).
-- Estados por PDF: `OK` (parser), `OK-IA` (rescatado por el fallback de IA), `WARN` (cierra con observaciones: sin año, créditos 0, matching < 70 %), `FAIL`, `SKIP`.
+- Usuario de prueba propio por corrida (se borra al final; el preview no persiste nada).
+- Estados por PDF: `OK` (parser), `OK-IA` (rescatado por el fallback de IA), `WARN` (observaciones: sin año, créditos 0, correlativas vía IA), `FAIL`, `SKIP` (`STRICT_IA=1` vuelve FAIL la falta de IA).
 - Análisis automático de respuestas para detectar errores o anomalías.
 
 ## Casos de Prueba
 
 1. **Salud y documentación**
    - Caso 1: **Salud.** `GET /health` → `200` con `{ "status": "ok" }` y `GET /` → `200` con el índice de la API.
-   - Caso 2: **Swagger.** Abrir `/api-docs` y verificar que el documento carga y que los paths listados son los reales (`/careers`, `/progress`, `/health`).
+   - Caso 2: **Swagger.** Abrir `/api-docs` y verificar que el documento carga y que los paths listados son los reales (v2.0: users, careers, plan-imports, study-plans, user-study-plans, universities, academic-units).
 
-2. **Carga de planes de estudio**
-   - Caso 3: **PDF del plan oficial.** `POST /careers/:id/parse-official` con el PDF en el campo `file` → `200` con `subjects`, `detectedCount`, `sourceKind`, `creditsFinal`, `creditsIntermediate` e `intermediateTitle`.
+2. **Cuentas y catálogo**
+   - Caso 2 bis: **Registro/login.** `POST /users/register` (nickName, firstName, lastName, email, password min 6) → `201`; duplicado → `409`; `POST /users/login` → `200` con JWT; credenciales mal → `401`.
+
+3. **Carga de planes de estudio**
+   - Caso 3: **Preview del plan oficial.** `POST /plan-imports/preview` (JWT, PDF en `file`) → `200` con `subjects`, `detectedCount`, `sourceKind`, `correlativasTexto`, `aiFallback`.
    - Caso 4: **Sin archivo.** La misma petición sin `file` → `400` con mensaje claro.
    - Caso 5: **Fila de totales.** Con un plan que cierre con una fila de totales ("TOTAL…"/"TÍTULO: …"), verificar que **no** se importe como materia.
-   - Caso 6: **PDF escaneado o ilegible.** Enviar un PDF sin texto → `400` "No se pudo leer el PDF…" y el servidor sigue operativo.
-   - Caso 7: **No-PDF.** Enviar un archivo que no es PDF → `400` "Solo se aceptan archivos PDF"; superar los 10 MB → `400` por tamaño.
-   - Caso 8: **PDF de correlativas.** `POST /careers/:id/parse-correlativas` → filas con `confidence` (`exact` | `compact` | `fuzzy` | `null`) y guardado con `POST /careers/:id/correlativas`.
-   - Caso 8 bis: **Carga masiva + fallback IA.** `npm run test:planes` sobre los 43 PDFs: verifica `detectedCount` dentro del rango de `docs/testing/planes-referencia.json` según el tipo (Licenciatura/Tecnicatura/Ingeniería); si el parser devuelve 0 o queda fuera de rango y hay IA configurada, la respuesta trae `aiFallback: true` + `provider` y la UI avisa "revisá las materias antes de publicar". En correlativas la IA no inventa: extrae pares literales con evidencia y el matcher determinístico los resuelve (exact+compact a `aiSuggested`, resto a revisión; umbral 0,7) y el guardado valida en servidor (whitelist, sin ciclos).
+   - Caso 6: **PDF escaneado o ilegible.** Enviar un PDF sin texto → `422` y el servidor sigue operativo.
+   - Caso 7: **No-PDF.** Enviar un archivo que no es PDF → `400`; superar los 10 MB → `400` por tamaño.
+   - Caso 7 bis: **Confirm.** `POST /plan-imports/confirm` (`fileHash`, `careerId`, `name`, `fileName`, `subjects`) → `201` con `saved`, `prerequisitesResolved`, `prerequisitesReview`; ciclo → `400` sin guardar; repetido → `409`.
+   - Caso 8: **PDF de correlativas.** `preview` informa `correlativasTexto` por materia; el matching a `prerequisites` lo resuelve el confirm (solo exact+compact; lo dudoso a revisión).
+   - Caso 8 bis: **Carga masiva + fallback IA.** `npm run test:planes` sobre los 43 PDFs: verifica `detectedCount` dentro del rango de `docs/testing/planes-referencia.json`; si el parser devuelve 0 y hay IA configurada, la respuesta trae `aiFallback: true` + `provider`.
 
-3. **Progreso académico**
-   - Caso 9: **Sin identificación.** `POST /progress` y `GET /progress/me` sin header `x-user-id` → `401`.
-   - Caso 10: **Marcar progreso.** Actualizar el estado de una materia (Aprobada/Regular/Cursando/Pendiente) y verificar que se recalcule el desbloqueo de correlativas y los créditos acumulados.
+4. **Progreso académico**
+   - Caso 9: **Sin identificación.** Rutas protegidas sin JWT → `401`; plan ajeno sin permiso → `403`/`404`.
+   - Caso 10: **Marcar progreso.** `PUT /user-study-plans/:id/progress/:subjectId` (APROBADA/REGULARIZADA/CURSANDO/PENDIENTE + nota) y verificar recálculo de disponibles y créditos.
 
-4. **Grafo de correlatividades**
-   - Caso 11: **Estructura.** `GET /careers/:id/graph` → `nodes`, `edges`, `availableNow`, `criticalPath`, `hasCycle`, `topologicalOrder` y `stats` (totales, aprobadas, disponibles, créditos).
-   - Caso 12: **Título intermedio.** En una carrera con título intermedio, verificar `graph.intermediate` (`title`, `total`, `aprobadas`, `credits`, `creditsAprob`) y el banner en la interfaz; en una sin título intermedio, verificar que no se muestre.
-   - Caso 13: **IDs inválidos.** `GET /careers/abc` → `400`; `GET /careers/<id inexistente>` → `404`.
+5. **Grafo de correlatividades**
+   - Caso 11: **Estructura.** `GET /study-plans/:id/graph` → `nodes`, `edges`, `availableNow`, `criticalPath`, `hasCycle`, `topologicalOrder` y `stats`.
+   - Caso 12: **Título intermedio.** En un plan con título intermedio, verificar `graph.intermediate` y el banner; sin título, que no se muestre.
+   - Caso 13: **IDs inválidos.** `GET /study-plans/abc` → `400`; ID inexistente → `404`.
 
-5. **Administración de planes**
-   - Caso 14: **Alta y duplicados.** `POST /careers` sin `name` → `400`; con un nombre ya existente (ignorando mayúsculas/acentos) → `200` con `reused: true` en lugar de crear otro.
-   - Caso 15: **Publicación.** `POST /careers/:id/publish` → `status: "published"` y `subjectCount` actualizado; `GET /careers?status=` filtra por estado.
-   - Caso 16: **Edición y borrado.** `PATCH /careers/:id` sobre `name`, `institute`, `color`, `planResolution`, `ruleCode`, `durationYears`, `creditsFinal` y `creditsIntermediate` (nombre vacío → `400`); `DELETE /careers/:id` → `200` con `deleted`/`deletedId` y elimina materias y progreso asociados.
+6. **Administración de planes**
+   - Caso 14: **Alta y duplicados.** `POST /study-plans` sin `name` → `400`; confirmar dos veces el mismo PDF → `409`.
+   - Caso 15: **Publicación.** `PATCH /study-plans/:id` (`status: "published"`); `GET /study-plans` lista propios (ADMIN ve todos).
+   - Caso 16: **Edición y borrado.** `PATCH` materia (incluye `prerequisites` con anti-ciclos); `DELETE` materia referenciada o con progreso → `409`; `DELETE /study-plans/:id` → `200` con `removed:{subjects,enrollments,progress,imports}` (409 con otros inscriptos no-ADMIN).
 
 6. **Manejo de errores**
    - Caso 17: **JSON inválido.** `POST /careers` con cuerpo mal formado → `400` "JSON inválido en el cuerpo de la solicitud".
@@ -99,12 +103,13 @@ Garantizar que la aplicación web (React) y su API REST (Node/Express + MongoDB 
 4. Registrar los resultados en el [Documento de Seguimiento de Testing](./Test-Cases.md), incluyendo errores o comportamientos inesperados.
 5. Repetir las pruebas tras cada corrección para confirmar estabilidad y consistencia.
 
-## Resultados de la Última Ejecución (30/09/2026)
+## Resultados de la Última Ejecución (09/10/2026, nueva arquitectura)
 
-- **Backend:** `node --check` OK · `npm test` 14/14 · `snapshot --check` SIN DIFERENCIAS · `test:salud` idéntico · `test:planes` corrida 6 (OK=34+OK-IA=1+WARN=8+FAIL=0).
-- **Frontend:** `npm run lint` sin errores; `npx tsc -b` sin errores (**con `strict: true`**); `npm run build` OK.
-- **Casos HTTP (1–19):** smoke ejecutado el 30/09 sobre API real (404 raíz e ID inválido con envelope `{ success:false, error:{ message } }`, 401 sin `x-user-id`, 200 en `/careers` plano y `/sugerencias`); falta el registro caso por caso en Test-Cases.
-- **Unitarios:** `npm test` — 14 tests (matcher, anti-ciclos/BUG-009, RN04, AR-3), 0 dependencias.
+- **Backend:** `npm test` 14/14 (matcher recuperado a `correlativas.service` + RN04 + AR-3) · `snapshot --check` SIN DIFERENCIAS · `validar` todo OK (`test:salud` OK con controles negativos 400/400 · `test:planes` OK=27+OK-IA=1+WARN=15+FAIL=0 sobre `files/` local con auth JWT).
+- **Frontend:** `npm run lint` 0 errores; `npx tsc --noEmit` limpio (**con `strict: true`**).
+- **E2E por API (flujo completo con usuario temporal, luego borrado):** register → login → `/users/me` → `GET /careers` (40) → `preview` (52/oficial) → `confirm` (52 guardadas, `prerequisitesResolved`) → subjects → `/graph` (nodos/aristas) → `/sugerencias` → enroll → progress APROBADA → DELETE plan en cascada (`removed:{subjects,enrollments,progress,imports}`) → DELETE usuario. 12/12 OK, DB restaurada.
+- **Casos HTTP:** `pruebas.http` reescrito al flujo real (12 pasos con Bearer + multipart + confirm).
+- **Unitarios:** `npm test` — 14 tests (matcher, anti-ciclos/BUG-009, RN04, AR-3), 0 dependencias. Tests jest huérfanos de `src/` eliminados (probaban código pre-merge).
 
 ## Plan de Pruebas Adicionales (Opcionales)
 

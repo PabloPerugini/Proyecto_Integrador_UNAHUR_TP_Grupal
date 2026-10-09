@@ -1,8 +1,8 @@
 # Documento de Seguimiento de Testing
 
 **Proyecto:** Gradify — Grafo Interactivo de Correlatividades y Seguimiento de Progreso Académico
-**Versión:** 2.1
-**Fecha:** 2026-09-30
+**Versión:** 2.2
+**Fecha:** 2026-10-09
 **Sponsor Organización:** Universidad Nacional de Hurlingham (UNAHUR) — Licenciatura en Informática
 **Autor:** Equipo del proyecto integrador
 **Tutor:** Prof. Alejandra Pinto
@@ -115,3 +115,20 @@ Corrida `npm run test:planes` sobre los 43 PDFs de `files/UNAHUR-Oferta-Academic
 **Correlativas determinísticas (Fix A):** Obstetricia **23/35** (era 6/35), Nutrición **41/48** (era 17/48), Diseño **32/38** (era 0/0), Mant. Hospitalario **14/19** (era 6/20), Mantenimiento 27/31. Resto igual (Kinesiología 41/41, Enfermería 39/39). IA lectora: 8 exactas en Obstetricia vía groq (failover Gemini 503 → Groq verificado en vivo).
 
 **Salud:** mismos números con RN04 activo (sin regresión); negativo 0/52.
+
+## Corrida 7 (09/10/2026, nueva arquitectura: JWT + planes por usuario)
+
+Scripts E2E reescritos a la API nueva (`lib/testAuth.js`: usuario propio + Bearer + retry 429; flujo `preview` sin persistir). Corpus en `files/` local (ignorado por git), con fallback a `../files` y `PLANES_DIR`.
+
+**Planes (`test:planes`, 43 PDFs): OK=27 + OK-IA=1 + WARN=15 + FAIL=0 + SKIP=0.** Los WARN son correlativas vía IA o sin `correlativasTexto` (el matching a `prerequisites` llega con el endpoint futuro, se reporta no se exige; `STRICT_IA=1` lo vuelve FAIL para auditoría).
+
+**Salud (`test:salud`):** Kinesiología 47, Obstetricia 39, Enfermería 41, Nutrición 52 (determinístico, sin IA) + correlativas 200 (Kine 36/Obst 35/Enf 34vía IA salvo Enfermería 34 determinística, Nutri 10). **Controles negativos:** preview sin archivo → 400, buffer no-PDF → 400.
+
+**E2E de usuario (12 pasos, temporal borrado):** register → login → `me` → careers(40) → preview(52/oficial) → confirm(52, 15 resueltas) → subjects → `graph`(nodos/aristas) → `sugerencias` → enroll → progress APROBADA → DELETE cascada (`removed:{subjects,enrollments,progress,imports}`) → DELETE usuario. 12/12 OK.
+
+| ID | Descripción | Estado | Comentarios |
+| --- | --- | --- | --- |
+| BUG-010 | Scripts `salud`/`masiva` y `unitarios` hablaban la API pre-merge (`POST /careers` sin auth, `parse-official`, `grafo`) → 401/FAIL. | Resuelto 09/10 | Scripts reescritos a `preview`+JWT; matcher portado a `correlativas.service` y test re-apuntado (14/14). |
+| BUG-011 | El `confirm` guardaba 0 `prerequisites` (grafo sin aristas) aunque el preview trae `correlativasTexto`. | Resuelto 09/10 | Resolución en el confirm (exact+compact, anti-ciclos 400): 15/19 en plan de prueba. |
+| BUG-012 | `DELETE` materia referenciada devolvía 500 (guarda existía pero caía en el 500 genérico); plan con materias/importaciones imborrable por API. | Resuelto 09/10 | 409 con mensaje real; borrado en cascada propia del plan (409 solo con otros inscriptos no-ADMIN). |
+| BUG-013 | `rateLimitAi` sin cablear (gasto IA sin cota) + 10 tests jest huérfanos (nunca corrieron, probaban código viejo). | Resuelto 09/10 | `aiRateLimit` en `preview` (privadas exentas); tests stale eliminados + `jest`/`supertest` fuera de devDeps (runner único `node --test`). |

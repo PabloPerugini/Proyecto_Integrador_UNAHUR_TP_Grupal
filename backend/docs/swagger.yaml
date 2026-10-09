@@ -1,23 +1,48 @@
 openapi: 3.0.3
 info:
-  title: UNAHUR TP - API
-  description: API REST del Proyecto Integrador UNAHUR. Documenta carreras, plan de estudios y progreso del alumno.
-  version: 1.0.0
+  title: Gradify API
+  description: API REST del Proyecto Integrador UNAHUR (nueva arquitectura: universidades, carreras, planes de estudio y progreso por usuario con JWT).
+  version: 2.0.0
 servers:
   - url: http://localhost:3000
 tags:
-  - name: Health
-    description: Estado de la API
+  - name: System
+    description: Raíz y salud
   - name: Careers
-    description: Carreras y plan de estudios
+    description: Catálogo de carreras (lectura pública; mutaciones solo ADMIN)
+  - name: StudyPlans
+    description: Planes de estudio del usuario + grafo y sugerencias
+  - name: PlanImports
+    description: Importación de PDFs (preview sin guardar + confirm)
+  - name: UserStudyPlans
+    description: Inscripciones y progreso del usuario
   - name: Progress
-    description: Progreso del alumno
+    description: Lector de historial académico en PDF
+  - name: Users
+    description: Registro, login JWT y administración
+  - name: Universities
+    description: Universidades (lectura pública; mutaciones solo ADMIN)
+  - name: AcademicUnits
+    description: Unidades académicas (lectura pública; mutaciones solo ADMIN)
+security:
+  - bearerAuth: []
 paths:
+  /:
+    get:
+      tags:
+        - System
+      summary: Raíz de la API (nombre, estado, docs)
+      security: []
+      responses:
+        "200":
+          description: Info de la API
+
   /health:
     get:
       tags:
-        - Health
+        - System
       summary: Verifica que la API esté viva
+      security: []
       responses:
         "200":
           description: Servicio OK
@@ -30,14 +55,8 @@ paths:
     get:
       tags:
         - Careers
-      summary: Lista las carreras (filtrable por status)
-      parameters:
-        - name: status
-          in: query
-          required: false
-          schema:
-            type: string
-            enum: [draft, published]
+      summary: Lista el catálogo de carreras (público)
+      security: []
       responses:
         "200":
           description: Lista de carreras
@@ -50,7 +69,7 @@ paths:
     post:
       tags:
         - Careers
-      summary: Crea una carrera
+      summary: Crea una carrera (solo ADMIN)
       requestBody:
         required: true
         content:
@@ -60,277 +79,632 @@ paths:
       responses:
         "201":
           description: Carrera creada
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Career"
-        "400":
-          description: Validación fallida
-
-  /careers/{id}/subjects:
-    get:
-      tags:
-        - Careers
-      summary: Lista las materias de una carrera
-      parameters:
-        - $ref: "#/components/parameters/id"
-      responses:
-        "200":
-          description: Lista de materias
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Subject"
-    post:
-      tags:
-        - Careers
-      summary: Guarda/mergea materias de una carrera
-      parameters:
-        - $ref: "#/components/parameters/id"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                subjects:
-                  type: array
-                  items:
-                    $ref: "#/components/schemas/SubjectIn"
-      responses:
-        "200":
-          description: Materias guardadas
-          content:
-            application/json:
-              example:
-                saved: 12
-                total: 40
-
-  /careers/{id}/graph:
-    get:
-      tags:
-        - Careers
-      summary: Devuelve el grafo del plan de estudios (incluye el progreso del navegador)
-      parameters:
-        - $ref: "#/components/parameters/id"
-      responses:
-        "200":
-          description: Grafo de nodos y aristas
-        "404":
-          description: Carrera no encontrada
-
-  /careers/{id}/sugerencias:
-    get:
-      tags:
-        - Careers
-      summary: Sugerencias de inscripción AR-3 (R0–R6) desde el historial
-      parameters:
-        - $ref: "#/components/parameters/id"
-      responses:
-        "200":
-          description: Materias A/B, disponibles, finales, comunes y mensajes
-        "404":
-          description: Carrera no encontrada
-
-  /careers/{id}/parse-official:
-    post:
-      tags:
-        - Careers
-      summary: Parsea un PDF del plan oficial (multipart, campo file)
-      parameters:
-        - $ref: "#/components/parameters/id"
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              properties:
-                file:
-                  type: string
-                  format: binary
-      responses:
-        "200":
-          description: Materias extraídas del PDF
-          content:
-            application/json:
-              example:
-                sourceKind: official
-                detectedCount: 3
-                subjects: []
-                aiFallback: false
-                aiProvider: null
-
-  /careers/{id}/publish:
-    post:
-      tags:
-        - Careers
-      summary: Publica una carrera pasándola a status published
-      parameters:
-        - $ref: "#/components/parameters/id"
-      responses:
-        "200":
-          description: Carrera publicada
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Career"
-        "404":
-          description: Carrera no encontrada
-
-  /progress/parse-history:
-    post:
-      tags:
-        - Progress
-      summary: Parsea un PDF del historial académico (multipart, campo file)
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              properties:
-                file:
-                  type: string
-                  format: binary
-      responses:
-        "200":
-          description: Progreso detectado en el PDF
-
-  /progress:
-    post:
-      tags:
-        - Progress
-      summary: Guarda el progreso del alumno
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: array
-              items:
-                $ref: "#/components/schemas/ProgressIn"
-      responses:
-        "200":
-          description: Progreso guardado
-
-  /progress/me:
-    get:
-      tags:
-        - Progress
-      summary: Obtiene el progreso del navegador actual
-      responses:
-        "200":
-          description: Lista de progreso
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Progress"
-
-  /:
-    get:
-      tags:
-        - System
-      summary: Raíz de la API (nombre, estado, docs)
-      responses:
-        "200":
-          description: Info de la API
-
-  /careers/{id}/parse-correlativas:
-    post:
-      tags:
-        - Careers
-      summary: Parsea un PDF de correlativas (multipart, campo file)
-      parameters:
-        - $ref: "#/components/parameters/id"
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              properties:
-                file:
-                  type: string
-                  format: binary
-      responses:
-        "200":
-          description: Matching contra materias + sugerencias IA (aiSuggested/aiReview)
-        "404":
-          description: Carrera no encontrada
-
-  /careers/{id}/correlativas:
-    post:
-      tags:
-        - Careers
-      summary: Guarda correlativas (solo códigos existentes, sin ciclos)
-      parameters:
-        - $ref: "#/components/parameters/id"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                subjects:
-                  type: array
-                  items:
-                    type: object
-      responses:
-        "200":
-          description: Correlativas guardadas (informa descartes en dropped)
-        "400":
-          description: Ciclo detectado (no se guarda nada) o arreglo vacío
+        "401":
+          description: Sin autenticación
+        "403":
+          description: Sin rol ADMIN
 
   /careers/{id}:
+    get:
+      tags:
+        - Careers
+      summary: Detalle de una carrera (público)
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/id"
+      responses:
+        "200":
+          description: Carrera
+        "404":
+          description: Carrera no encontrada
     patch:
       tags:
         - Careers
-      summary: Actualiza datos de una carrera
+      summary: Actualiza una carrera (solo ADMIN)
       parameters:
         - $ref: "#/components/parameters/id"
       responses:
         "200":
           description: Carrera actualizada
-        "404":
-          description: Carrera no encontrada
     delete:
       tags:
         - Careers
-      summary: Borra una carrera con sus materias y avances
+      summary: Borra una carrera (solo ADMIN)
       parameters:
         - $ref: "#/components/parameters/id"
       responses:
         "200":
           description: Carrera eliminada
-        "404":
-          description: Carrera no encontrada
 
-  /users/login:
+  /plan-imports/preview:
     post:
       tags:
-        - Users (legado, sin UI)
-      summary: "[LEGADO] Login JWT — existe en código, ninguna pantalla lo usa"
+        - PlanImports
+      summary: Parsea un PDF sin guardar (multipart, campo file; con cota IA)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
       responses:
         "200":
-          description: Token JWT
+          description: Materias extraídas + correlativasTexto
+          content:
+            application/json:
+              example:
+                sourceKind: oficial
+                detectedCount: 19
+                subjects: []
+                aiFallback: false
+                aiProvider: null
+        "400":
+          description: Sin archivo o no es PDF
+        "422":
+          description: Sin materias detectables
+
+  /plan-imports/confirm:
+    post:
+      tags:
+        - PlanImports
+      summary: Guarda el plan (resuelve correlativas a prerequisites, anti-ciclos)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fileHash, careerId, name, fileName, subjects]
+              properties:
+                fileHash:
+                  type: string
+                careerId:
+                  type: string
+                name:
+                  type: string
+                fileName:
+                  type: string
+                subjects:
+                  type: array
+                  items:
+                    type: object
+      responses:
+        "201":
+          description: Plan guardado
+          content:
+            application/json:
+              example:
+                message: Plan guardado correctamente
+                saved: 19
+                prerequisitesResolved: 15
+                prerequisitesReview: []
+                prerequisitesDropped: []
+        "400":
+          description: Ciclo detectado (no se guarda nada) o datos inválidos
+        "409":
+          description: Ese PDF ya se guardó en esa carrera
+
+  /plan-imports:
+    get:
+      tags:
+        - PlanImports
+      summary: Historial de importaciones del usuario
+      responses:
+        "200":
+          description: Lista de importaciones
+
+  /plan-imports/{importId}:
+    get:
+      tags:
+        - PlanImports
+      summary: Detalle de una importación
+      parameters:
+        - name: importId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Importación
+        "404":
+          description: No encontrada
+
+  /study-plans:
+    get:
+      tags:
+        - StudyPlans
+      summary: Mis planes (ADMIN ve todos)
+      responses:
+        "200":
+          description: Lista de planes
+    post:
+      tags:
+        - StudyPlans
+      summary: Crea un plan personal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "201":
+          description: Plan creado
+
+  /study-plans/{id}:
+    get:
+      tags:
+        - StudyPlans
+      summary: Detalle del plan (dueño o ADMIN)
+      parameters:
+        - $ref: "#/components/parameters/id"
+      responses:
+        "200":
+          description: Plan
+        "404":
+          description: No encontrado
+    patch:
+      tags:
+        - StudyPlans
+      summary: Actualiza el plan (dueño o ADMIN)
+      parameters:
+        - $ref: "#/components/parameters/id"
+      responses:
+        "200":
+          description: Plan actualizado
+    delete:
+      tags:
+        - StudyPlans
+      summary: Borra el plan en cascada (materias, inscripciones, progreso, importaciones). 409 si hay otros inscriptos y no sos ADMIN
+      parameters:
+        - $ref: "#/components/parameters/id"
+      responses:
+        "200":
+          description: Plan eliminado
+          content:
+            application/json:
+              example:
+                message: Plan de estudio eliminado correctamente
+                removed:
+                  subjects: 19
+                  enrollments: 1
+                  progress: 1
+                  imports: 1
+        "409":
+          description: Otros estudiantes lo usan
+
+  /study-plans/{id}/subjects:
+    get:
+      tags:
+        - StudyPlans
+      summary: Materias del plan con prerequisites (base de tablero y grafo)
+      parameters:
+        - $ref: "#/components/parameters/id"
+      responses:
+        "200":
+          description: Lista de materias del plan
+    post:
+      tags:
+        - StudyPlans
+      summary: Agrega una materia al plan (dueño o ADMIN)
+      parameters:
+        - $ref: "#/components/parameters/id"
+      responses:
+        "201":
+          description: Materia agregada
+
+  /study-plans/{id}/subjects/{subjectId}:
+    get:
+      tags:
+        - StudyPlans
+      summary: Detalle de una materia del plan
+      parameters:
+        - $ref: "#/components/parameters/id"
+        - name: subjectId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Materia del plan
+    patch:
+      tags:
+        - StudyPlans
+      summary: Actualiza materia (incluye prerequisites, con anti-ciclos)
+      parameters:
+        - $ref: "#/components/parameters/id"
+        - name: subjectId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Materia actualizada
+    delete:
+      tags:
+        - StudyPlans
+      summary: Elimina materia (409 si es correlativa de otra o tiene progreso)
+      parameters:
+        - $ref: "#/components/parameters/id"
+        - name: subjectId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Materia eliminada
+        "409":
+          description: Referenciada o con progreso
+
+  /study-plans/{id}/graph:
+    get:
+      tags:
+        - StudyPlans
+      summary: Grafo de correlatividades (nodos, aristas, disponibles, camino crítico, RN04)
+      parameters:
+        - $ref: "#/components/parameters/id"
+      responses:
+        "200":
+          description: Grafo del plan
+
+  /study-plans/{id}/sugerencias:
+    get:
+      tags:
+        - StudyPlans
+      summary: Sugerencias de inscripción AR-3 (C1–C6, mensajes R0–R6)
+      parameters:
+        - $ref: "#/components/parameters/id"
+      responses:
+        "200":
+          description: Sugerencias
+
+  /user-study-plans:
+    get:
+      tags:
+        - UserStudyPlans
+      summary: Mis inscripciones a planes
+      responses:
+        "200":
+          description: Inscripciones
+    post:
+      tags:
+        - UserStudyPlans
+      summary: Inscribirme a un plan (propio o publicado oficial)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [studyPlanId]
+              properties:
+                studyPlanId:
+                  type: string
+      responses:
+        "201":
+          description: Inscripción creada
+        "404":
+          description: Plan no disponible
+        "409":
+          description: Ya inscripto
+
+  /user-study-plans/{studyPlanId}:
+    delete:
+      tags:
+        - UserStudyPlans
+      summary: Desinscribirme de un plan
+      parameters:
+        - name: studyPlanId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Inscripción eliminada
+
+  /user-study-plans/{userStudyPlanId}/progress:
+    get:
+      tags:
+        - UserStudyPlans
+      summary: Progreso guardado de mi inscripción
+      parameters:
+        - name: userStudyPlanId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Lista de avances (PENDIENTE/CURSANDO/REGULARIZADA/APROBADA + nota)
+
+  /user-study-plans/{userStudyPlanId}/progress/{planSubjectId}:
+    put:
+      tags:
+        - UserStudyPlans
+      summary: Guarda/avanza el estado de una materia
+      parameters:
+        - name: userStudyPlanId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: planSubjectId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [PENDIENTE, CURSANDO, REGULARIZADA, APROBADA]
+                grade:
+                  type: number
+      responses:
+        "200":
+          description: Progreso guardado
+
+  /progress/parse-history:
+    post:
+      tags:
+        - Progress
+      summary: Lee un PDF de historial académico (multipart, campo file)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Avances detectados en el PDF
 
   /users/register:
     post:
       tags:
-        - Users (legado, sin UI)
-      summary: "[LEGADO] Registro — existe en código, ninguna pantalla lo usa"
+        - Users
+      summary: Registro (nickName, firstName, lastName, email, password min 6; rol siempre USUARIO)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nickName, firstName, lastName, email, password]
+              properties:
+                nickName:
+                  type: string
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+                email:
+                  type: string
+                password:
+                  type: string
       responses:
         "201":
           description: Usuario creado
+        "400":
+          description: Datos inválidos
+        "409":
+          description: Nick o email duplicado
+
+  /users/login:
+    post:
+      tags:
+        - Users
+      summary: Login (devuelve JWT Bearer + cookie httpOnly)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nickName, password]
+              properties:
+                nickName:
+                  type: string
+                password:
+                  type: string
+      responses:
+        "200":
+          description: Token JWT
+        "401":
+          description: Credenciales inválidas
+
+  /users/logout:
+    post:
+      tags:
+        - Users
+      summary: Cierra sesión (limpia cookie)
+      responses:
+        "200":
+          description: Sesión cerrada
+
+  /users/me:
+    get:
+      tags:
+        - Users
+      summary: Mi perfil
+      responses:
+        "200":
+          description: Usuario actual
+
+  /users:
+    get:
+      tags:
+        - Users
+      summary: Lista usuarios (solo ADMIN)
+      responses:
+        "200":
+          description: Lista de usuarios
+        "403":
+          description: Sin rol ADMIN
+
+  /users/{nickName}:
+    get:
+      tags:
+        - Users
+      summary: Ver usuario (dueño o ADMIN)
+      parameters:
+        - name: nickName
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Usuario
+    patch:
+      tags:
+        - Users
+      summary: Actualiza usuario (dueño o ADMIN)
+      parameters:
+        - name: nickName
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Usuario actualizado
+    delete:
+      tags:
+        - Users
+      summary: Elimina usuario (dueño o ADMIN)
+      parameters:
+        - name: nickName
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Usuario eliminado
+
+  /universities:
+    get:
+      tags:
+        - Universities
+      summary: Lista universidades (público)
+      security: []
+      responses:
+        "200":
+          description: Lista de universidades
+    post:
+      tags:
+        - Universities
+      summary: Crea universidad (solo ADMIN)
+      responses:
+        "201":
+          description: Universidad creada
+
+  /universities/{id}:
+    get:
+      tags:
+        - Universities
+      summary: Detalle de universidad (público)
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/id"
+      responses:
+        "200":
+          description: Universidad
+    patch:
+      tags:
+        - Universities
+      summary: Actualiza universidad (solo ADMIN)
+      parameters:
+        - $ref: "#/components/parameters/id"
+      responses:
+        "200":
+          description: Universidad actualizada
+    delete:
+      tags:
+        - Universities
+      summary: Borra universidad (solo ADMIN)
+      parameters:
+        - $ref: "#/components/parameters/id"
+      responses:
+        "200":
+          description: Universidad eliminada
+
+  /academic-units:
+    get:
+      tags:
+        - AcademicUnits
+      summary: Lista unidades académicas (público)
+      security: []
+      responses:
+        "200":
+          description: Lista de unidades
+    post:
+      tags:
+        - AcademicUnits
+      summary: Crea unidad académica (solo ADMIN)
+      responses:
+        "201":
+          description: Unidad creada
+
+  /academic-units/{id}:
+    get:
+      tags:
+        - AcademicUnits
+      summary: Detalle de unidad académica (público)
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/id"
+      responses:
+        "200":
+          description: Unidad académica
+    patch:
+      tags:
+        - AcademicUnits
+      summary: Actualiza unidad (solo ADMIN)
+      parameters:
+        - $ref: "#/components/parameters/id"
+      responses:
+        "200":
+          description: Unidad actualizada
+    delete:
+      tags:
+        - AcademicUnits
+      summary: Borra unidad (solo ADMIN)
+      parameters:
+        - $ref: "#/components/parameters/id"
+      responses:
+        "200":
+          description: Unidad eliminada
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
   parameters:
     id:
       name: id
@@ -338,7 +712,7 @@ components:
       required: true
       schema:
         type: string
-      description: ID (Mongo ObjectId) de la carrera
+      description: ID (Mongo ObjectId)
 
   schemas:
     Career:
@@ -352,21 +726,9 @@ components:
           type: string
         color:
           type: string
-        planResolution:
-          type: string
-        ruleCode:
-          type: string
-        durationYears:
-          type: number
-        creditsFinal:
-          type: number
-        creditsIntermediate:
-          type: number
         status:
           type: string
           enum: [draft, published]
-        subjectCount:
-          type: number
     CreateCareerBody:
       type: object
       required: [name]
@@ -375,101 +737,5 @@ components:
           type: string
         institute:
           type: string
-        color:
-          type: string
-        planResolution:
-          type: string
-        ruleCode:
-          type: string
         durationYears:
           type: number
-        creditsFinal:
-          type: number
-        creditsIntermediate:
-          type: number
-    Subject:
-      type: object
-      properties:
-        _id:
-          type: string
-        careerId:
-          type: string
-        code:
-          type: string
-        name:
-          type: string
-        year:
-          type: number
-        cuatrimestre:
-          type: number
-        duration:
-          type: string
-          enum: [C, A, TF]
-        hours:
-          type: object
-          additionalProperties:
-            type: number
-        credits:
-          type: number
-        kind:
-          type: string
-        optional:
-          type: boolean
-        requires:
-          type: array
-          items:
-            type: string
-    SubjectIn:
-      type: object
-      properties:
-        code:
-          type: string
-        name:
-          type: string
-        year:
-          type: number
-        cuatrimestre:
-          type: number
-        duration:
-          type: string
-        hours:
-          type: object
-          additionalProperties:
-            type: number
-        credits:
-          type: number
-        kind:
-          type: string
-        optional:
-          type: boolean
-        requires:
-          type: array
-          items:
-            type: string
-    ProgressIn:
-      type: object
-      required: [subjectCode]
-      properties:
-        subjectCode:
-          type: string
-        status:
-          type: string
-          enum: [Aprobada, Regular, Cursando, Pendiente]
-        nota:
-          type: number
-        fecha:
-          type: string
-          format: date
-        origen:
-          type: string
-    Progress:
-      allOf:
-        - $ref: "#/components/schemas/ProgressIn"
-        - type: object
-          properties:
-            _id:
-              type: string
-            userId:
-              type: string
-            careerId:
-              type: string

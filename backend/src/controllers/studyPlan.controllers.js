@@ -1,6 +1,10 @@
 
 const mongoose = require("mongoose");
 const studyPlanService = require("../services/studyPlanService");
+const {
+  getGraphData,
+  getSugerenciasData,
+} = require("../services/studyPlanGraph.service");
 
 // Crear un plan de estudio
 const createStudyPlan = async (req, res) => {
@@ -131,7 +135,7 @@ const deleteStudyPlan = async (req, res) => {
     }
 
     const deletedStudyPlan =
-      await studyPlanService.deleteStudyPlan(id);
+      await studyPlanService.deleteStudyPlan(id, req.user);
 
     if (!deletedStudyPlan) {
       return res.status(404).json({
@@ -141,6 +145,7 @@ const deleteStudyPlan = async (req, res) => {
 
     return res.status(200).json({
       message: "Plan de estudio eliminado correctamente",
+      removed: deletedStudyPlan.removed,
     });
 
   } catch (error) {
@@ -162,10 +167,56 @@ const deleteStudyPlan = async (req, res) => {
   }
 };
 
+// Grafo de correlatividades del plan (motor graph.service adaptado).
+const getGraph = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({
+        message: "ID de plan inválido",
+      });
+    }
+
+    const graph = await getGraphData(id, req.user._id);
+
+    return res.status(200).json(graph);
+
+  } catch (error) {
+    return res.status(500).json({
+      message: "Error al calcular el grafo del plan",
+    });
+  }
+};
+
+// Sugerencias de inscripción AR-3 del plan (motor sugerencias.service).
+const getSugerencias = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({
+        message: "ID de plan inválido",
+      });
+    }
+
+    const sugerencias = await getSugerenciasData(id, req.user._id);
+
+    return res.status(200).json(sugerencias);
+
+  } catch (error) {
+    return res.status(500).json({
+      message: "Error al calcular las sugerencias del plan",
+    });
+  }
+};
+
 module.exports = {
   createStudyPlan,
   getAllStudyPlans,
   getStudyPlanById,
   updateStudyPlan,
   deleteStudyPlan,
+  getGraph,
+  getSugerencias,
 };

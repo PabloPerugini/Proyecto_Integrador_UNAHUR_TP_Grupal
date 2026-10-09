@@ -16,10 +16,10 @@ const { spawnSync } = require("child_process");
 const path = require("path");
 const fs = require("fs");
 
-const PLANES_DIR =
-  process.env.PLANES_DIR ||
-  path.join(__dirname, "..", "..", "..", "files", "UNAHUR-Oferta-Academica");
-const { requireCorpus } = require("./lib/requireCorpus");
+const { requireCorpus, resolvePlanesDir } = require("./lib/requireCorpus");
+
+const REPO_ROOT_VALID = path.join(__dirname, "..", "..");
+const PLANES_DIR = resolvePlanesDir(REPO_ROOT_VALID);
 
 const ENGINES = {
   masiva: "carga-masiva.test.js",

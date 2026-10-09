@@ -1,6 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { bestDbMatch, cleanRequiresList, findCycle } = require("../src/controllers/career.controllers");
+const { bestDbMatch, cleanRequiresList, findCycle } = require("../src/services/correlativas.service");
 
 const db = [
   { code: "MAT001", name: "Análisis Matemático I" },
