@@ -82,6 +82,134 @@ const getCareerSubjects = async (req, res, next) => {
   }
 };
 
+const updateSubject = async (req, res, next) => {
+  try {
+    const { id, subjectId } = req.params;
+    const career = await Career.findById(id);
+    if (!career) return res.status(404).json({ message: "Carrera no encontrada" });
+
+    const subject = await Subject.findOne({ _id: subjectId, careerId: id });
+    if (!subject) return res.status(404).json({ message: "Materia no encontrada" });
+
+    const { code, name, requires, year, cuatrimestre, duration, credits, kind, optional, intermediate } = req.body;
+    const cleanName = typeof name === "string" ? name.trim() : subject.name;
+    const cleanCode = typeof code === "string" ? code.trim() : subject.code;
+    if (!cleanName || !cleanCode) {
+      return res.status(400).json({ message: "El código y el nombre de la materia son obligatorios" });
+    }
+
+    const duplicate = await Subject.findOne({
+      careerId: id,
+      _id: { $ne: subjectId },
+      $or: [{ code: cleanCode }, { slug: normalizeName(cleanName) }],
+    }).select("_id");
+    if (duplicate) {
+      return res.status(409).json({ message: "Ya existe otra materia con ese código o nombre" });
+    }
+
+    const numericOrNull = (value, fallback) => {
+      if (value === null || value === "" || value === undefined) return fallback;
+      const number = Number(value);
+      return Number.isFinite(number) ? number : fallback;
+    };
+    const nextYear = numericOrNull(year, subject.year);
+    const nextCuatrimestre = numericOrNull(cuatrimestre, subject.cuatrimestre);
+    const nextCredits = numericOrNull(credits, subject.credits);
+    if (nextYear !== null && (!Number.isInteger(nextYear) || nextYear < 1)) {
+      return res.status(400).json({ message: "El año debe ser un entero mayor o igual a 1" });
+    }
+    if (nextCuatrimestre !== null && (!Number.isInteger(nextCuatrimestre) || nextCuatrimestre < 1 || nextCuatrimestre > 2)) {
+      return res.status(400).json({ message: "El cuatrimestre debe ser 1 o 2" });
+    }
+    if (nextCredits === null || nextCredits < 0) {
+      return res.status(400).json({ message: "Los créditos deben ser un número mayor o igual a 0" });
+    }
+    const previousCode = subject.code;
+    let nextRequires = subject.requires || [];
+    if (requires !== undefined) {
+      if (!Array.isArray(requires)) {
+        return res.status(400).json({ message: "Las correlativas deben enviarse como un arreglo de códigos" });
+      }
+      const all = await Subject.find({ careerId: id }).select("code requires").lean();
+      const validCodes = new Set(all.map((item) => item.code));
+      validCodes.delete(previousCode);
+      validCodes.add(cleanCode);
+      const cleaned = cleanRequiresList(cleanCode, requires, validCodes);
+      if (cleaned.dropped.length) {
+        return res.status(400).json({
+          message: `Las correlativas contienen referencias inválidas: ${cleaned.dropped.join(", ")}`,
+          dropped: cleaned.dropped,
+        });
+      }
+
+      const allRequires = {};
+      for (const item of all) {
+        const itemCode = item.code === previousCode ? cleanCode : item.code;
+        allRequires[itemCode] = (item.requires || []).map((itemRequire) =>
+          itemRequire === previousCode ? cleanCode : itemRequire,
+        );
+      }
+      const cycle = findCycle(allRequires, [{ code: cleanCode, requires: cleaned.clean }]);
+      if (cycle) {
+        return res.status(400).json({
+          message: `Las correlativas forman un ciclo (${cycle.join(" -> ")}): no se guardó nada`,
+          cycle,
+        });
+      }
+      nextRequires = cleaned.clean;
+    }
+    subject.code = cleanCode;
+    subject.name = cleanName;
+    subject.slug = normalizeName(cleanName);
+    subject.year = nextYear;
+    subject.cuatrimestre = nextCuatrimestre;
+    subject.duration = ["C", "A", "TF"].includes(duration) ? duration : subject.duration;
+    subject.credits = nextCredits;
+    subject.requires = nextRequires;
+    subject.kind = ["Materia", "ACA", "AU", "OTRA"].includes(kind) ? kind : subject.kind;
+    if (typeof optional === "boolean") subject.optional = optional;
+    if (typeof intermediate === "boolean") subject.intermediate = intermediate;
+    await subject.save();
+    if (previousCode !== cleanCode) {
+      await Subject.updateMany(
+        { careerId: id, requires: previousCode },
+        { $set: { "requires.$": cleanCode } },
+      );
+      await UserProgress.updateMany(
+        { careerId: id, subjectCode: previousCode },
+        { $set: { subjectCode: cleanCode } },
+      );
+    }
+
+    res.status(200).json(subject);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const deleteSubject = async (req, res, next) => {
+  try {
+    const { id, subjectId } = req.params;
+    const career = await Career.findById(id);
+    if (!career) return res.status(404).json({ message: "Carrera no encontrada" });
+
+    const subject = await Subject.findOneAndDelete({ _id: subjectId, careerId: id });
+    if (!subject) return res.status(404).json({ message: "Materia no encontrada" });
+
+    await Subject.updateMany(
+      { careerId: id, requires: subject.code },
+      { $pull: { requires: subject.code } },
+    );
+    await UserProgress.deleteMany({ careerId: id, subjectCode: subject.code });
+    career.subjectCount = await Subject.countDocuments({ careerId: id });
+    await career.save();
+
+    res.status(200).json({ deleted: subject.code, deletedId: subject._id });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Rango esperado [min,max] de materias según docs/testing/planes-referencia.json
 // (se matchea por nombre de archivo subido). Null si no hay referencia.
 let planesRefCache = null;
@@ -825,6 +953,8 @@ module.exports = {
   createCareer,
   getAllCareers,
   getCareerSubjects,
+  updateSubject,
+  deleteSubject,
   parseOfficial,
   saveSubjects,
   parseCorrelativas,

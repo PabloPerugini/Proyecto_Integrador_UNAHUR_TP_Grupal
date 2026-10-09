@@ -29,6 +29,17 @@ export const careersApi = {
 
   getSubjects: (id: string) => request<Subject[]>(`/careers/${id}/subjects`),
 
+  updateSubject: (careerId: string, subjectId: string, data: Partial<Subject>) =>
+    request<Subject>(`/careers/${careerId}/subjects/${subjectId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  deleteSubject: (careerId: string, subjectId: string) =>
+    request<{ deleted: string; deletedId: string }>(`/careers/${careerId}/subjects/${subjectId}`, {
+      method: 'DELETE',
+    }),
+
   parseOfficial: (id: string, file: File) =>
     uploadPdf<{
       subjects: ParsedSubject[];

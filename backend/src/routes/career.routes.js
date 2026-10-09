@@ -6,6 +6,8 @@ const {
   createCareer,
   getAllCareers,
   getCareerSubjects,
+  updateSubject,
+  deleteSubject,
   parseOfficial,
   saveSubjects,
   parseCorrelativas,
@@ -22,6 +24,8 @@ const router = Router();
 router.post("/", createCareer);
 router.get("/", getAllCareers);
 router.get("/:id/subjects", getCareerSubjects);
+router.patch("/:id/subjects/:subjectId", updateSubject);
+router.delete("/:id/subjects/:subjectId", deleteSubject);
 router.get("/:id/graph", withDeviceId, getGraph);
 router.get("/:id/sugerencias", withDeviceId, getSugerencias);
 // Solo las 2 rutas que pueden gastar créditos de IA externa llevan aiRateLimit:
