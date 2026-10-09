@@ -11,8 +11,11 @@ export interface Career {
   creditsFinal?: number;
   creditsIntermediate?: number;
   intermediateTitle?: string | null;
-  status: CareerStatus;
+  status?: CareerStatus;
   subjectCount?: number;
+  description?: string;
+  university?: string | { _id: string; name: string } | null;
+  academicUnit?: string | null;
   createdAt?: string;
   updatedAt?: string;
   reused?: boolean;

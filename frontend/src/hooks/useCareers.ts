@@ -20,7 +20,7 @@ export function useCareers({ scope = 'all', onError }: UseCareersOptions = {}) {
     setLoading(true);
     try {
       const list = await apiService.getAll(scope === 'published' ? 'published' : undefined);
-      setCareers(list);
+      setCareers(Array.isArray(list) ? list : []);
     } catch (err) {
       onErrorRef.current?.(err instanceof Error ? err.message : 'Error cargando los planes');
     } finally {

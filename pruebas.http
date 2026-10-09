@@ -1,0 +1,31 @@
+
+### COMPROBAR BACKEND
+GET http://localhost:3000/health
+
+
+### LOGIN
+# @name login
+POST http://localhost:3000/users/login
+Content-Type: application/json
+
+{
+  "nickName": "usuarioPrueba100",
+  "password": "PruebaGradify2026!"
+}
+
+
+### CONSULTAR IMPORTACIONES
+GET http://localhost:3000/plan-imports
+Authorization: Bearer {{login.response.body.$.token}}
+
+### SUBIR PDF A GRADIFY
+POST http://localhost:3000/plan-imports/preview
+Authorization: Bearer {{login.response.body.$.token}}
+Content-Type: multipart/form-data; boundary=----GradifyBoundary12345
+
+------GradifyBoundary12345
+Content-Disposition: form-data; name="file"; filename="plan.pdf"
+Content-Type: application/pdf
+
+< ./plan.pdf
+------GradifyBoundary12345--

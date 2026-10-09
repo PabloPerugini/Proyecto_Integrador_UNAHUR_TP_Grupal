@@ -4,22 +4,39 @@ const careerSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: [true, "Nombre de la carrera es obligatorio"],
+      required: [true, "El nombre de la carrera es obligatorio"],
       trim: true,
     },
-    institute: { type: String, default: "", trim: true },
-    color: { type: String, default: "", trim: true },
-    planResolution: { type: String, default: "", trim: true },
-    ruleCode: { type: String, default: "", trim: true },
-    durationYears: { type: Number, default: 0 },
-    creditsFinal: { type: Number, default: 0 },
-    creditsIntermediate: { type: Number, default: 0 },
-    intermediateTitle: { type: String, default: null, trim: true },
-    status: { type: String, enum: ["draft", "published"], default: "draft" },
-    subjectCount: { type: Number, default: 0 },
+
+    description: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    university: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "University",
+      required: [true, "La universidad es obligatoria"],
+    },
+
+    academicUnit: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "AcademicUnit",
+      default: null,
+    },
+
+    color: {
+      type: String,
+      default: "",
+      trim: true,
+    },
   },
-  { timestamps: true },
+  {
+    timestamps: true,
+  }
 );
 
 const Career = mongoose.model("Career", careerSchema);
+
 module.exports = Career;

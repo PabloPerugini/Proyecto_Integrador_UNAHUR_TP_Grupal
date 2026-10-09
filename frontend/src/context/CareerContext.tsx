@@ -7,7 +7,9 @@ interface CareerSelectionContextType {
 
 const CareerSelectionContext = createContext<CareerSelectionContextType | null>(null);
 
-const CAREER_KEY = 'gca-selected-career';
+// Conservamos el nombre público del contexto, pero ahora la selección es un ID de StudyPlan.
+// Clave nueva: evita recuperar un ID antiguo de Career que ya no corresponde al grafo.
+const CAREER_KEY = 'gradify-selected-study-plan';
 
 export function CareerSelectionProvider({ children }: { children: ReactNode }) {
   const [careerId, setCareerIdState] = useState<string | null>(() => {

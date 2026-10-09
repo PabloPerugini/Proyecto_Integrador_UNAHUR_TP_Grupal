@@ -1,608 +1,155 @@
-import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
-import { Badge, Button, Card, Col, Form, Row, Spinner, Table } from 'react-bootstrap';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import { apiService } from '../api';
-import type { ParsedSubject, ParseCorrelativasResponse, Subject } from '../types';
-import { getCareerColor } from '../utils/careerColor';
-import { toSubjectPayload } from '../utils/subjectMappers';
-import { groupSubjectsByYear, sortSubjects, yearLabel } from '../utils/subjects';
-import { useCareers } from '../hooks/useCareers';
-import { useAdminActions } from '../hooks/useAdminActions';
+import { useEffect, useState } from 'react';
+import { Badge, Button, Card, Form, Spinner, Table } from 'react-bootstrap';
+import { useNavigate, useParams } from 'react-router-dom';
+import { studyPlansApi, orderedSubjects, subjectName, careerName, prerequisiteId, type StudyPlan, type PlanSubject, type PlanPrerequisite } from '../api/studyPlans';
 import { useFlashMessage } from '../hooks/useFlashMessage';
-import PdfDropzone from '../components/PdfDropzone';
-import MessageBanner from '../components/MessageBanner';
 import PageHeader from '../components/PageHeader';
-import CareersTable from '../components/CareersTable';
-import ModalConfirm from '../components/ModalConfirm';
-import ColorDot from '../components/ColorDot';
-import { IconUpload, IconUsers } from '../components/icons';
+import MessageBanner from '../components/MessageBanner';
 
+interface SubjectForm {
+  code: string; year: string; period: string; credits: string; optional: boolean;
+  prerequisites: PlanPrerequisite[];
+}
+function fromSubject(s: PlanSubject): SubjectForm {
+  return { code: s.code ?? '', year: s.year == null ? '' : String(s.year), period: s.period == null ? '' : String(s.period), credits: String(s.credits ?? 0), optional: Boolean(s.optional),
+    prerequisites: (s.prerequisites ?? []).map(p => ({ planSubject: prerequisiteId(p) ?? '', requiredStatus: p.requiredStatus })).filter(p => Boolean(p.planSubject)) };
+}
+function validNum(value: string, label: string, min: number, max: number): number | null {
+  if (!value.trim()) return null;
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < min || n > max) throw new Error(`${label} debe estar entre ${min} y ${max}`);
+  return n;
+}
 export default function PlanAdmin() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { careers, reload } = useCareers();
   const { msg, flash, flashFromError, clear } = useFlashMessage();
-  const [selectedId, setSelectedId] = useState<string | null>(id ?? null);
-  const { candidate, setCandidate, deleting, publish, confirmRemove, CONFIRM_DELETE } = useAdminActions({
-    reload,
-    flash,
-    flashFromError,
-    isSelected: (cid) => selectedId === cid,
-    clearSelection: () => setSelectedId(null),
-    afterDelete: () => navigate('/admin'),
-  });
+  const [plans, setPlans] = useState<StudyPlan[]>([]);
+  const [selected, setSelected] = useState(id ?? '');
+  const [subjects, setSubjects] = useState<PlanSubject[]>([]);
+  const [draft, setDraft] = useState<Record<string, SubjectForm>>({});
+  const [name, setName] = useState('');
+  const [status, setStatus] = useState<'draft'|'published'>('draft');
+  const [loading, setLoading] = useState(true);
+  const [working, setWorking] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const plan = plans.find(p => p._id === selected);
 
-  const [personalParsed, setPersonalParsed] = useState<ParsedSubject[] | null>(null);
-  const [personalIntermediateTitle, setPersonalIntermediateTitle] = useState<string | null>(null);
-  const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [requiresDraft, setRequiresDraft] = useState<Record<string, string>>({});
-  const [saving, setSaving] = useState(false);
-
-  const [corrParsed, setCorrParsed] = useState<ParseCorrelativasResponse | null>(null);
-  const [corrLoading, setCorrLoading] = useState(false);
-  const [corrSaving, setCorrSaving] = useState(false);
-  const [corrFilter, setCorrFilter] = useState<'todas' | 'coinciden' | 'sin'>('todas');
-
-  const [nameDraft, setNameDraft] = useState('');
-  const [renaming, setRenaming] = useState(false);
-
+  const loadPlans = async () => {
+    const list = await studyPlansApi.getAll();
+    setPlans(list);
+    setSelected(current => list.some(p => p._id === current) ? current : list[0]?._id ?? '');
+  };
+  useEffect(() => { let active = true;
+    studyPlansApi.getAll().then(list => { if (!active) return; setPlans(list); setSelected(cur => list.some(p => p._id === cur) ? cur : list[0]?._id ?? ''); })
+      .catch(e => { if (active) setError(e instanceof Error ? e.message : 'Error cargando planes'); }).finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
   useEffect(() => {
-    if (id) setSelectedId(id);
+    if (id) setSelected(id);
   }, [id]);
-
-  const reloadSubjects = useCallback(
-    async (careerId: string) => {
-      const s = await apiService.getSubjects(careerId);
-      setSubjects(s);
-      const draft: Record<string, string> = {};
-      for (const subj of s) draft[subj.code] = (subj.requires || []).join(', ');
-      setRequiresDraft(draft);
-    },
-    [],
-  );
-
   useEffect(() => {
-    if (!selectedId) {
-      setSubjects([]);
-      setRequiresDraft({});
-      setCorrParsed(null);
-      return;
-    }
-    reloadSubjects(selectedId).catch((e) => flashFromError(e, 'Error cargando las materias'));
-  }, [selectedId, reloadSubjects, flashFromError]);
+    if (!selected) { setSubjects([]); return; }
+    let active = true;
+    setLoading(true); setError(null);
+    studyPlansApi.getSubjects(selected).then(list => {
+      if (!active) return;
+      setSubjects(orderedSubjects(list));
+      setDraft(Object.fromEntries(list.map(s => [s._id, fromSubject(s)])));
+    }).catch(e => { if (active) setError(e instanceof Error ? e.message : 'Error cargando materias'); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [selected]);
+  useEffect(() => { setName(plan?.name ?? ''); setStatus(plan?.status ?? 'draft'); }, [plan?._id, plan?.name, plan?.status]);
 
-  const onPersonal = async (file: File) => {
+  const selectPlan = (next: string) => { setSelected(next); navigate(`/admin/${next}`); };
+  const modify = (subjectId: string, change: Partial<SubjectForm>) => setDraft(current => ({ ...current, [subjectId]: { ...current[subjectId], ...change } }));
+  const savePlan = async () => {
+    if (!plan || !name.trim() || working) return;
+    setWorking(true);
     try {
-      const r = await apiService.parsePersonal(file);
-      setPersonalParsed(r.subjects);
-      setPersonalIntermediateTitle(r.intermediateTitle ?? null);
-      flash('success', `${r.detectedCount} materias detectadas en tu plan`);
-    } catch (err) {
-      flashFromError(err, 'Error leyendo tu plan');
-    }
+      await studyPlansApi.update(plan._id, { name: name.trim(), status });
+      await loadPlans();
+      flash('success', 'Datos del plan guardados.');
+    } catch (e) { flashFromError(e, 'No se pudo guardar el plan'); }
+    finally { setWorking(false); }
   };
-
-  const importPersonal = async () => {
-    if (!selectedId || !personalParsed) return;
-    setSaving(true);
+  const saveSubject = async (subject: PlanSubject) => {
+    const edit = draft[subject._id]; if (!edit || working || !plan) return;
+    setWorking(true);
     try {
-      const r = await apiService.saveSubjects(selectedId, personalParsed.map(toSubjectPayload), personalIntermediateTitle);
-      setPersonalParsed(null);
-      setPersonalIntermediateTitle(null);
-      flash('success', `Plan personal importado: ${r.saved} materias (${r.total} en total)`);
-      await reload();
-    } catch (err) {
-      flashFromError(err, 'Error importando el plan personal');
-    } finally {
-      setSaving(false);
-    }
+      await studyPlansApi.updateSubject(plan._id, subject._id, {
+        code: edit.code.trim(), year: validNum(edit.year, 'Año', 1, 20), period: validNum(edit.period, 'Período', 1, 12),
+        credits: validNum(edit.credits, 'Créditos', 0, 1000) ?? 0, optional: edit.optional,
+        prerequisites: edit.prerequisites.map(p => ({ planSubject: prerequisiteId(p) || '', requiredStatus: p.requiredStatus })),
+      });
+      const list = await studyPlansApi.getSubjects(plan._id);
+      setSubjects(orderedSubjects(list)); setDraft(Object.fromEntries(list.map(s => [s._id, fromSubject(s)])));
+      flash('success', `Materia ${subjectName(subject)} actualizada.`);
+    } catch (e) { flashFromError(e, 'No se pudo actualizar la materia'); }
+    finally { setWorking(false); }
   };
-
-  const saveRequires = async () => {
-    if (!selectedId) return;
-    setSaving(true);
+  const removeSubject = async (subject: PlanSubject) => {
+    if (!plan || working || !window.confirm(`¿Quitar ${subjectName(subject)} del plan?`)) return;
+    setWorking(true);
     try {
-      const payload = subjects.map((s) => ({
-        ...toSubjectPayload({ ...s }),
-        requires: Array.from(new Set(
-          (requiresDraft[s.code] || '')
-            .split(',')
-            .map((x) => x.trim())
-            .filter(Boolean),
-        )),
-      }));
-      const r = await apiService.saveSubjects(selectedId, payload);
-      flash('success', `Correlatividades guardadas (${r.total} materias)`);
-      await reload();
-    } catch (err) {
-      flashFromError(err, 'Error guardando las correlatividades');
-    } finally {
-      setSaving(false);
-    }
+      await studyPlansApi.deleteSubject(plan._id, subject._id);
+      const list = await studyPlansApi.getSubjects(plan._id);
+      setSubjects(orderedSubjects(list)); setDraft(Object.fromEntries(list.map(s => [s._id, fromSubject(s)])));
+      flash('success', 'Materia eliminada.');
+    } catch(e) { flashFromError(e, 'No se pudo eliminar la materia. Puede tener correlativas o progreso asociado.'); }
+    finally { setWorking(false); }
   };
-
-  const renameCareer = async () => {
-    if (!selectedId) return;
-    const newName = nameDraft.trim();
-    if (!newName) return;
-    setRenaming(true);
-    try {
-      await apiService.update(selectedId, { name: newName });
-      flash('success', `Carrera renombrada a "${newName}"`);
-      await reload();
-    } catch (err) {
-      flashFromError(err, 'Error renombrando la carrera');
-    } finally {
-      setRenaming(false);
-    }
+  const togglePrerequisite = (subjectId: string, prerequisiteIdValue: string, enabled: boolean) => {
+    const list = draft[subjectId]?.prerequisites ?? [];
+    modify(subjectId, { prerequisites: enabled ? [...list, { planSubject: prerequisiteIdValue, requiredStatus: 'APROBADA' }] : list.filter(p => prerequisiteId(p) !== prerequisiteIdValue) });
   };
-
-  const onCorrelativas = async (file: File) => {
-    if (!selectedId) return;
-    setCorrLoading(true);
-    setCorrParsed(null);
-    try {
-      const r = await apiService.parseCorrelativas(selectedId, file);
-      setCorrParsed(r);
-      const aiMsg =
-        r.aiFallback && (r.aiSuggested?.length ?? 0) > 0
-          ? ` La IA (${r.aiProvider ?? 'IA'}) propone ${r.aiSuggested!.length} mapeos para revisar antes de guardar.`
-          : '';
-      flash(
-        r.partial && r.matchedCount > 0 ? 'warning' : r.partial ? 'danger' : 'success',
-        `${r.total} materias leídas del PDF · ${r.matchedCount} reconocidas en la carrera.${aiMsg}`,
-      );
-    } catch (err) {
-      flashFromError(err, 'Error leyendo las correlatividades');
-    } finally {
-      setCorrLoading(false);
-    }
+  const updateRequirement = (subjectId: string, prerequisiteIdValue: string, requiredStatus: 'REGULARIZADA'|'APROBADA') => {
+    modify(subjectId, { prerequisites: (draft[subjectId]?.prerequisites ?? []).map(p => prerequisiteId(p) === prerequisiteIdValue ? { ...p, requiredStatus } : p) });
   };
-
-  const doSaveCorrelativas = async (
-    payload: { code: string; name: string; requires: string[] }[],
-    emptyMsg: string,
-  ) => {
-    if (!selectedId || !corrParsed) return;
-    if (!payload.length) {
-      flash('warning', emptyMsg);
-      return;
-    }
-    setCorrSaving(true);
-    try {
-      const r = await apiService.saveCorrelativas(selectedId, payload);
-      const droppedMsg = r.dropped?.length
-        ? ` Se descartaron ${r.dropped.length} correlativas inválidas (códigos inexistentes o ciclos).`
-        : '';
-      flash('success', `Correlatividades guardadas en ${r.saved} materias (${r.total} en total).${droppedMsg}`);
-      setCorrParsed(null);
-      await reloadSubjects(selectedId);
-    } catch (err) {
-      flashFromError(err, 'Error guardando las correlatividades');
-    } finally {
-      setCorrSaving(false);
-    }
-  };
-
-  const saveCorrelativas = async () => {
-    if (!corrParsed) return;
-    await doSaveCorrelativas(
-      corrParsed.subjects
-        .filter((s) => s.matched && s.dbCode)
-        .map((s) => ({ code: s.dbCode!, name: s.dbName || s.name, requires: s.requires })),
-      'No hay materias con coincidencia para guardar.',
-    );
-  };
-
-  // Sugerencias de IA: acción explícita de revisión (nunca se guardan solas).
-  const saveAiSuggested = async () => {
-    if (!corrParsed?.aiSuggested?.length) return;
-    await doSaveCorrelativas(
-      corrParsed.aiSuggested.map((s) => ({
-        code: s.code,
-        name: nameByCode.get(s.code) || s.code,
-        requires: s.requires,
-      })),
-      'No hay sugerencias de IA para guardar.',
-    );
-  };
-
-  const selected = careers.find((c) => c._id === selectedId) || null;
-  const ordered = useMemo(() => sortSubjects(subjects), [subjects]);
-
-  const nameByCode = new Map(subjects.map((s) => [s.code, s.name]));
-  const pctMatch =
-    corrParsed && corrParsed.total ? Math.round((corrParsed.matchedCount / corrParsed.total) * 100) : 0;
-  const rowList = corrParsed
-    ? corrParsed.subjects.filter((s) =>
-        corrFilter === 'todas' ? true : corrFilter === 'coinciden' ? s.matched : !s.matched,
-      )
-    : [];
-
-  useEffect(() => {
-    const career = careers.find((c) => c._id === selectedId);
-    setNameDraft(career?.name ?? '');
-  }, [selectedId, careers]);
-
-  const draftCodes = (code: string) =>
-    (requiresDraft[code] || '')
-      .split(',')
-      .map((x) => x.trim())
-      .filter(Boolean);
-
-  const dirtyCount = ordered.reduce((acc, s) => {
-    const a = draftCodes(s.code);
-    const b = s.requires || [];
-    const same = a.length === b.length && a.every((x, i) => x === b[i]);
-    return acc + (same ? 0 : 1);
-  }, 0);
-
-  const yearGroups = groupSubjectsByYear(ordered);
-
-  return (
-    <div>
-      <PageHeader title="Editar plan de estudios" />
-      <MessageBanner message={msg} onClose={clear} />
-
-      <Card className="mb-4">
-        <Card.Header>Carreras generadas</Card.Header>
-        <Card.Body>
-          <CareersTable
-            careers={careers}
-            selectedId={selectedId}
-            onSelect={(c) => {
-              setSelectedId(c._id);
-              navigate(`/admin/${c._id}`);
-            }}
-            emptyText={
-              <p className="text-muted mb-0">
-                Todavía no hay planes. Cargá el primero desde <Link to="/cargar">Cargar plan</Link>.
-              </p>
-            }
-            actions={(c) => (
-              <>
-                {c.status !== 'published' && (
-                  <Button size="sm" variant="outline-success" onClick={() => publish(c._id)}>Publicar</Button>
-                )}{' '}
-                <Button size="sm" variant="outline-danger" onClick={() => setCandidate(c)}>Eliminar</Button>
-              </>
-            )}
-          />
-        </Card.Body>
-      </Card>
-
-      {selected && (
-        <Card className="mb-4" style={{ borderTop: `4px solid ${getCareerColor(selected)}` }}>
-          <Card.Header className="d-flex flex-wrap align-items-center gap-2">
-            <ColorDot color={getCareerColor(selected)} size={14} />
-            <Form.Control
-              size="sm"
-              value={nameDraft}
-              onChange={(e) => setNameDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') renameCareer();
-              }}
-              style={{ maxWidth: 280 }}
-              aria-label="Nombre de la carrera"
-            />
-            <Button
-              size="sm"
-              variant="outline-primary"
-              disabled={renaming || !nameDraft.trim() || nameDraft.trim() === selected.name}
-              onClick={renameCareer}
-            >
-              {renaming && <Spinner size="sm" className="me-1" />}
-              Renombrar
-            </Button>
-            {selected.institute && <span className="text-muted small">· {selected.institute}</span>}
-            <Badge pill bg="light" text="dark">{selected.subjectCount ?? subjects.length} materias</Badge>
-            <span className="ms-auto d-inline-flex gap-1">
-              <Link to={`/grafo/${selected._id}`} className="btn btn-sm btn-outline-primary">Ver grafo</Link>
-              <Link to={`/tablero/${selected._id}`} className="btn btn-sm btn-outline-primary">Ver tablero</Link>
-            </span>
-          </Card.Header>
-          <Card.Body>
-            <Card border="light" className="mb-4">
-              <Card.Header className="d-flex align-items-center gap-2">
-                <IconUpload size={16} />
-                Importar correlatividades desde el PDF
-                {corrLoading && <Spinner size="sm" className="ms-1" />}
-              </Card.Header>
-              <Card.Body>
-                <Row className="align-items-start">
-                  <Col md={4}>
-                    <PdfDropzone
-                      onFiles={(files) => {
-                        const f = files[0];
-                        if (f) onCorrelativas(f);
-                      }}
-                      disabled={corrLoading || corrSaving}
-                      text="Arrastrá el plan de correlatividades acá"
-                      hint="o elegí el PDF «Plan de correlatividades…» (Biotecnología, Kinesiología, Matemática, Ed. Física)"
-                      multiple={false}
-                    />
-                  </Col>
-                  <Col md={8}>
-                    {corrParsed && (
-                      <>
-                        <div className="d-flex gap-2 align-items-center mb-2 flex-wrap">
-                          <Badge bg="secondary">{corrParsed.total} en el PDF</Badge>
-                          <Badge bg={corrParsed.matchedCount === corrParsed.total ? 'success' : 'primary'}>
-                            {corrParsed.matchedCount} coinciden
-                          </Badge>
-                          {corrParsed.unresolved.length > 0 && (
-                            <Badge bg="warning" text="dark">{corrParsed.unresolved.length} sin coincidencia</Badge>
-                          )}
-                          <span className="small text-muted ms-auto">
-                            {pctMatch}% coinciden
-                          </span>
-                        </div>
-
-                        <div className="mini-progress mb-2">
-                          <div className="mini-progress__bar" style={{ width: `${pctMatch}%`, background: 'var(--gradify-brand)' }} />
-                        </div>
-
-                        <div className="d-flex gap-1 flex-wrap mb-2">
-                          <Button size="sm" variant={corrFilter === 'todas' ? 'primary' : 'outline-secondary'} onClick={() => setCorrFilter('todas')}>
-                            Todas ({corrParsed.subjects.length})
-                          </Button>
-                          <Button size="sm" variant={corrFilter === 'coinciden' ? 'success' : 'outline-secondary'} onClick={() => setCorrFilter('coinciden')}>
-                            Coinciden ({corrParsed.matchedCount})
-                          </Button>
-                          <Button size="sm" variant={corrFilter === 'sin' ? 'warning' : 'outline-secondary'} onClick={() => setCorrFilter('sin')}>
-                            Sin coincidencia ({corrParsed.unresolved.length})
-                          </Button>
-                        </div>
-
-                        <div style={{ maxHeight: 340, overflowY: 'auto', border: '1px solid var(--bs-border-color)', borderRadius: 8 }}>
-                          <Table size="sm" hover className="align-middle mb-0">
-                            <thead>
-                              <tr>
-                                <th style={{ width: 40, position: 'sticky', top: 0, background: 'var(--bs-body-bg)', zIndex: 1 }}>N°</th>
-                                <th style={{ position: 'sticky', top: 0, background: 'var(--bs-body-bg)', zIndex: 1 }}>Materia</th>
-                                <th style={{ width: 90, position: 'sticky', top: 0, background: 'var(--bs-body-bg)', zIndex: 1 }}>Coincide</th>
-                                <th style={{ width: 110, position: 'sticky', top: 0, background: 'var(--bs-body-bg)', zIndex: 1 }}>Código</th>
-                                <th style={{ position: 'sticky', top: 0, background: 'var(--bs-body-bg)', zIndex: 1 }}>Requiere</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {rowList.length === 0 && (
-                                <tr>
-                                  <td colSpan={5} className="text-center text-muted py-3">
-                                    No hay materias para mostrar en este filtro.
-                                  </td>
-                                </tr>
-                              )}
-                              {rowList.map((s) => {
-                                const fuzzy = s.matched && s.confidence === 'fuzzy';
-                                return (
-                                  <tr key={s.num} className={s.matched ? '' : 'table-warning'}>
-                                    <td className="text-muted">{s.num}</td>
-                                    <td>
-                                      <div className="fw-semibold lh-sm">{s.name}</div>
-                                      {s.matched && s.dbName && s.dbName !== s.name && (
-                                        <div className="small text-muted lh-sm">→ {s.dbName}</div>
-                                      )}
-                                    </td>
-                                    <td>
-                                      {s.matched ? (
-                                        <Badge bg={fuzzy ? 'warning' : 'success'} text={fuzzy ? 'dark' : undefined}>
-                                          {fuzzy ? 'aprox.' : 'sí'}
-                                        </Badge>
-                                      ) : (
-                                        <Badge bg="warning" text="dark">no</Badge>
-                                      )}
-                                    </td>
-                                    <td>
-                                      {s.matched ? (
-                                        <code>{s.dbCode}</code>
-                                      ) : (
-                                        <span className="text-muted small">{s.parsedCode}</span>
-                                      )}
-                                    </td>
-                                    <td className="small">
-                                      {s.matched && s.requires.length ? (
-                                        s.requires.map((c) => {
-                                          const rName = nameByCode.get(c);
-                                          return (
-                                            <code key={c} className="me-1" title={rName ?? c}>
-                                              {rName ? `${rName} (${c})` : c}
-                                            </code>
-                                          );
-                                        })
-                                      ) : s.matched ? (
-                                        <Badge bg="light" text="secondary">sin prerequisitos</Badge>
-                                      ) : (
-                                        '—'
-                                      )}
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </Table>
-                        </div>
-                        <div className="d-flex flex-wrap align-items-center gap-2 mt-3">
-                          <Button
-                            size="sm"
-                            variant="success"
-                            disabled={corrSaving || corrParsed.matchedCount === 0}
-                            onClick={saveCorrelativas}
-                          >
-                            {corrSaving && <Spinner size="sm" className="me-1" />}
-                            Guardar correlatividades ({corrParsed.matchedCount})
-                          </Button>
-                          {(corrParsed.aiSuggested?.length ?? 0) > 0 && (
-                            <Button
-                              size="sm"
-                              variant="outline-warning"
-                              disabled={corrSaving}
-                              onClick={saveAiSuggested}
-                              title="Solo incluye coincidencias exactas resueltas contra la base. Las difusas quedan abajo para revisión."
-                            >
-                              {corrSaving && <Spinner size="sm" className="me-1" />}
-                              Aplicar sugerencias de IA ({corrParsed.aiSuggested!.length})
-                            </Button>
-                          )}
-                          {(corrParsed.aiReview?.length ?? 0) > 0 && (
-                            <span className="small text-muted ms-auto" style={{ maxWidth: 340 }}>
-                              {corrParsed.aiReview!.length} para revisión (coincidencia aproximada):{' '}
-                              {corrParsed.aiReview!.slice(0, 4).map((r) => (
-                                <span key={r.code ?? r.subject} title={r.evidence ?? r.subject}>
-                                  {r.subject}
-                                  {'; '}
-                                </span>
-                              ))}
-                              {(corrParsed.aiReview!.length > 4) && '…'}
-                            </span>
-                          )}
-                          <Button
-                            size="sm"
-                            variant="outline-secondary"
-                            disabled={corrSaving}
-                            onClick={() => {
-                              setCorrParsed(null);
-                              setCorrFilter('todas');
-                            }}
-                          >
-                            Descartar
-                          </Button>
-                          {corrParsed.partial && corrParsed.unresolved.length > 0 && (
-                            <span className="small text-muted ms-auto" style={{ maxWidth: 320 }}>
-                              Las materias sin coincidencia no se guardan. Revisá que el plan de estudio ya esté cargado
-                              en esta carrera.
-                            </span>
-                          )}
-                        </div>
-                      </>
-                    )}
-                  </Col>
-                </Row>
-              </Card.Body>
-            </Card>
-
-            <Row>
-              <Col md={5}>
-                <Card border="light" className="h-100">
-                  <Card.Header className="d-flex align-items-center gap-2">
-                    <IconUsers size={16} />
-                    Importar tu plan personal (códigos + estados)
-                  </Card.Header>
-                  <Card.Body>
-                    <PdfDropzone
-                      onFiles={(files) => {
-                        const f = files[0];
-                        if (f) onPersonal(f);
-                      }}
-                      text="Arrastrá tu plan de estudio acá"
-                      hint="o elegí el PDF con tus estados (Promocionado, Aprobado…) y códigos"
-                      multiple={false}
-                    />
-                    {personalParsed && (
-                      <div className="mt-3 d-flex align-items-center gap-3">
-                        <span className="text-muted small">
-                          <strong>{personalParsed.length}</strong> materias detectadas · se suman/actualizan por nombre
-                        </span>
-                        <Button size="sm" variant="success" disabled={saving} onClick={importPersonal}>
-                          Importar
-                        </Button>
-                      </div>
-                    )}
-                  </Card.Body>
-                </Card>
-              </Col>
-
-              <Col md={7}>
-                <Card border="light" className="h-100">
-                  <Card.Header className="d-flex flex-wrap align-items-center gap-2">
-                    <span>Correlatividades (editar / confirmar)</span>
-                    <span className="ms-auto d-flex align-items-center gap-1">
-                      <Badge bg="light" text="dark">{ordered.length} materias</Badge>
-                      {dirtyCount > 0 && <Badge bg="warning" text="dark">{dirtyCount} cambios</Badge>}
-                    </span>
-                  </Card.Header>
-                  <Card.Body>
-                    {ordered.length === 0 && <p className="text-muted mb-0">No hay materias importadas todavía.</p>}
-                    {ordered.length > 0 && (
-                      <>
-                        <div style={{ maxHeight: 380, overflowY: 'auto', border: '1px solid var(--bs-border-color)', borderRadius: 8 }}>
-                          <Table size="sm" hover className="align-middle mb-0">
-                            <thead>
-                              <tr>
-                                <th style={{ width: 80, position: 'sticky', top: 0, background: 'var(--bs-body-bg)', zIndex: 1 }}>Código</th>
-                                <th style={{ position: 'sticky', top: 0, background: 'var(--bs-body-bg)', zIndex: 1 }}>Materia</th>
-                                <th style={{ position: 'sticky', top: 0, background: 'var(--bs-body-bg)', zIndex: 1 }}>Requisitos (códigos, separados por coma)</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {yearGroups.map(({ year, items }) => (
-                                <Fragment key={year ?? 'sin-año'}>
-                                  <tr>
-                                    <td colSpan={3} style={{ background: 'var(--gradify-surface-2)', padding: '3px 10px' }}>
-                                      <strong className="small text-uppercase" style={{ letterSpacing: '.04em' }}>
-                                        {yearLabel(year)}
-                                      </strong>
-                                      <span className="text-muted small"> · {items.length} materias</span>
-                                    </td>
-                                  </tr>
-                                  {items.map((s) => (
-                                    <tr key={s._id}>
-                                      <td>
-                                        <code>{s.code}</code>
-                                      </td>
-                                      <td>
-                                        <div className="fw-semibold lh-sm">{s.name}</div>
-                                        <div className="small text-muted" style={{ lineHeight: 1.4 }}>
-                                          {s.duration === 'A' ? 'Anual' : 'Cuatrimestral'}
-                                          {s.cuatrimestre ? ` · cuat. ${s.cuatrimestre}` : ''} · {s.credits} cr
-                                          {s.kind === 'ACA' && <Badge bg="warning" text="dark" className="ms-1">ACA</Badge>}
-                                          {s.kind !== 'ACA' && s.optional && <Badge bg="info" className="ms-1">Optativa</Badge>}
-                                          {s.intermediate && <Badge bg="success" className="ms-1">Título intermedio</Badge>}
-                                        </div>
-                                      </td>
-                                      <td>
-                                        <Form.Control
-                                          size="sm"
-                                          placeholder="OF005, OF006…"
-                                          value={requiresDraft[s.code] ?? ''}
-                                          onChange={(e) =>
-                                            setRequiresDraft((d) => ({ ...d, [s.code]: e.target.value }))
-                                          }
-                                        />
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </Fragment>
-                              ))}
-                            </tbody>
-                          </Table>
-                        </div>
-                        <div className="d-flex justify-content-end mt-3">
-                          <Button size="sm" variant="primary" disabled={saving} onClick={saveRequires}>
-                            {saving && <Spinner size="sm" className="me-1" />}
-                            Guardar correlatividades
-                            {dirtyCount > 0 && <span className="ms-1">({dirtyCount})</span>}
-                          </Button>
-                        </div>
-                      </>
-                    )}
-                  </Card.Body>
-                </Card>
-              </Col>
-            </Row>
-          </Card.Body>
-        </Card>
-      )}
-
-      <ModalConfirm
-        show={candidate !== null}
-        title="Eliminar plan"
-        message={candidate ? CONFIRM_DELETE(candidate.name) : ''}
-        confirmLabel="Eliminar"
-        loading={deleting}
-        onConfirm={confirmRemove}
-        onClose={() => !deleting && setCandidate(null)}
-      />
-    </div>
-  );
+  return <div>
+    <PageHeader title="Administrar planes de estudio" sub="Editá la información, las materias y las correlatividades del plan seleccionado." />
+    <MessageBanner message={msg} onClose={clear} />
+    <Card className="mb-4"><Card.Body>
+      <Form.Label>Plan de estudios</Form.Label>
+      <Form.Select value={selected} onChange={e => selectPlan(e.target.value)}><option value="">Seleccioná un plan</option>{plans.map(p => <option key={p._id} value={p._id}>{p.name} — {careerName(p)}</option>)}</Form.Select>
+    </Card.Body></Card>
+    {error && <div className="alert alert-danger">{error}</div>}
+    {loading && <div className="text-center py-4"><Spinner animation="border" /> Cargando materias…</div>}
+    {!loading && !error && !plan && <p className="text-muted">Todavía no hay planes registrados. Importá uno desde Cargar plan.</p>}
+    {!loading && !error && plan && <>
+      <Card className="mb-4"><Card.Header className="d-flex justify-content-between align-items-center"><strong>Información del plan</strong><Badge bg={plan.status === 'published' ? 'success' : 'secondary'}>{plan.status === 'published' ? 'Publicado' : 'Borrador'}</Badge></Card.Header><Card.Body>
+        <Form.Group className="mb-3"><Form.Label>Nombre del plan</Form.Label><Form.Control value={name} onChange={e => setName(e.target.value)} /></Form.Group>
+        <Form.Group className="mb-3"><Form.Label>Estado del plan</Form.Label><Form.Select value={status} onChange={e => setStatus(e.target.value as 'draft'|'published')}>
+          <option value="draft">Borrador</option><option value="published">Publicado</option>
+        </Form.Select><Form.Text muted>Publicar el borrador no lo convierte en un plan oficial; conserva su propietario.</Form.Text></Form.Group>
+        <Button disabled={working || !name.trim()} onClick={() => void savePlan()}>Guardar datos del plan</Button>
+      </Card.Body></Card>
+      <Card className="mb-4"><Card.Header className="d-flex justify-content-between flex-wrap gap-2"><strong>Materias y correlatividades ({subjects.length})</strong><Button size="sm" variant="outline-secondary" onClick={() => navigate(`/grafo/${plan._id}`)}>Ver grafo</Button></Card.Header><Card.Body>
+        <p className="small text-muted">Las materias importadas se editan aquí. Los nombres pertenecen al catálogo general de materias; en esta pantalla se editan sus datos propios del plan.</p>
+        <div className="table-responsive"><Table size="sm" striped hover><thead><tr><th>Materia</th><th>Código</th><th>Año</th><th>Período</th><th>Créditos</th><th>Optativa</th><th>Correlatividades</th><th>Acciones</th></tr></thead><tbody>
+          {subjects.map(s => {
+            const v = draft[s._id]; if (!v) return null;
+            return <tr key={s._id}><td style={{ minWidth: 190 }}><strong>{subjectName(s)}</strong></td>
+              <td><Form.Control size="sm" style={{ minWidth: 90 }} value={v.code} onChange={e => modify(s._id, { code: e.target.value })} /></td>
+              <td><Form.Control size="sm" type="number" min={1} style={{ width: 72 }} value={v.year} onChange={e => modify(s._id, { year: e.target.value })} /></td>
+              <td><Form.Control size="sm" type="number" min={1} style={{ width: 72 }} value={v.period} onChange={e => modify(s._id, { period: e.target.value })} /></td>
+              <td><Form.Control size="sm" type="number" min={0} style={{ width: 85 }} value={v.credits} onChange={e => modify(s._id, { credits: e.target.value })} /></td>
+              <td><Form.Check type="checkbox" checked={v.optional} onChange={e => modify(s._id, { optional: e.target.checked })} /></td>
+              <td style={{ minWidth: 260 }}><details><summary style={{ cursor: 'pointer' }}>{v.prerequisites.length} requisito(s)</summary><div className="p-2 border rounded mt-2" style={{ maxHeight: 240, overflowY: 'auto', minWidth: 260 }}>
+                {subjects.filter(other => other._id !== s._id).map(other => {
+                  const required = v.prerequisites.find(p => prerequisiteId(p) === other._id);
+                  return <div key={other._id} className="mb-2"><Form.Check type="checkbox" label={`${other.code || '—'} · ${subjectName(other)}`} checked={Boolean(required)} onChange={e => togglePrerequisite(s._id, other._id, e.target.checked)} />
+                    {required && <Form.Select size="sm" className="mt-1" value={required.requiredStatus} onChange={e => updateRequirement(s._id, other._id, e.target.value as 'APROBADA'|'REGULARIZADA')}><option value="APROBADA">Debe estar aprobada</option><option value="REGULARIZADA">Alcanza regularizada</option></Form.Select>}
+                  </div>;
+                })}
+              </div></details></td>
+              <td style={{ minWidth: 135 }}><Button size="sm" disabled={working} onClick={() => void saveSubject(s)}>Guardar</Button>{' '}<Button size="sm" variant="outline-danger" disabled={working} onClick={() => void removeSubject(s)}>Quitar</Button></td>
+            </tr>;
+          })}
+        </tbody></Table></div>
+        {!subjects.length && <p className="text-muted mb-0">El plan todavía no tiene materias. Cargalas desde la importación de PDF.</p>}
+      </Card.Body></Card>
+    </>}
+  </div>;
 }

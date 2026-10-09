@@ -1,70 +1,36 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+// Cliente común para todas las peticiones al backend.
+const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:3000').replace(/\/$/, '');
 
-const DEVICE_ID_KEY = 'gradify-device-id';
-
-function getDeviceId(): string {
-  let id = localStorage.getItem(DEVICE_ID_KEY);
-  if (!id) {
-    id = `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
-    localStorage.setItem(DEVICE_ID_KEY, id);
-  }
-  return id;
+function buildHeaders(extra?: HeadersInit): Headers {
+  const headers = new Headers(extra);
+  const token = localStorage.getItem('gradify-auth-token');
+  if (token) headers.set('Authorization', `Bearer ${token}`);
+  return headers;
 }
 
-function deviceHeaders(): Record<string, string> {
-  return { 'x-user-id': getDeviceId() };
-}
-
-async function fetchJson(url: string, init: RequestInit): Promise<Response> {
-  try {
-    return await fetch(url, init);
-  } catch {
-    throw new Error('No se pudo conectar con el servidor. Revisá que el backend esté corriendo.');
-  }
-}
-
-async function errorMessage(response: Response, fallback: string): Promise<string> {
-  try {
-    const data = await response.json();
-    // Envelope nuevo { success:false, error:{ message } } con fallback
-    // a los formatos legados { message } y { error: string }.
-    if (data && typeof data === 'object') {
-      if (typeof data.error === 'object' && data.error !== null && data.error.message) {
-        return String(data.error.message);
-      }
-      return data.error || data.message || fallback;
-    }
-    return fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-export async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
-  const response = await fetchJson(`${API_URL}${url}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...deviceHeaders(),
-      ...(options.headers as Record<string, string>),
-    },
-  });
+async function parseResponse<T>(response: Response): Promise<T> {
+  const body: unknown = await response.json().catch(() => null);
   if (!response.ok) {
-    throw new Error(await errorMessage(response, 'Error en la solicitud'));
+    const message = typeof body === 'object' && body !== null && 'message' in body && typeof body.message === 'string'
+      ? body.message
+      : `Error HTTP ${response.status}`;
+    throw new Error(message);
   }
-  return response.json();
+  return body as T;
 }
 
-export async function uploadPdf<T>(url: string, file: File): Promise<T> {
-  const form = new FormData();
-  form.append('file', file);
-  const response = await fetchJson(`${API_URL}${url}`, {
-    method: 'POST',
-    headers: deviceHeaders(),
-    body: form,
-  });
-  if (!response.ok) {
-    throw new Error(await errorMessage(response, 'Error al procesar el PDF'));
+export async function request<T = unknown>(path: string, options: RequestInit = {}): Promise<T> {
+  const headers = buildHeaders(options.headers);
+  if (options.body != null && !(options.body instanceof FormData) && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
   }
-  return response.json();
+  const response = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  return parseResponse<T>(response);
+}
+
+export async function uploadPdf<T = unknown>(path: string, file: File): Promise<T> {
+  const body = new FormData();
+  body.append('file', file);
+  const response = await fetch(`${API_BASE}${path}`, { method: 'POST', headers: buildHeaders(), body });
+  return parseResponse<T>(response);
 }

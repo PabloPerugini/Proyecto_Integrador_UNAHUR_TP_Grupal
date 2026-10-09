@@ -1,21 +1,12 @@
 import { request, uploadPdf } from './client';
-import type { ParsedSubject, ProgressEntry, ProgressSummary } from '../types';
+import type { ParsedSubject } from '../types';
 
+export interface PersonalPdfResult {
+  detectedCount: number;
+  subjects: ParsedSubject[];
+}
 export const progressApi = {
-  parsePersonal: (file: File) =>
-    uploadPdf<{ subjects: ParsedSubject[]; detectedCount: number; careerHint: string | null; intermediateTitle?: string | null }>(
-      '/progress/parse-history',
-      file,
-    ),
-
-  save: (careerId: string, entries: ProgressEntry[]) =>
-    request<{ saved: number }>('/progress', {
-      method: 'POST',
-      body: JSON.stringify({ careerId, entries }),
-    }),
-
-  getMine: (careerId?: string) =>
-    request<{ entries: ProgressEntry[]; summary: ProgressSummary | null }>(
-      `/progress/me${careerId ? `?careerId=${careerId}` : ''}`,
-    ),
+  // Endpoint histórico. La pantalla de progreso nueva utiliza SubjectProgress.
+  parsePersonal: (file: File) => uploadPdf<PersonalPdfResult>('/progress/parse-history', file),
+  getMine: (careerId: string) => request<unknown>(`/progress/me?careerId=${encodeURIComponent(careerId)}`),
 };

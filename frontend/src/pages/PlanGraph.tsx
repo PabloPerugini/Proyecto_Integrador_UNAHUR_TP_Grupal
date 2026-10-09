@@ -14,10 +14,10 @@ import {
 import '@xyflow/react/dist/style.css';
 import { Alert, Badge, Button, Card, Form } from 'react-bootstrap';
 import { useNavigate, useParams } from 'react-router-dom';
-import { apiService } from '../api';
+import { getPlanGraph } from '../api/planGraphAdapter';
+import { studyPlansApi, careerName, type StudyPlan } from '../api/studyPlans';
 import type { GraphData, IntermediateProgress } from '../types';
 import { useCareerSelection } from '../context/CareerContext';
-import { useCareers } from '../hooks/useCareers';
 import { yearLabel } from '../utils/subjects';
 import { STATUS_COLOR, STATUS_BADGE, statusColor, statusLabel } from '../utils/status';
 import ColorDot from '../components/ColorDot';
@@ -287,26 +287,33 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
   const view = initialView;
   const [pinnedCode, setPinnedCode] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  // 5.ª copia del listado unificada al hook (Fase 5 §11.6): mismo fetch on-mount.
-  const { careers } = useCareers({ onError: (m) => setErr(m) });
-  const selectedCareer = useMemo(() => careers.find((c) => c._id === id) ?? null, [careers, id]);
+  const [plans, setPlans] = useState<StudyPlan[]>([]);
+  const selectedPlan = useMemo(() => plans.find((p) => p._id === id) ?? null, [plans, id]);
 
   useEffect(() => {
-    if (!id) return;
-    setSelectedCareerId(id);
+    let active = true;
+    studyPlansApi.getAll().then(result => { if (active) setPlans(result); }).catch(e => { if (active) setErr(e instanceof Error ? e.message : 'Error cargando planes'); });
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!id || !selectedPlan) return;
+    let active = true;
+    setSelectedCareerId(id); // el contexto guarda ahora el ID del StudyPlan
     setGraph(null);
     setPinnedCode(null);
-    apiService
-      .getGraph(id)
-      .then((g) => setGraph(g))
-      .catch((e) => setErr(e instanceof Error ? e.message : 'Error cargando el plan'));
-  }, [id, setSelectedCareerId]);
+    setErr(null);
+    getPlanGraph(selectedPlan).then(g => { if (active) setGraph(g); }).catch(e => {
+      if (active) setErr(e instanceof Error ? e.message : 'No se pudo cargar el plan');
+    });
+    return () => { active = false; };
+  }, [id, selectedPlan, setSelectedCareerId]);
 
   useEffect(() => {
-    if (id || careers.length === 0) return;
-    const chosen = careers.some((c) => c._id === selectedCareerId) ? selectedCareerId : careers[0]._id;
-    if (chosen) navigate(`/${view}/${chosen}`, { replace: true });
-  }, [id, careers, selectedCareerId, navigate, view]);
+    if (id || plans.length === 0) return;
+    const chosen = plans.some(p => p._id === selectedCareerId) ? selectedCareerId : plans[0]._id;
+    navigate(`/${view}/${chosen}`, { replace: true });
+  }, [id, plans, selectedCareerId, navigate, view]);
 
   const changeCareer = (newId: string) => {
     if (!newId) return;
@@ -563,19 +570,19 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
             )}
             <div>
               <h1 className="mb-0 fs-4">
-                {selectedCareer?.name ?? 'Carrera'} ·{' '}
+                {selectedPlan ? `${careerName(selectedPlan)} · ${selectedPlan.name}` : 'Plan de estudios'} ·{' '}
                 {view === 'grafo' ? 'Correlatividades' : 'Tablero de avance'}
               </h1>
-              {careers.length > 0 && (
+              {plans.length > 0 && (
                 <Form.Select
                   size="sm"
                   value={id ?? ''}
                   onChange={(e) => changeCareer(e.target.value)}
-                  aria-label="Cambiar carrera"
+                  aria-label="Cambiar plan de estudios"
                   style={{ maxWidth: 320 }}
                 >
-                  {careers.map((c) => (
-                    <option key={c._id} value={c._id}>{c.name}</option>
+                  {plans.map((p) => (
+                    <option key={p._id} value={p._id}>{p.name} — {careerName(p)}</option>
                   ))}
                 </Form.Select>
               )}
@@ -595,6 +602,9 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
           <Button variant="outline-secondary" size="sm" onClick={() => navigate('/')}>← Volver</Button>
         </div>
 
+        {err && <Alert variant="danger" className="mx-3">{err}</Alert>}
+        {id && !selectedPlan && plans.length > 0 && <Alert variant="warning" className="mx-3">Seleccioná un plan válido. Los enlaces antiguos de carrera ya no corresponden al grafo.</Alert>}
+        {graph && graph.edges.length === 0 && <Alert variant="info" className="mx-3 py-1 small">No hay correlatividades vinculadas todavía. Podés agregarlas desde Administrar plan.</Alert>}
         {graph?.intermediate && graph.intermediate.total > 0 && (
           <IntermediateBanner intermediate={graph.intermediate} />
         )}

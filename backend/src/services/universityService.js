@@ -1,39 +1,51 @@
+
 const University = require("../models/university");
 
 const getAllUniversities = async () => {
-    return University.find();
+  return University.find().sort({ name: 1 });
 };
 
-const findUniversityById = async (id) => {
-    return University.findById(id);
-};
+const createUniversity = async (data) => {
+  const name = String(data.name || "").trim();
+  const description = String(data.description || "").trim();
 
-const createUniversity = async (universityData) => {
-    return University.create({
-        name: universityData.name,
-        description: universityData.description,
-    });
-};
-
-const updateUniversity = async (id, universityData) => {
-    return University.findByIdAndUpdate(
-        id,
-        universityData,
-        {
-            new: true,
-            runValidators: true,
-        }
+  if (name.length < 2 || name.length > 150) {
+    const error = new Error(
+      "El nombre debe tener entre 2 y 150 caracteres"
     );
-};
+    error.statusCode = 400;
+    throw error;
+  }
 
-const deleteUniversity = async(id) => {
-    return University.findByIdAndDelete(id);
+  // Escapar caracteres especiales para la búsqueda.
+  const escapedName = name.replace(
+    /[.*+?^${}()|[\]\\]/g,
+    "\\$&"
+  );
+
+  // Comprobar que no esté registrada.
+  const existing = await University.findOne({
+    name: {
+      $regex: `^${escapedName}$`,
+      $options: "i",
+    },
+  });
+
+  if (existing) {
+    const error = new Error(
+      "Esta universidad ya está registrada"
+    );
+    error.statusCode = 409;
+    throw error;
+  }
+
+  return University.create({
+    name,
+    description,
+  });
 };
 
 module.exports = {
   getAllUniversities,
-  findUniversityById,
   createUniversity,
-  updateUniversity,
-  deleteUniversity,
 };

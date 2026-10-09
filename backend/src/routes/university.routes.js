@@ -1,40 +1,27 @@
+
 const express = require("express");
 
-const universityController = require("../controllers/university.controllers");
+const universityController = require(
+  "../controllers/university.controllers"
+);
+
 const authUser = require("../middlewares/authUser");
 const authAdmin = require("../middlewares/authAdmin");
 
 const router = express.Router();
 
+// Consultar universidades existentes.
 router.get(
-    "/",
-    universityController.getAllUniversities
+  "/",
+  universityController.getAllUniversities
 );
 
-router.get(
-    "/:id",
-    universityController.getUniversityById
-);
-
+// Solamente administradores pueden crearlas.
 router.post(
-    "/",
-    authUser,
-    authAdmin,
-    universityController.createUniversity
-);
-
-router.patch(
-    "/:id",
-    authUser,
-    authAdmin,
-    universityController.updateUniversity
-);
-
-router.delete(
-    "/:id",
-    authUser,
-    authAdmin,
-    universityController.deleteUniversity
+  "/",
+  authUser,
+  authAdmin,
+  universityController.createUniversity
 );
 
 module.exports = router;
