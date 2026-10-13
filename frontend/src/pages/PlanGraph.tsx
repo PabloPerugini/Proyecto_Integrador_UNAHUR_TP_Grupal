@@ -284,12 +284,14 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
   const navigate = useNavigate();
   const { careerId: selectedCareerId, setCareerId: setSelectedCareerId } = useCareerSelection();
   const [graph, setGraph] = useState<GraphData | null>(null);
+  const [enrollments, setEnrollments] = useState<string[]>([]);
   const [tab, setTab] = useState<'lic' | 'tec'>('lic');
   const [interCodes, setInterCodes] = useState<Set<string> | null>(null);
 
   // Subgrafo de la vista: Licenciatura completa o solo tecnicatura.
+  // Con set vacío se muestra vacío (aviso), nunca la Licenciatura.
   const displayGraph = useMemo(() => {
-    if (!graph || tab === 'lic' || !interCodes || interCodes.size === 0) return graph;
+    if (!graph || tab === 'lic' || !interCodes) return graph;
     const nodes = graph.nodes.filter((n) => interCodes.has(n.code));
     const inSet = new Set(nodes.map((n) => n.code));
     const edges = graph.edges.filter((e) => inSet.has(e.source) && inSet.has(e.target));
@@ -324,6 +326,15 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
   useEffect(() => {
     let active = true;
     studyPlansApi.getAll().then(result => { if (active) setPlans(result); }).catch(e => { if (active) setErr(e instanceof Error ? e.message : 'Error cargando planes'); });
+    studyPlansApi.getMine().then(
+      (mine) => {
+        if (!active) return;
+        setEnrollments(
+          mine.map((e) => (typeof e.studyPlan === 'string' ? e.studyPlan : e.studyPlan?._id)).filter((x): x is string => Boolean(x)),
+        );
+      },
+      () => { if (active) setEnrollments([]); },
+    );
     return () => { active = false; };
   }, []);
 
@@ -350,9 +361,15 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
 
   useEffect(() => {
     if (id || plans.length === 0) return;
-    const chosen = plans.some(p => p._id === selectedCareerId) ? selectedCareerId : plans[0]._id;
-    navigate(`/${view}/${chosen}`, { replace: true });
-  }, [id, plans, selectedCareerId, navigate, view]);
+    // Ámbito a lo elegido: recordado, inscripto o explorar (nunca el primero).
+    if (plans.some(p => p._id === selectedCareerId)) {
+      navigate(`/${view}/${selectedCareerId}`, { replace: true });
+    } else if (enrollments.length > 0 && plans.some(p => p._id === enrollments[0])) {
+      navigate(`/${view}/${enrollments[0]}`, { replace: true });
+    } else {
+      navigate('/', { replace: true });
+    }
+  }, [id, plans, selectedCareerId, enrollments, navigate, view]);
 
   const changeCareer = (newId: string) => {
     if (!newId) return;
@@ -624,9 +641,11 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
                   aria-label="Cambiar plan de estudios"
                   style={{ maxWidth: 320 }}
                 >
-                  {plans.map((p) => (
-                    <option key={p._id} value={p._id}>{p.name} — {careerName(p)}</option>
-                  ))}
+                  {plans
+                    .filter((p) => p._id === id || enrollments.includes(p._id))
+                    .map((p) => (
+                      <option key={p._id} value={p._id}>{p.name} — {careerName(p)}</option>
+                    ))}
                 </Form.Select>
               )}
             </div>

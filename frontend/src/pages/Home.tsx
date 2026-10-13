@@ -23,6 +23,17 @@ import PageLoader from '../components/PageLoader';
 import EmptyState from '../components/EmptyState';
 
 import { IconCap, IconBoard } from '../components/icons';
+import { instituteColor, instituteGradient } from '../utils/instituteColors';
+
+function unitNameOfCareer(career: Career): string | null {
+  const unit = career.academicUnit as unknown as { _id: string; name: string } | string | null;
+  if (unit && typeof unit === 'object') return unit.name ?? null;
+  return null;
+}
+
+function careerCoverColor(career: Career): string {
+  return career.color || instituteColor(unitNameOfCareer(career));
+}
 
 interface PlanEntry {
   plan: StudyPlan;
@@ -649,7 +660,7 @@ export default function Home() {
               <article key={unit._id} className="career-card">
                 <div
                   className="career-card__cover"
-                  style={{ background: 'linear-gradient(135deg, #6841df 0%, color-mix(in srgb, #6841df 52%, #0b0f14) 100%)' }}
+                  style={{ background: instituteGradient(instituteColor(unit.name)) }}
                 >
                   <span className="career-card__cover-icon"><IconCap /></span>
                   <span className="career-card__cover-title">{unit.name}</span>
@@ -699,7 +710,7 @@ export default function Home() {
                 <article key={career._id} className="career-card">
                   <div
                     className="career-card__cover"
-                    style={{ background: `linear-gradient(135deg, ${career.color || '#6841df'} 0%, color-mix(in srgb, ${career.color || '#6841df'} 52%, #0b0f14) 100%)` }}
+                    style={{ background: instituteGradient(careerCoverColor(career)) }}
                   >
                     <span className="career-card__cover-icon"><IconBoard /></span>
                     <span className="career-card__cover-title">{career.name}</span>
@@ -766,7 +777,7 @@ export default function Home() {
                 key={entry.plan._id}
                 entry={entry}
                 careerName={selectedCareer?.name ?? 'Carrera asociada'}
-                careerColor={selectedCareer?.color || '#6841df'}
+                careerColor={selectedCareer ? careerCoverColor(selectedCareer) : '#6841df'}
                 enrollmentId={enrollmentIdFor(entry.plan._id)}
                 onEnroll={handleEnroll}
                 onOpen={handleOpen}
