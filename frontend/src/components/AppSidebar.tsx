@@ -80,6 +80,14 @@ export default function AppSidebar() {
         </span>
       </div>
       <div className="sidebar__section mt-3">{user?.nickName || 'Estudiante'}</div>
+      <NavLink
+        to="/cuenta"
+        className={({ isActive }) =>
+          `sidebar__link${isActive ? ' sidebar__link--active' : ''}`
+        }
+      >
+        Mi cuenta
+      </NavLink>
       <button
         type="button"
         className="sidebar__link border-0 bg-transparent text-start"

@@ -12,6 +12,7 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import ProtectedRoute from './components/ProtectedRoute'
 import Forbidden from './pages/Forbidden'
+import Account from './pages/Account'
 import { AuthProvider } from './context/AuthContext'
 import { useAuth } from './hooks/useAuth'
 import { Navigate, Outlet } from 'react-router-dom'
@@ -86,6 +87,7 @@ export default function App() {
               <Route element={<AppShell />}>
                 <Route path="/" element={<Home />} />
                 <Route path="/progreso" element={<PageSuspense><MyProgress /></PageSuspense>} />
+                <Route path="/cuenta" element={<Account />} />
                 <Route path="/grafo/:id?" element={<PageSuspense><PlanGraph /></PageSuspense>} />
                 <Route path="/tablero/:id?" element={<PageSuspense><PlanBoard /></PageSuspense>} />
                 <Route path="/403" element={<Forbidden />} />

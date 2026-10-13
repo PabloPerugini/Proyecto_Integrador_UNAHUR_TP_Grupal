@@ -17,6 +17,13 @@ export const usersApi = {
     if (!result.user?._id) throw new Error('El servidor no devolvió el usuario creado');
     return result.user;
   },
+  updateUser: async (nickName: string, data: Partial<CreateUserPayload>): Promise<User> => {
+    const result = await request<{ user: User }>(`/users/${encodeURIComponent(nickName)}`, {
+      method: 'PATCH', body: JSON.stringify(data),
+    });
+    if (!result.user?._id) throw new Error('El servidor no devolvió el usuario actualizado');
+    return result.user;
+  },
   getMe: () => request<User>('/users/me'),
   logout: () => request<{ message: string }>('/users/logout', { method: 'POST' }),
 };

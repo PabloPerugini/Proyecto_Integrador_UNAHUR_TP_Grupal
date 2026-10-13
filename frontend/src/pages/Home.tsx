@@ -31,7 +31,7 @@ interface PlanEntry {
   subjects: PlanSubject[] | null;
 }
 
-type Step = 'units' | 'careers' | 'plans';
+type Step = 'mine' | 'units' | 'careers' | 'plans';
 
 // Nombre de la materia, considerando
 // que Subject puede venir populado o como ID.
@@ -371,8 +371,22 @@ function PlanCard({
   );
 }
 
+function planCareerName(plan: StudyPlan): string {
+  if (plan.career && typeof plan.career === 'object') {
+    return plan.career.name || 'Carrera asociada';
+  }
+  return 'Carrera asociada';
+}
+
+function planCareerColor(plan: StudyPlan): string {
+  if (plan.career && typeof plan.career === 'object') {
+    return plan.career.color || '#6841df';
+  }
+  return '#6841df';
+}
+
 // =========================================
-// HOME: INSTITUTO → CARRERAS → PLANES
+// HOME: MIS INSCRIPCIONES → INSTITUTO → CARRERAS → PLANES
 // =========================================
 
 export default function Home() {
@@ -392,16 +406,58 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Paso 1: institutos con conteo de carreras.
+  const openMine = async (enrolls: UserStudyPlan[]) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const pairs = await Promise.all(
+        enrolls.map(async (e) => {
+          const sp = e.studyPlan;
+          const plan =
+            sp && typeof sp === 'object'
+              ? sp
+              : await studyPlansApi.getById(typeof sp === 'string' ? sp : '');
+          const s = await studyPlansApi
+            .getSubjects(plan._id)
+            .catch((): null => null);
+          const subjects: PlanSubject[] | null = Array.isArray(s) ? s : null;
+          return { plan, subjects };
+        }),
+      );
+      setEntries(pairs);
+      setSelectedUnit(null);
+      setSelectedCareer(null);
+      setStep('mine');
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudieron cargar tus inscripciones');
+      setEntries([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Inicio: institutos + inscripciones. Si hay inscripciones,
+  // se aterriza en "Mis inscripciones" (mi carrera recordada).
   useEffect(() => {
     let active = true;
 
     const load = async () => {
       try {
-        const list = await academicUnitsApi.getAll(true);
+        const [list, mine] = await Promise.all([
+          academicUnitsApi.getAll(true),
+          studyPlansApi.getMine(),
+        ]);
         if (!active) return;
         setUnits(Array.isArray(list) ? list : []);
+        const enrolls = Array.isArray(mine) ? mine : [];
+        setEnrollments(enrolls);
         setError(null);
+
+        if (enrolls.length > 0) {
+          await openMine(enrolls);
+          return;
+        }
       } catch (err) {
         if (!active) return;
         setError(err instanceof Error ? err.message : 'No se pudieron cargar los institutos');
@@ -521,6 +577,16 @@ export default function Home() {
       {/* MIGAS */}
 
       <div className="d-flex flex-wrap align-items-center gap-2 mb-4">
+        {enrollments.length > 0 && (
+          <Button
+            size="sm"
+            variant={step === 'mine' ? 'primary' : 'outline-primary'}
+            onClick={() => { void openMine(enrollments); }}
+          >
+            Mis inscripciones
+          </Button>
+        )}
+
         <Button
           size="sm"
           variant={step === 'units' ? 'primary' : 'outline-primary'}
@@ -641,6 +707,32 @@ export default function Home() {
             </div>
           )}
         </>
+      )}
+
+      {/* MIS INSCRIPCIONES */}
+
+      {!loading && !error && step === 'mine' && (
+        entries.length === 0 ? (
+          <EmptyState
+            icon={<IconCap size={46} />}
+            title="Todavía no hay planes disponibles"
+            text="Todavía no hay planes publicados. Volvé pronto."
+          />
+        ) : (
+          <div className="career-grid">
+            {entries.map((entry) => (
+              <PlanCard
+                key={entry.plan._id}
+                entry={entry}
+                careerName={planCareerName(entry.plan)}
+                careerColor={planCareerColor(entry.plan)}
+                enrollmentId={enrollmentIdFor(entry.plan._id)}
+                onEnroll={handleEnroll}
+                onOpen={handleOpen}
+              />
+            ))}
+          </div>
+        )
       )}
 
       {/* PASO 3: PLANES */}
