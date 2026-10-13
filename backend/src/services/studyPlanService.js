@@ -18,6 +18,7 @@ const getAllStudyPlans = async (user, { career } = {}) => {
 
   return StudyPlan.find({
     ...careerFilter,
+    isActive: { $ne: false },
     $or: [
       {
         createdBy: null,
@@ -42,6 +43,7 @@ const findStudyPlanById = async (id, user) => {
 
   return StudyPlan.findOne({
     _id: id,
+    isActive: { $ne: false },
     $or: [
       {
         createdBy: null,
@@ -107,6 +109,8 @@ const updateStudyPlan = async (id, studyPlanData) => {
     "creditsIntermediate",
     "intermediateTitle",
     "status",
+    "planYear",
+    "isActive",
   ];
 
   const updateData = {};

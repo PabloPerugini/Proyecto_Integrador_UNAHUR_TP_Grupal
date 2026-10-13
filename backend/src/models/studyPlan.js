@@ -46,6 +46,17 @@ const studyPlanSchema = new mongoose.Schema(
             default: "draft",
         },
 
+        // Versionado liviano F4: año del plan y vigencia.
+        planYear: {
+            type: Number,
+            default: null,
+        },
+
+        isActive: {
+            type: Boolean,
+            default: true,
+        },
+
         createdBy: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",

@@ -1,5 +1,6 @@
 const userService = require("../services/userService");
-const { signToken } = require("../middlewares/auth");
+const User = require("../models/user");
+const { signToken, getUserId } = require("../middlewares/auth");
 const { userSchema, userUpdateSchema } = require("../schemas/user.schemas");
 
 const createUser = async (req, res) => {
@@ -174,7 +175,7 @@ const loginUser = async (req, res) => {
     }
 
     // Token único: mismo firmador y TTL que la cookie (7d).
-    const token = signToken(user._id);
+    const token = signToken(user._id, user.tokenVersion ?? 0);
 
     // Integración auth-cookie-ia: espeja el JWT en cookie httpOnly
     // (el header Bearer sigue siendo la vía principal).
@@ -197,8 +198,13 @@ const loginUser = async (req, res) => {
   }
 };
 
-const logoutUser = (req, res) => {
+const logoutUser = async (req, res) => {
   try {
+    // Invalida el JWT vigente (bump de versión) además de borrar la cookie.
+    const userId = getUserId(req);
+    if (userId) {
+      await User.updateOne({ _id: userId }, { $inc: { tokenVersion: 1 } });
+    }
     const { clearAuthCookie } = require("../middlewares/auth");
     if (typeof res.clearCookie === "function") clearAuthCookie(res);
   } catch {

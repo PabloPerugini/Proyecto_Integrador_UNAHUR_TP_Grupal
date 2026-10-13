@@ -53,6 +53,10 @@ app.use("/users/register", limiterRegister);
 app.use(express.json());
 app.use(cookieParser());
 
+// CSRF ligero en mutaciones con cookie (ver middlewares/checkOrigin.js).
+const { checkOrigin } = require("./middlewares/checkOrigin");
+app.use(checkOrigin(allowedOrigins));
+
 // Envelope progresivo de errores (Cuerpo B §3.1, fase 1: solo errores).
 // Normaliza TODA respuesta con status >= 400 a
 // { success: false, error: { message, details? }, ...camposExtra }

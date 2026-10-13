@@ -21,10 +21,12 @@ const router = express.Router();
 
 router.use(authUser);
 
-// Leer un PDF sin guardar un StudyPlan (con cota de IA: el fallback
-// consume créditos externos; redes privadas/LAN exentas por defecto).
+const authAdmin = require("../middlewares/authAdmin");
+
+// Vista previa y confirmación: solo ADMIN (cuestan IA y crean planes).
 router.post(
   "/preview",
+  authAdmin,
   aiRateLimit,
   uploadSinglePdf,
   planImportController.previewPlanPdf
@@ -33,6 +35,7 @@ router.post(
 // Confirmar y guardar materias.
 router.post(
   "/confirm",
+  authAdmin,
   confirmationController.confirm
 );
 

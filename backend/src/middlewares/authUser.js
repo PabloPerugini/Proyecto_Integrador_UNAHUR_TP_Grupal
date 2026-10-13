@@ -48,6 +48,14 @@ const authUser = async (req, res, next) => {
       });
     }
 
+    // Logout invalida versiones viejas (tokenVersion bump).
+    const tokenVersion = decoded.v ?? 0;
+    if ((user.tokenVersion ?? 0) !== tokenVersion) {
+      return res.status(401).json({
+        message: "Sesión cerrada, volvé a iniciar sesión",
+      });
+    }
+
     req.user = user;
     req.userId = String(user._id);
 

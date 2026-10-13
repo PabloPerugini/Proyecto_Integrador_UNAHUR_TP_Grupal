@@ -6,9 +6,9 @@ const JWT_EXPIRES_IN = "7d";
 const COOKIE_SECURE =
   process.env.COOKIE_SECURE === "true" || process.env.NODE_ENV === "production";
 
-function signToken(userId) {
+function signToken(userId, version = 0) {
   const sub = String(userId);
-  return jwt.sign({ sub, id: sub }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+  return jwt.sign({ sub, id: sub, v: version }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 }
 
 function setAuthCookie(res, token) {
@@ -53,6 +53,7 @@ const optionalAuth = (req, res, next) => {
 module.exports = {
   requireAuth,
   optionalAuth,
+  getUserId,
   signToken,
   setAuthCookie,
   clearAuthCookie,

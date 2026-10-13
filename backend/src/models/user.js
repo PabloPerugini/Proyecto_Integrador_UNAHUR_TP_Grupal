@@ -35,6 +35,11 @@ const userSchema = new mongoose.Schema(
       enum: ["USUARIO", "ADMIN"],
       default: "USUARIO",
     },
+    // Invalida JWTs al cerrar sesión (logout = bump).
+    tokenVersion: {
+      type: Number,
+      default: 0,
+    },
   },
   {
     timestamps: true,
