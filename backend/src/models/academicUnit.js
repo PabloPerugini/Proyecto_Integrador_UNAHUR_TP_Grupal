@@ -1,6 +1,5 @@
-const moongose = require("mongoose");
+const mongoose = require("mongoose");
 const University = require("./university");
-const { default: mongoose } = require("mongoose");
 
 const academicUnitSchema = new mongoose.Schema(
     {

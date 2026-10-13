@@ -44,7 +44,7 @@ router.get(
   authStudyPlanViewer,
   studyPlanController.getIntermediate
 );
-//NOTA AL HACER POST FIAJRSE SI SE REPITE
+// NOTA: al hacer POST, fijarse si se repite (evitar planes duplicados).
 router.post(
     "/",
     authUser,
