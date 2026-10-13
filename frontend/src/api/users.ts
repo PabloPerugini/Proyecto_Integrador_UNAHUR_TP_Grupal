@@ -17,7 +17,8 @@ export const usersApi = {
     if (!result.user?._id) throw new Error('El servidor no devolvió el usuario creado');
     return result.user;
   },
-  updateUser: async (nickName: string, data: Partial<CreateUserPayload>): Promise<User> => {
+  getAll: () => request<User[]>('/users'),
+  updateUser: async (nickName: string, data: Partial<CreateUserPayload> & { rol?: 'ADMIN' | 'USUARIO' }): Promise<User> => {
     const result = await request<{ user: User }>(`/users/${encodeURIComponent(nickName)}`, {
       method: 'PATCH', body: JSON.stringify(data),
     });
@@ -26,4 +27,6 @@ export const usersApi = {
   },
   getMe: () => request<User>('/users/me'),
   logout: () => request<{ message: string }>('/users/logout', { method: 'POST' }),
+  deleteUser: (nickName: string) =>
+    request<{ message: string }>(`/users/${encodeURIComponent(nickName)}`, { method: 'DELETE' }),
 };

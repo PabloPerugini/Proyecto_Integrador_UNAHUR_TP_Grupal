@@ -12,6 +12,7 @@ import {
   IconBoard,
   IconUpload,
   IconEdit,
+  IconUsers,
 } from './icons';
 
 // Shell único por rol: mismas vistas base para todos,
@@ -46,6 +47,8 @@ export default function AppSidebar() {
   const adminNav: NavItem[] = [
     { to: '/cargar', label: 'Cargar plan', icon: <IconUpload /> },
     { to: '/admin', label: 'Editar plan', icon: <IconEdit /> },
+    { to: '/admin/users', label: 'Usuarios', icon: <IconUsers /> },
+    { to: '/admin/archivadas', label: 'Archivadas', icon: <IconBoard /> },
   ];
 
   const renderAdminLinks = (onClick?: () => void) =>

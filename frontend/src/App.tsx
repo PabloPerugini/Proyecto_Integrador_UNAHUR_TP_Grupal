@@ -13,6 +13,9 @@ import Register from './pages/Register'
 import ProtectedRoute from './components/ProtectedRoute'
 import Forbidden from './pages/Forbidden'
 import Account from './pages/Account'
+
+const AdminUsers = lazy(() => import('./pages/AdminUsers'))
+const AdminArchived = lazy(() => import('./pages/AdminArchived'))
 import { AuthProvider } from './context/AuthContext'
 import { useAuth } from './hooks/useAuth'
 import { Navigate, Outlet } from 'react-router-dom'
@@ -96,6 +99,8 @@ export default function App() {
               <Route element={<AppShell />}>
                 <Route path="/cargar" element={<PageSuspense><UploadPlan /></PageSuspense>} />
                 <Route path="/admin/:id?" element={<PageSuspense><PlanAdmin /></PageSuspense>} />
+                <Route path="/admin/users" element={<PageSuspense><AdminUsers /></PageSuspense>} />
+                <Route path="/admin/archivadas" element={<PageSuspense><AdminArchived /></PageSuspense>} />
               </Route>
               </Route>
               </Route>

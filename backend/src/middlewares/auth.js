@@ -45,8 +45,18 @@ const requireAuth = (req, res, next) => {
   next();
 };
 
-const optionalAuth = (req, res, next) => {
+const optionalAuth = async (req, res, next) => {
   req.userId = getUserId(req);
+  // Adjunta el usuario para decisiones por rol (ej. includeArchived solo ADMIN).
+  // Best-effort: sin usuario sigue como anónimo.
+  try {
+    if (req.userId) {
+      const User = require("../models/user");
+      req.user = await User.findById(req.userId).select("_id nickName rol");
+    }
+  } catch {
+    // Sin DB: sigue anónimo.
+  }
   next();
 };
 

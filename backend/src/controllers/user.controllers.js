@@ -78,6 +78,20 @@ const updateUser = async (req, res) => {
       "password",
     ];
 
+    // El rol solo lo cambia un ADMIN (gestión de usuarios).
+    if (req.body.rol !== undefined) {
+      if (!req.user || req.user.rol !== "ADMIN") {
+        return res.status(403).json({
+          message: "Solo un administrador puede cambiar roles",
+        });
+      }
+      if (!["USUARIO", "ADMIN"].includes(req.body.rol)) {
+        return res.status(400).json({
+          message: "Rol inválido",
+        });
+      }
+    }
+
     const updateData = {};
 
     for (const field of allowedFields) {
@@ -100,7 +114,11 @@ const updateUser = async (req, res) => {
 
     const updatedUser = await userService.updateUser(
       nickName,
-      value,
+      {
+        ...value,
+        // rol ya validado arriba (solo ADMIN); el schema lo elimina.
+        ...(req.body.rol !== undefined ? { rol: req.body.rol } : {}),
+      },
     );
 
     if (!updatedUser) {

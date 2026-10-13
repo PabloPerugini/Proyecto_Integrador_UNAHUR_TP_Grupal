@@ -3,10 +3,12 @@ import type { Career } from '../types';
 
 export const careersApi = {
   // F1: filtro por instituto. El backend ignora valores no-ObjectId.
-  getAll: async (unit?: string) => {
-    return request<Career[]>(
-      unit ? `/careers?unit=${encodeURIComponent(unit)}` : '/careers',
-    );
+  getAll: async (unit?: string, includeArchived = false) => {
+    const params = new URLSearchParams();
+    if (unit) params.set('unit', unit);
+    if (includeArchived) params.set('includeArchived', '1');
+    const query = params.toString();
+    return request<Career[]>(`/careers${query ? `?${query}` : ''}`);
   },
   create: (data: Partial<Career>) => request<Career>('/careers', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: string, data: Partial<Career>) => request<Career>(`/careers/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),

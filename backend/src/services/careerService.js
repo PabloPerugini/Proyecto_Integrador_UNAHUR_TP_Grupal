@@ -108,35 +108,45 @@ const updateCareer = async (id, careerData) => {
     );
   }
 
-  // Actualizar solamente los campos permitidos
+  // Actualizar solamente los campos permitidos (set parcial: no revalida
+  // el documento entero, así se puede desarchivar basura vieja sin university).
+  const updateData = {};
+
   if (careerData.name !== undefined) {
-    career.name = careerData.name;
+    updateData.name = careerData.name;
   }
 
   if (careerData.description !== undefined) {
-    career.description = careerData.description;
+    updateData.description = careerData.description;
   }
 
   if (careerData.university !== undefined) {
-    career.university = careerData.university;
+    updateData.university = careerData.university;
   }
 
   if (careerData.academicUnit !== undefined) {
-    career.academicUnit = careerData.academicUnit;
+    updateData.academicUnit = careerData.academicUnit;
   }
 
   if (careerData.color !== undefined) {
-    career.color = careerData.color;
+    updateData.color = careerData.color;
   }
 
-  await career.save();
+  // Archivar/desarchivar (rutas admin).
+  if (careerData.isArchived !== undefined) {
+    updateData.isArchived = Boolean(careerData.isArchived);
+  }
 
-  await career.populate([
-    "university",
-    "academicUnit",
-  ]);
-
-  return career;
+  return Career.findByIdAndUpdate(
+    id,
+    { $set: updateData },
+    { new: true, runValidators: true },
+  )
+    .setOptions({ includeArchived: true })
+    .populate([
+      "university",
+      "academicUnit",
+    ]);
 };
 
 // Eliminar una carrera

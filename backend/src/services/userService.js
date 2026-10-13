@@ -76,6 +76,8 @@ const updateUser = async (nickName, userData) => {
     "lastName",
     "email",
     "password",
+    // rol solo llega hasta acá validado por el controller (solo ADMIN).
+    "rol",
   ];
 
   for (const field of allowedFields) {
