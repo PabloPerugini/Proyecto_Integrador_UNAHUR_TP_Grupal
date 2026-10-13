@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Button, Form, Spinner, Table } from 'react-bootstrap';
-import { studyPlansApi, orderedSubjects, subjectName, careerName, type StudyPlan, type PlanSubject, type ProgressStatus, type UserStudyPlan } from '../api/studyPlans';
+import { studyPlansApi, orderedSubjects, subjectName, careerName, prerequisiteId, type StudyPlan, type PlanSubject, type ProgressStatus, type UserStudyPlan } from '../api/studyPlans';
 import { uploadPdf } from '../api/client';
 import { useCareerSelection } from '../context/CareerContext';
 import { useFlashMessage } from '../hooks/useFlashMessage';
@@ -102,6 +102,26 @@ export default function MyProgress() {
   const dirty = subjects.filter(s => draft[s._id] && (draft[s._id].status !== original[s._id]?.status || draft[s._id].grade !== original[s._id]?.grade));
   const saveAll = async () => {
     if (!enrollment || working || dirty.length === 0) return;
+    // Pre-chequeo local de correlativas (el back revalida y es la fuente).
+    const byId = new Map(subjects.map(s => [s._id, s]));
+    const blocked: string[] = [];
+    for (const item of dirty) {
+      const value = draft[item._id];
+      if (!value || value.status === 'PENDIENTE') continue;
+      for (const p of item.prerequisites ?? []) {
+        const refId = prerequisiteId(p);
+        const ref = refId ? byId.get(refId) : undefined;
+        const state = ref ? draft[ref._id]?.status ?? 'PENDIENTE' : 'PENDIENTE';
+        const ok = p.requiredStatus === 'APROBADA'
+          ? state === 'APROBADA'
+          : state === 'REGULARIZADA' || state === 'APROBADA';
+        if (!ok && ref) blocked.push(`${subjectName(item)} ← ${subjectName(ref)}`);
+      }
+    }
+    if (blocked.length > 0) {
+      flash('danger', `Faltan correlativas: ${[...new Set(blocked)].slice(0, 5).join('; ')}${blocked.length > 5 ? '…' : ''}`);
+      return;
+    }
     setWorking(true);
     let saved = 0;
     try {
