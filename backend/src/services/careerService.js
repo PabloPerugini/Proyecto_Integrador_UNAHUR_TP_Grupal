@@ -3,6 +3,7 @@ const Career = require("../models/career");
 const University = require("../models/university");
 const AcademicUnit = require("../models/academicUnit");
 const StudyPlan = require("../models/studyPlan");
+const mongoose = require("mongoose");
 
 // Validar universidad y unidad académica
 const validateCareerRelations = async (
@@ -39,7 +40,8 @@ const validateCareerRelations = async (
 const getAllCareers = async ({ unit, includeArchived } = {}) => {
   const query = Career.find();
 
-  if (unit) {
+  // Compat: valores no-ObjectId (ej. "published" legado) se ignoran.
+  if (unit && mongoose.isValidObjectId(unit)) {
     query.where({ academicUnit: unit });
   }
 

@@ -17,6 +17,13 @@ export interface CreateUserPayload {
   password?: string;
 }
 
+export interface AcademicUnit {
+  _id: string;
+  name: string;
+  type?: string;
+  careerCount?: number;
+}
+
 export type CareerStatus = 'draft' | 'published';
 
 export interface Career {

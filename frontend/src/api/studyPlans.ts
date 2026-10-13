@@ -36,10 +36,34 @@ export interface GraphLike {
   availableNow: unknown[];
   [key: string]: unknown;
 }
+export interface SugerenciaDisponible {
+  code: string;
+  name: string;
+  critica?: boolean;
+  desbloquea?: number;
+  [key: string]: unknown;
+}
 export interface SugerenciasLike {
   mensajes: unknown[];
-  disponibles: unknown[];
+  disponibles: SugerenciaDisponible[];
   [key: string]: unknown;
+}
+export interface IntermediateSubject {
+  code: string;
+  name: string;
+  year: number | null;
+  credits: number;
+  requires: string[];
+  externalRequires: string[];
+}
+export interface IntermediateView {
+  planId: string;
+  planName: string;
+  intermediateTitle: string;
+  creditsIntermediate: number;
+  closed: boolean;
+  total: number;
+  subjects: IntermediateSubject[];
 }
 
 async function uploadCorrelativas<T>(url: string, file: File): Promise<T> {
@@ -127,7 +151,9 @@ export function orderedSubjects(subjects: PlanSubject[]): PlanSubject[] {
   );
 }
 export const studyPlansApi = {
-  getAll: () => request<StudyPlan[]>('/study-plans'),
+  getAll: (careerId?: string) => request<StudyPlan[]>(
+    careerId ? `/study-plans?career=${encodeURIComponent(careerId)}` : '/study-plans',
+  ),
   getById: (id: string) => request<StudyPlan>(`/study-plans/${id}`),
   update: async (id: string, data: Partial<StudyPlan>) => {
     const result = await request<{ studyPlan: StudyPlan }>(`/study-plans/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
@@ -139,6 +165,7 @@ export const studyPlansApi = {
   },
   deleteSubject: (planId: string, subjectId: string) => request<unknown>(`/study-plans/${planId}/subjects/${subjectId}`, { method: 'DELETE' }),
   getGraph: (planId: string) => request<GraphLike>(`/study-plans/${planId}/graph`),
+  getIntermediate: (planId: string) => request<IntermediateView>(`/study-plans/${planId}/intermediate`),
   getSugerencias: (planId: string) => request<SugerenciasLike>(`/study-plans/${planId}/sugerencias`),
   parseCorrelativas: (planId: string, file: File) => uploadCorrelativas<CorrParseResult>(`/study-plans/${planId}/parse-correlativas`, file),
   saveCorrelativas: (planId: string, updates: CorrUpdate[]) => request<CorrSaveResult>(`/study-plans/${planId}/correlativas`, { method: 'POST', body: JSON.stringify({ updates }) }),

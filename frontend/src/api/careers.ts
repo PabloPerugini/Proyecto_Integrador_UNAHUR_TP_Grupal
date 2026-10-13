@@ -2,11 +2,11 @@ import { request } from './client';
 import type { Career } from '../types';
 
 export const careersApi = {
-  // Career ahora es sólo el catálogo de carreras. El estado published corresponde a StudyPlan.
-  // El backend ignora el filtro (se mantiene el parámetro por compatibilidad con useCareers).
-  getAll: async (_status?: string) => {
-    void _status;
-    return request<Career[]>('/careers');
+  // F1: filtro por instituto. El backend ignora valores no-ObjectId.
+  getAll: async (unit?: string) => {
+    return request<Career[]>(
+      unit ? `/careers?unit=${encodeURIComponent(unit)}` : '/careers',
+    );
   },
   create: (data: Partial<Career>) => request<Career>('/careers', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: string, data: Partial<Career>) => request<Career>(`/careers/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
