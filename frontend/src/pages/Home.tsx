@@ -11,6 +11,7 @@ import {
 
 import { useCareers } from '../hooks/useCareers';
 import { useCareerSelection } from '../context/CareerContext';
+import { useAuth } from '../hooks/useAuth';
 
 import PageHeader from '../components/PageHeader';
 import PageLoader from '../components/PageLoader';
@@ -43,6 +44,8 @@ function subjectName(item: PlanSubject): string {
 export default function Home() {
   const navigate = useNavigate();
   const { setCareerId } = useCareerSelection();
+  const { user } = useAuth();
+  const isAdmin = user?.rol === 'ADMIN';
 
   const { careers } = useCareers();
 
@@ -153,19 +156,26 @@ export default function Home() {
   // ESTADÍSTICAS
   // =========================================
 
-  const totalPlans = entries.length;
+  // No-admin solo ve publicados (oculta borradores y datos de prueba).
+  const visibleEntries = isAdmin
+    ? entries
+    : entries.filter(
+        (entry) => entry.plan.status === 'published'
+      );
 
-  const totalSubjects = entries.reduce(
+  const totalPlans = visibleEntries.length;
+
+  const totalSubjects = visibleEntries.reduce(
     (total, entry) =>
       total + (entry.subjects?.length ?? 0),
     0
   );
 
-  const publishedPlans = entries.filter(
+  const publishedPlans = visibleEntries.filter(
     (entry) => entry.plan.status === 'published'
   ).length;
 
-  const failedSubjectLoads = entries.filter(
+  const failedSubjectLoads = visibleEntries.filter(
     (entry) => entry.subjects === null
   ).length;
 
@@ -181,12 +191,14 @@ export default function Home() {
       />
 
       <div className="d-flex justify-content-end mb-4">
-        <Button
-          className="btn-gradify"
-          onClick={() => navigate('/cargar')}
-        >
-          + Cargar nuevo plan
-        </Button>
+        {isAdmin && (
+          <Button
+            className="btn-gradify"
+            onClick={() => navigate('/cargar')}
+          >
+            + Cargar nuevo plan
+          </Button>
+        )}
       </div>
 
       {loading && (
@@ -201,25 +213,27 @@ export default function Home() {
 
       {!loading &&
         !error &&
-        entries.length === 0 && (
+        visibleEntries.length === 0 && (
           <EmptyState
             icon={<IconCap size={46} />}
             title="Todavía no hay planes disponibles"
-            text="Cargá un PDF, revisá las materias y guardá el plan para verlo acá."
+            text={isAdmin ? 'Cargá un PDF, revisá las materias y guardá el plan para verlo acá.' : 'Todavía no hay planes publicados. Volvé pronto.'}
             action={
-              <Button
-                className="btn-gradify"
-                onClick={() => navigate('/cargar')}
-              >
-                Cargar mi primer plan
-              </Button>
+              isAdmin ? (
+                <Button
+                  className="btn-gradify"
+                  onClick={() => navigate('/cargar')}
+                >
+                  Cargar mi primer plan
+                </Button>
+              ) : undefined
             }
           />
         )}
 
       {!loading &&
         !error &&
-        entries.length > 0 && (
+        visibleEntries.length > 0 && (
           <>
             {/* ESTADÍSTICAS */}
 
@@ -284,7 +298,7 @@ export default function Home() {
             {/* PLANES GUARDADOS */}
 
             <div className="career-grid">
-              {entries.map(({ plan, subjects }) => {
+              {visibleEntries.map(({ plan, subjects }) => {
                 const career = getCareerInfo(plan);
 
                 const published =

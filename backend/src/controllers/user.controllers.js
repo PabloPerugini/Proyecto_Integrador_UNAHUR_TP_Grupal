@@ -1,5 +1,5 @@
-const jwt = require("jsonwebtoken");
 const userService = require("../services/userService");
+const { signToken } = require("../middlewares/auth");
 const { userSchema, userUpdateSchema } = require("../schemas/user.schemas");
 
 const createUser = async (req, res) => {
@@ -173,17 +173,8 @@ const loginUser = async (req, res) => {
       });
     }
 
-    // Generamos el token (unificado: `id` legado + `sub` estándar).
-    const token = jwt.sign(
-      {
-        id: user._id,
-        sub: String(user._id),
-      },
-      process.env.JWT_SECRET,
-      {
-        expiresIn: "1d",
-      }
-    );
+    // Token único: mismo firmador y TTL que la cookie (7d).
+    const token = signToken(user._id);
 
     // Integración auth-cookie-ia: espeja el JWT en cookie httpOnly
     // (el header Bearer sigue siendo la vía principal).

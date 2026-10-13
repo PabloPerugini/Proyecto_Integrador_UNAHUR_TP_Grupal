@@ -31,11 +31,24 @@ const careerSchema = new mongoose.Schema(
       default: "",
       trim: true,
     },
+
+    // Curaduría F0: las archivadas se ocultan en lecturas normales.
+    isArchived: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
   }
 );
+
+// Oculta archivadas salvo opt-in explícito { includeArchived: true }.
+careerSchema.pre(/^find/, function () {
+  if (!this.getOptions().includeArchived) {
+    this.where({ isArchived: { $ne: true } });
+  }
+});
 
 const Career = mongoose.model("Career", careerSchema);
 

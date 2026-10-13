@@ -11,11 +11,13 @@ const routes = require("./routes");
 const errorHandler = require("./middlewares/errorHandler");
 let limiterGeneral;
 let limiterLogin;
+let limiterRegister;
 try {
-  ({ limiterGeneral, limiterLogin } = require("./config/limits"));
+  ({ limiterGeneral, limiterLogin, limiterRegister } = require("./config/limits"));
 } catch {
-  limiterGeneral = rateLimit({ windowMs: 15 * 60 * 1000, max: 200 });
-  limiterLogin = rateLimit({ windowMs: 15 * 60 * 1000, max: 20 });
+  limiterGeneral = rateLimit({ windowMs: 15 * 60 * 1000, limit: 200 });
+  limiterLogin = rateLimit({ windowMs: 15 * 60 * 1000, limit: 20 });
+  limiterRegister = rateLimit({ windowMs: 15 * 60 * 1000, max: 10 });
 }
 
 const app = express();
@@ -34,8 +36,10 @@ const allowedOrigins = (process.env.CORS_ORIGIN || process.env.FRONTEND_URL || "
 app.use(
   cors({
     origin: (origin, cb) => {
+      // Origen no listado: se deniega CORS sin error (el navegador
+      // bloquea igual, pero evitamos el 500 y el ruido en logs).
       if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
-      return cb(new Error("Origen no permitido por CORS"));
+      return cb(null, false);
     },
     credentials: true,
   }),
@@ -45,7 +49,7 @@ app.use(helmet({ contentSecurityPolicy: false }));
 app.use(limiterGeneral);
 // Rate-limit en auth (compat: limiterLogin centralizado + ref.antiguo).
 app.use("/users/login", limiterLogin);
-app.use("/users/register", limiterLogin);
+app.use("/users/register", limiterRegister);
 app.use(express.json());
 app.use(cookieParser());
 

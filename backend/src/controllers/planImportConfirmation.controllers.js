@@ -7,7 +7,8 @@ const confirm = async (req, res) => {
   try {
     const result = await confirmPlanImport(
       req.user._id,
-      req.body
+      req.body,
+      { isAdmin: req.user.rol === "ADMIN" },
     );
 
     return res.status(201).json(result);

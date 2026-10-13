@@ -144,11 +144,17 @@ function normalizeSubject(item, index) {
   };
 }
 
-async function confirmPlanImport(userId, data) {
+async function confirmPlanImport(userId, data, { isAdmin = false } = {}) {
   const fileHash = text(data.fileHash, 64).toLowerCase();
   const careerId = data.careerId;
   const planName = text(data.name);
   const fileName = text(data.fileName, 255);
+  // Plan oficial (visible para todos): solo ADMIN. Queda createdBy=null
+  // + published para que cualquier usuario pueda inscribirse.
+  const official = data.official === true;
+  if (official && !isAdmin) {
+    throw httpError("Solo un administrador puede publicar planes oficiales", 403);
+  }
 
   if (!/^[a-f0-9]{64}$/.test(fileHash)) {
     throw httpError("Hash del PDF inválido");
@@ -270,8 +276,8 @@ async function confirmPlanImport(userId, data) {
         "créditos intermedios"
       ) ?? 0,
       intermediateTitle: text(data.intermediateTitle) || null,
-      status: "draft",
-      createdBy: userId,
+      status: official ? "published" : "draft",
+      createdBy: official ? null : userId,
     });
 
     const planSubjects = [];

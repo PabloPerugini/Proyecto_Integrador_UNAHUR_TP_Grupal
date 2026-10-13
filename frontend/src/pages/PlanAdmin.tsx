@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Badge, Button, Card, Form, Spinner, Table } from 'react-bootstrap';
 import { useNavigate, useParams } from 'react-router-dom';
-import { studyPlansApi, orderedSubjects, subjectName, careerName, prerequisiteId, type StudyPlan, type PlanSubject, type PlanPrerequisite } from '../api/studyPlans';
+import { studyPlansApi, orderedSubjects, subjectName, careerName, prerequisiteId, type StudyPlan, type PlanSubject, type PlanPrerequisite, type CorrParseResult } from '../api/studyPlans';
 import { useFlashMessage } from '../hooks/useFlashMessage';
 import PageHeader from '../components/PageHeader';
 import MessageBanner from '../components/MessageBanner';
@@ -30,6 +30,7 @@ export default function PlanAdmin() {
   const [draft, setDraft] = useState<Record<string, SubjectForm>>({});
   const [name, setName] = useState('');
   const [status, setStatus] = useState<'draft'|'published'>('draft');
+  const [corrResult, setCorrResult] = useState<CorrParseResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -107,6 +108,42 @@ export default function PlanAdmin() {
   const updateRequirement = (subjectId: string, prerequisiteIdValue: string, requiredStatus: 'REGULARIZADA'|'APROBADA') => {
     modify(subjectId, { prerequisites: (draft[subjectId]?.prerequisites ?? []).map(p => prerequisiteId(p) === prerequisiteIdValue ? { ...p, requiredStatus } : p) });
   };
+  const reloadSubjects = async (planId: string) => {
+    const list = await studyPlansApi.getSubjects(planId);
+    setSubjects(orderedSubjects(list)); setDraft(Object.fromEntries(list.map(s => [s._id, fromSubject(s)])));
+  };
+  const parseCorrFile = async (file: File) => {
+    if (!plan || working) return;
+    setWorking(true); clear();
+    try {
+      const r = await studyPlansApi.parseCorrelativas(plan._id, file);
+      setCorrResult(r);
+      flash('success', `PDF analizado: ${r.matchedCount}/${r.total} materias reconocidas.`);
+    } catch (e) { flashFromError(e, 'No se pudo analizar el PDF de correlatividades'); }
+    finally { setWorking(false); }
+  };
+  const applyCorr = async () => {
+    if (!plan || !corrResult || working) return;
+    const updates = corrResult.rows.filter(r => r.matched && r.code && r.requires.length).map(r => ({ code: r.code as string, requires: r.requires }));
+    if (!updates.length) { flash('danger', 'No hay correlativas reconocidas para aplicar.'); return; }
+    setWorking(true);
+    try {
+      const r = await studyPlansApi.saveCorrelativas(plan._id, updates);
+      await reloadSubjects(plan._id); setCorrResult(null);
+      flash('success', `Correlativas guardadas en ${r.saved} materias.${r.dropped.length ? ` Descartadas: ${r.dropped.length}.` : ''}`);
+    } catch (e) { flashFromError(e, 'No se pudieron guardar las correlativas (¿ciclo?)'); }
+    finally { setWorking(false); }
+  };
+  const clearCorr = async () => {
+    if (!plan || working || !subjects.length || !window.confirm('¿Quitar TODAS las correlativas del plan?')) return;
+    setWorking(true);
+    try {
+      await studyPlansApi.saveCorrelativas(plan._id, subjects.filter(s => s.code).map(s => ({ code: s.code as string, requires: [] })));
+      await reloadSubjects(plan._id); setCorrResult(null);
+      flash('success', 'Correlativas eliminadas del plan.');
+    } catch (e) { flashFromError(e, 'No se pudieron eliminar las correlativas'); }
+    finally { setWorking(false); }
+  };
   return <div>
     <PageHeader title="Administrar planes de estudio" sub="Editá la información, las materias y las correlatividades del plan seleccionado." />
     <MessageBanner message={msg} onClose={clear} />
@@ -124,6 +161,21 @@ export default function PlanAdmin() {
           <option value="draft">Borrador</option><option value="published">Publicado</option>
         </Form.Select><Form.Text muted>Publicar el borrador no lo convierte en un plan oficial; conserva su propietario.</Form.Text></Form.Group>
         <Button disabled={working || !name.trim()} onClick={() => void savePlan()}>Guardar datos del plan</Button>
+      </Card.Body></Card>
+      <Card className="mb-4"><Card.Header><strong>Correlatividades desde PDF</strong></Card.Header><Card.Body>
+        <p className="small text-muted mb-2">Subí el PDF de correlatividades: se reconoce cada materia contra el plan (sin guardar) y después aplicás. Solo lo reconocido con requisitos se guarda; ante un ciclo no se guarda nada.</p>
+        <div className="d-flex flex-wrap gap-2 align-items-center">
+          <Form.Control type="file" accept="application/pdf" style={{ maxWidth: 320 }} disabled={working} onChange={e => { const f = (e.target as HTMLInputElement).files?.[0]; if (f) void parseCorrFile(f); }} />
+          <Button size="sm" disabled={working || !corrResult} onClick={() => void applyCorr()}>Aplicar reconocidas</Button>
+          <Button size="sm" variant="outline-danger" disabled={working || !subjects.length} onClick={() => void clearCorr()}>Quitar todas</Button>
+        </div>
+        {corrResult && <div className="mt-3">
+          <p className="mb-1"><strong>{corrResult.matchedCount}/{corrResult.total}</strong> reconocidas · origen {corrResult.sourceKind ?? '—'}</p>
+          <div className="table-responsive" style={{ maxHeight: 260, overflowY: 'auto' }}><Table size="sm" striped><thead><tr><th>Materia PDF</th><th>Plan</th><th>Requiere</th></tr></thead><tbody>
+            {corrResult.rows.filter(r => r.matched).map((r, i) => <tr key={i}><td>{r.name}</td><td>{r.code} · {r.dbName} ({r.confidence})</td><td>{r.requires.join(', ') || '—'}</td></tr>)}
+          </tbody></Table></div>
+          {!!corrResult.unmatched.length && <p className="small text-muted mt-2">Sin reconocer ({corrResult.unmatched.length}): {corrResult.unmatched.slice(0, 8).join(' · ')}{corrResult.unmatched.length > 8 ? '…' : ''}</p>}
+        </div>}
       </Card.Body></Card>
       <Card className="mb-4"><Card.Header className="d-flex justify-content-between flex-wrap gap-2"><strong>Materias y correlatividades ({subjects.length})</strong><Button size="sm" variant="outline-secondary" onClick={() => navigate(`/grafo/${plan._id}`)}>Ver grafo</Button></Card.Header><Card.Body>
         <p className="small text-muted">Las materias importadas se editan aquí. Los nombres pertenecen al catálogo general de materias; en esta pantalla se editan sus datos propios del plan.</p>

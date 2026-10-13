@@ -4,6 +4,9 @@ const planSubjectController = require("../controllers/planSubject.controllers");
 const authUser = require("../middlewares/authUser");
 const authStudyPlanOwnerOrAdmin = require("../middlewares/authStudyPlanOwnerOrAdmin");
 const authStudyPlanViewer = require("../middlewares/authStudyPlanViewer");
+const {
+  uploadSinglePdf,
+} = require("../middlewares/upload");
 const router = express.Router();
 
 // Ver materias de un plan
@@ -42,6 +45,23 @@ router.delete(
   authUser,
   authStudyPlanOwnerOrAdmin,
   planSubjectController.deletePlanSubject
+);
+
+// Parsea un PDF de correlativas contra las materias del plan (sin guardar).
+router.post(
+  "/:studyPlanId/parse-correlativas",
+  authUser,
+  authStudyPlanOwnerOrAdmin,
+  uploadSinglePdf,
+  planSubjectController.parseCorrelativasPlan
+);
+
+// Guarda correlativas del plan (whitelist + anti-ciclos; requires: [] limpia).
+router.post(
+  "/:studyPlanId/correlativas",
+  authUser,
+  authStudyPlanOwnerOrAdmin,
+  planSubjectController.saveCorrelativasPlan
 );
 
 module.exports = router;

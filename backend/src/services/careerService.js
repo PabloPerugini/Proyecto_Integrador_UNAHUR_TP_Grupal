@@ -35,18 +35,30 @@ const validateCareerRelations = async (
   }
 };
 
-// Obtener todas las carreras
-const getAllCareers = async () => {
-  return Career.find()
-    .populate("university")
-    .populate("academicUnit");
+// Obtener todas las carreras (filtros F1; archivadas solo con opt-in).
+const getAllCareers = async ({ unit, includeArchived } = {}) => {
+  const query = Career.find();
+
+  if (unit) {
+    query.where({ academicUnit: unit });
+  }
+
+  if (includeArchived) {
+    query.setOptions({ includeArchived: true });
+  }
+
+  return query.populate("university").populate("academicUnit");
 };
 
-// Obtener una carrera por ID
-const findCareerById = async (id) => {
-  return Career.findById(id)
-    .populate("university")
-    .populate("academicUnit");
+// Obtener una carrera por ID (archivadas solo con opt-in).
+const findCareerById = async (id, { includeArchived } = {}) => {
+  const query = Career.findById(id);
+
+  if (includeArchived) {
+    query.setOptions({ includeArchived: true });
+  }
+
+  return query.populate("university").populate("academicUnit");
 };
 
 // Crear una carrera
@@ -65,9 +77,11 @@ const createCareer = async (careerData) => {
   });
 };
 
-// Actualizar una carrera
+// Actualizar una carrera (rutas admin: ve archivadas para desarchivar).
 const updateCareer = async (id, careerData) => {
-  const career = await Career.findById(id);
+  const career = await Career.findById(id).setOptions({
+    includeArchived: true,
+  });
 
   if (!career) return null;
 

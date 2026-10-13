@@ -1,7 +1,7 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/user");
 
-// IMPORTANTEEEEE:
+// IMPORTANTE:
 // Este middleware usa process.env.JWT_SECRET para verificar los tokens.
 // deben tener en su archivo .env algo como:
 //

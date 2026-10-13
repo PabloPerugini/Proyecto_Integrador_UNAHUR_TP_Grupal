@@ -1,10 +1,49 @@
-import { request } from './client';
+import { request, uploadPdf } from './client';
 
 export interface CareerRef {
   _id: string;
   name?: string;
   color?: string;
   university?: string | { _id: string; name: string } | null;
+}
+export interface CorrRow {
+  name: string;
+  matched: boolean;
+  code: string | null;
+  dbName: string | null;
+  confidence: string | null;
+  requires: string[];
+}
+export interface CorrParseResult {
+  sourceKind?: string;
+  total: number;
+  planSubjects: number;
+  matchedCount: number;
+  rows: CorrRow[];
+  unmatched: string[];
+}
+export interface CorrUpdate {
+  code: string;
+  requires: string[];
+}
+export interface CorrSaveResult {
+  saved: number;
+  dropped: string[];
+}
+export interface GraphLike {
+  nodes: unknown[];
+  edges: unknown[];
+  availableNow: unknown[];
+  [key: string]: unknown;
+}
+export interface SugerenciasLike {
+  mensajes: unknown[];
+  disponibles: unknown[];
+  [key: string]: unknown;
+}
+
+async function uploadCorrelativas<T>(url: string, file: File): Promise<T> {
+  return uploadPdf<T>(url, file);
 }
 export interface StudyPlan {
   _id: string;
@@ -94,12 +133,15 @@ export const studyPlansApi = {
     const result = await request<{ studyPlan: StudyPlan }>(`/study-plans/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
     return result.studyPlan;
   },
-  getSubjects: (planId: string) => request<PlanSubject[]>(`/study-plans/${planId}/subjects`),
-  updateSubject: async (planId: string, subjectId: string, data: Partial<PlanSubject>) => {
+  getSubjects: (planId: string) => request<PlanSubject[]>(`/study-plans/${planId}/subjects`),  updateSubject: async (planId: string, subjectId: string, data: Partial<PlanSubject>) => {
     const result = await request<{ planSubject: PlanSubject }>(`/study-plans/${planId}/subjects/${subjectId}`, { method: 'PATCH', body: JSON.stringify(data) });
     return result.planSubject;
   },
   deleteSubject: (planId: string, subjectId: string) => request<unknown>(`/study-plans/${planId}/subjects/${subjectId}`, { method: 'DELETE' }),
+  getGraph: (planId: string) => request<GraphLike>(`/study-plans/${planId}/graph`),
+  getSugerencias: (planId: string) => request<SugerenciasLike>(`/study-plans/${planId}/sugerencias`),
+  parseCorrelativas: (planId: string, file: File) => uploadCorrelativas<CorrParseResult>(`/study-plans/${planId}/parse-correlativas`, file),
+  saveCorrelativas: (planId: string, updates: CorrUpdate[]) => request<CorrSaveResult>(`/study-plans/${planId}/correlativas`, { method: 'POST', body: JSON.stringify({ updates }) }),
   getMine: () => request<UserStudyPlan[]>('/user-study-plans'),
   enroll: async (studyPlanId: string) => {
     const result = await request<{ userStudyPlan: UserStudyPlan }>('/user-study-plans', {

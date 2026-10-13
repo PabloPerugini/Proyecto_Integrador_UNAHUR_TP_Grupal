@@ -1,5 +1,10 @@
 
 const planSubjectService = require("../services/planSubjectService");
+const {
+  parseAndMatch,
+  saveCorrelativas,
+} = require("../services/planCorrelativas.service");
+const { isPdfBuffer } = require("../middlewares/upload");
 const mongoose = require("mongoose");
 
 // Obtener todas las materias de un plan
@@ -192,10 +197,87 @@ const deletePlanSubject = async (req, res) => {
   }
 };
 
+// Parsea un PDF de correlativas contra las materias del plan (sin guardar).
+const parseCorrelativasPlan = async (req, res) => {
+  try {
+    const { studyPlanId } = req.params;
+
+    if (!req.file) {
+      return res.status(400).json({
+        message: "Enviá el PDF en el campo 'file'",
+      });
+    }
+    if (!isPdfBuffer(req.file.buffer)) {
+      return res.status(400).json({
+        message: "Solo se aceptan archivos PDF",
+      });
+    }
+
+    const result = await parseAndMatch(studyPlanId, req.file.buffer);
+
+    return res.status(200).json(result);
+
+  } catch (error) {
+    if (error instanceof mongoose.Error.CastError) {
+      return res.status(400).json({
+        message: "ID del plan inválido",
+      });
+    }
+
+    return res.status(error.statusCode || 500).json({
+      message: error.statusCode
+        ? error.message
+        : "Error al analizar el PDF de correlatividades",
+    });
+  }
+};
+
+// Guarda correlativas del plan (whitelist + anti-ciclos; requires: [] limpia).
+const saveCorrelativasPlan = async (req, res) => {
+  try {
+    const { studyPlanId } = req.params;
+    const updates = Array.isArray(req.body?.updates)
+      ? req.body.updates
+      : req.body?.subjects;
+
+    if (!Array.isArray(updates)) {
+      return res.status(400).json({
+        message: "Enviá un arreglo 'updates' con { code, requires }",
+      });
+    }
+
+    const result = await saveCorrelativas(studyPlanId, updates);
+
+    return res.status(200).json(result);
+
+  } catch (error) {
+    if (error instanceof mongoose.Error.CastError) {
+      return res.status(400).json({
+        message: "ID del plan inválido",
+      });
+    }
+
+    if (error.cycle) {
+      return res.status(400).json({
+        message: error.message,
+        cycle: error.cycle,
+      });
+    }
+
+    return res.status(error.statusCode || 500).json({
+      message: error.statusCode
+        ? error.message
+        : "Error al guardar las correlativas",
+    });
+  }
+};
+
 module.exports = {
   getPlanSubjects,
   getPlanSubjectById,
   createPlanSubject,
   updatePlanSubject,
   deletePlanSubject,
+  parseCorrelativasPlan,
+  saveCorrelativasPlan,
 };

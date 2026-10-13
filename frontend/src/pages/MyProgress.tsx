@@ -58,7 +58,7 @@ export default function MyProgress() {
     }).catch(e => { if (active) setError(e instanceof Error ? e.message : 'Error cargando planes'); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, []);
+  }, [selectedFromContext]);
 
   const loadProgress = useCallback(async (planId: string, personalId?: string) => {
     const [items, progress] = await Promise.all([
@@ -94,7 +94,7 @@ export default function MyProgress() {
     }).catch(e => { if (active) setError(e instanceof Error ? e.message : 'Error cargando materias'); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [selectedId, enrollment?._id]);
+  }, [selectedId, enrollment]);
 
   const update = (id: string, change: Partial<Draft>) => {
     setDraft(p => ({ ...p, [id]: { ...p[id], status: p[id]?.status ?? 'PENDIENTE', grade: p[id]?.grade ?? '', ...change } }));

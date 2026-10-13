@@ -32,7 +32,7 @@ export default function Register() {
       return 'Ingresá un correo electrónico válido.';
     }
     if (password.length < 6) {
-      return 'La contraseña debe tener al menos 4 caracteres.';
+      return 'La contraseña debe tener al menos 6 caracteres.';
     }
     if (password !== confirmPassword) {
       return 'Las contraseñas no coinciden.';

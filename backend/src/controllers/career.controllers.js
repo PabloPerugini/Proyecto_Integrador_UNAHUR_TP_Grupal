@@ -17,7 +17,14 @@ const createCareer = async (req, res) => {
 
 const getAllCareers = async (req, res) => {
   try {
-    const careers = await careerService.getAllCareers();
+    // includeArchived solo para ADMIN (con auth opcional, sin romper público).
+    const includeArchived =
+      req.query.includeArchived === "1" && req.user?.rol === "ADMIN";
+
+    const careers = await careerService.getAllCareers({
+      unit: req.query.unit,
+      includeArchived,
+    });
 
     return res.status(200).json(careers);
   } catch (error) {
@@ -31,7 +38,12 @@ const getCareerById = async (req, res) => {
   try {
     const {id} = req.params;
 
-    const career = await careerService.findCareerById(id);
+    const includeArchived =
+      req.query.includeArchived === "1" && req.user?.rol === "ADMIN";
+
+    const career = await careerService.findCareerById(id, {
+      includeArchived,
+    });
   
     if (!career) {
       return res.status(404).json({
