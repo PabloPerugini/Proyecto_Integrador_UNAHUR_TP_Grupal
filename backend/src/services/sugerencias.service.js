@@ -49,10 +49,32 @@ function buildSugerencias({ subjects, progress = [] }) {
 
   // Grafo: disponibles ahora y camino crítico
   const graph = buildGraph({ subjects, progress });
+  // Desbloqueos transitivos por materia (estilo Plande): cuántas materias
+  // dependen, directa o indirectamente, de cada código disponible.
+  const dependents = new Map();
+  for (const s of subjects) {
+    for (const req of s.requires || []) {
+      if (!dependents.has(req)) dependents.set(req, []);
+      dependents.get(req).push(s.code);
+    }
+  }
+  const unlockCount = (code) => {
+    const seen = new Set([code]);
+    const queue = [...(dependents.get(code) || [])];
+    while (queue.length > 0) {
+      const current = queue.shift();
+      if (seen.has(current)) continue;
+      seen.add(current);
+      queue.push(...(dependents.get(current) || []));
+    }
+    seen.delete(code);
+    return seen.size;
+  };
   const disponibles = (graph.availableNow || []).map((code) => ({
     code,
     name: nameOf(code),
     critica: (graph.criticalPath || []).includes(code),
+    desbloquea: unlockCount(code),
   }));
 
   // Finales pendientes = Regularizadas

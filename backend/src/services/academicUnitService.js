@@ -1,10 +1,23 @@
 const AcademicUnit = require("../models/academicUnit");
 const University = require("../models/university");
+const Career = require("../models/career");
 
-const getAllAcademicUnits = async () => {
-    return AcademicUnit.find()
+const getAllAcademicUnits = async ({ withCounts } = {}) => {
+    const units = await AcademicUnit.find()
         .populate("university")
         .populate("parentUnit");
+
+    if (!withCounts) return units;
+
+    // Solo institutos con conteo de carreras visibles (hook excluye archivadas).
+    return Promise.all(
+        units.map(async (unit) => {
+            const careerCount = await Career.countDocuments({
+                academicUnit: unit._id,
+            });
+            return { ...unit.toObject(), careerCount };
+        }),
+    );
 };
 
 const findAcademicUnitById = async (id) => {

@@ -55,3 +55,18 @@ test("comunes disponibles excluye cursadas", () => {
   });
   assert.deepEqual(r.comunesDisponibles, []);
 });
+
+test("disponibles incluyen desbloquea transitivo", () => {
+  const r = buildSugerencias({
+    subjects: [
+      { code: "M1", name: "Base", year: 1, requires: [] },
+      { code: "M2", name: "Media", year: 1, requires: ["M1"] },
+      { code: "M3", name: "Alta", year: 2, requires: ["M2"] },
+    ],
+    progress: [],
+  });
+  const byCode = Object.fromEntries(
+    r.disponibles.map((d) => [d.code, d.desbloquea]),
+  );
+  assert.equal(byCode.M1, 2);
+});

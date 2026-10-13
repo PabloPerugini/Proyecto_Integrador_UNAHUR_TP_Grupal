@@ -6,15 +6,18 @@ const UserStudyPlan = require("../models/userStudyPlan");
 const SubjectProgress = require("../models/subjectProgress");
 const PlanImport = require("../models/planImport");
 
-// Obtener todos los planes accesibles
-const getAllStudyPlans = async (user) => {
+// Obtener todos los planes accesibles (filtro F1 ?career=).
+const getAllStudyPlans = async (user, { career } = {}) => {
+  const careerFilter = career ? { career } : {};
+
   if (user.rol === "ADMIN") {
-    return StudyPlan.find()
+    return StudyPlan.find(careerFilter)
       .populate("career")
       .populate("createdBy");
   }
 
   return StudyPlan.find({
+    ...careerFilter,
     $or: [
       {
         createdBy: null,
@@ -193,10 +196,64 @@ const deleteStudyPlan = async (id, user) => {
   };
 };
 
+// Tecnicatura intermedia como sub-plan virtual cerrado.
+// Respeta la misma visibilidad que findStudyPlanById.
+const getIntermediateView = async (id, user) => {
+  const plan = await findStudyPlanById(id, user);
+
+  if (!plan || !plan.intermediateTitle) return null;
+
+  const all = await PlanSubject.find({ studyPlan: id })
+    .populate("prerequisites.planSubject", "code name")
+    .lean();
+
+  const byId = new Map(
+    all.map((s) => [String(s._id), s.code]),
+  );
+
+  const reqCodes = (subject) =>
+    (subject.prerequisites || [])
+      .map((p) => {
+        const ref = p.planSubject;
+        if (ref && typeof ref === "object") return ref.code;
+        return byId.get(String(ref)) || null;
+      })
+      .filter(Boolean);
+
+  const interCodes = new Set(
+    all.filter((s) => s.intermediate).map((s) => s.code),
+  );
+
+  const subjects = all
+    .filter((s) => s.intermediate)
+    .map((s) => {
+      const reqs = reqCodes(s);
+      return {
+        code: s.code,
+        name: s.name,
+        year: s.year ?? null,
+        credits: s.credits ?? 0,
+        requires: reqs.filter((c) => interCodes.has(c)),
+        externalRequires: reqs.filter((c) => !interCodes.has(c)),
+      };
+    });
+
+  return {
+    planId: String(plan._id),
+    planName: plan.name,
+    intermediateTitle: plan.intermediateTitle,
+    creditsIntermediate: plan.creditsIntermediate ?? 0,
+    closed: subjects.every((s) => s.externalRequires.length === 0),
+    total: subjects.length,
+    subjects,
+  };
+};
+
 module.exports = {
   getAllStudyPlans,
   findStudyPlanById,
   createStudyPlan,
   updateStudyPlan,
   deleteStudyPlan,
+  getIntermediateView,
 };

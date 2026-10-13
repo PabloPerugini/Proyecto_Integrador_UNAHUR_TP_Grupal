@@ -19,7 +19,9 @@ const createAcademicUnit = async(req, res) => {
 const getAllAcademicUnits = async (req, res) => {
     try {
         const academicUnits =
-            await academicUnitService.getAllAcademicUnits();
+            await academicUnitService.getAllAcademicUnits({
+                withCounts: req.query.withCounts === "1",
+            });
         return res.status(200).json(academicUnits);
     }   catch (error) {
         return res.status(500).json({

@@ -38,8 +38,13 @@ const createStudyPlan = async (req, res) => {
 // Obtener todos los planes accesibles
 const getAllStudyPlans = async (req, res) => {
   try {
+    const career =
+      req.query.career && mongoose.isValidObjectId(req.query.career)
+        ? req.query.career
+        : undefined;
+
     const studyPlans =
-      await studyPlanService.getAllStudyPlans(req.user);
+      await studyPlanService.getAllStudyPlans(req.user, { career });
 
     return res.status(200).json(studyPlans);
 
@@ -211,6 +216,37 @@ const getSugerencias = async (req, res) => {
   }
 };
 
+// Vista tecnicatura intermedia como sub-plan virtual cerrado.
+const getIntermediate = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({
+        message: "ID de plan inválido",
+      });
+    }
+
+    const view = await studyPlanService.getIntermediateView(
+      id,
+      req.user
+    );
+
+    if (!view) {
+      return res.status(404).json({
+        message: "El plan no tiene tecnicatura intermedia",
+      });
+    }
+
+    return res.status(200).json(view);
+
+  } catch (error) {
+    return res.status(500).json({
+      message: "Error al calcular la tecnicatura intermedia",
+    });
+  }
+};
+
 module.exports = {
   createStudyPlan,
   getAllStudyPlans,
@@ -219,4 +255,5 @@ module.exports = {
   deleteStudyPlan,
   getGraph,
   getSugerencias,
+  getIntermediate,
 };
