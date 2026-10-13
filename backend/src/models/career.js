@@ -50,6 +50,9 @@ careerSchema.pre(/^find/, function () {
   }
 });
 
+// Evita carreras duplicadas por instituto.
+careerSchema.index({ name: 1, academicUnit: 1 }, { unique: true });
+
 const Career = mongoose.model("Career", careerSchema);
 
 module.exports = Career;

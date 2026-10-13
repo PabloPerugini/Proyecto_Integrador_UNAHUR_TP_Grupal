@@ -6,54 +6,36 @@ const UserStudyPlan = require("../models/userStudyPlan");
 const SubjectProgress = require("../models/subjectProgress");
 const PlanImport = require("../models/planImport");
 
+// Visibilidad: ADMIN ve todo; el resto ve oficiales publicados + propios.
+// (También filtra isActive salvo admin; ver F4.)
+const visibleTo = (user) =>
+  user.rol === "ADMIN"
+    ? {}
+    : {
+        isActive: { $ne: false },
+        $or: [
+          {
+            createdBy: null,
+            status: "published",
+          },
+          {
+            createdBy: user._id,
+          },
+        ],
+      };
+
 // Obtener todos los planes accesibles (filtro F1 ?career=).
 const getAllStudyPlans = async (user, { career } = {}) => {
   const careerFilter = career ? { career } : {};
 
-  if (user.rol === "ADMIN") {
-    return StudyPlan.find(careerFilter)
-      .populate("career")
-      .populate("createdBy");
-  }
-
-  return StudyPlan.find({
-    ...careerFilter,
-    isActive: { $ne: false },
-    $or: [
-      {
-        createdBy: null,
-        status: "published",
-      },
-      {
-        createdBy: user._id,
-      },
-    ],
-  })
+  return StudyPlan.find({ ...careerFilter, ...visibleTo(user) })
     .populate("career")
     .populate("createdBy");
 };
 
 // Obtener un plan por ID
 const findStudyPlanById = async (id, user) => {
-  if (user.rol === "ADMIN") {
-    return StudyPlan.findById(id)
-      .populate("career")
-      .populate("createdBy");
-  }
-
-  return StudyPlan.findOne({
-    _id: id,
-    isActive: { $ne: false },
-    $or: [
-      {
-        createdBy: null,
-        status: "published",
-      },
-      {
-        createdBy: user._id,
-      },
-    ],
-  })
+  return StudyPlan.findOne({ _id: id, ...visibleTo(user) })
     .populate("career")
     .populate("createdBy");
 };

@@ -40,6 +40,7 @@ const academicUnitSchema = new mongoose.Schema(
         timestamps: true,
     }
 );
+academicUnitSchema.index({ name: 1, university: 1 }, { unique: true });
 const AcademicUnit = mongoose.model(
     "AcademicUnit",
     academicUnitSchema

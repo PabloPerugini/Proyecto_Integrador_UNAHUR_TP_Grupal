@@ -68,6 +68,8 @@ const studyPlanSchema = new mongoose.Schema(
     }
 );
 
+studyPlanSchema.index({ name: 1, career: 1 }, { unique: true });
+
 const StudyPlan = mongoose.model("StudyPlan", studyPlanSchema);
 
 module.exports = StudyPlan;

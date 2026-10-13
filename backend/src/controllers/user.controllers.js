@@ -1,22 +1,13 @@
 const userService = require("../services/userService");
 const User = require("../models/user");
 const { signToken, getUserId } = require("../middlewares/auth");
-const { userSchema, userUpdateSchema } = require("../schemas/user.schemas");
+const { userUpdateSchema } = require("../schemas/user.schemas");
 
 const createUser = async (req, res) => {
   try {
-    const {error, value} = userSchema.validate(req.body, {
-      abortEarly:false,
-    });
-
-    if (error) {
-      return res.status(400).json({
-        message: "Datos invalidos",
-        errors: error.details.map((detail) => detail.message),
-      });
-    }
-
-    const newUser = await userService.createUser(value);
+    // El cuerpo ya viene validado por el middleware validarUser
+    // (fuente única: userSchema). Acá solo se aplican reglas de negocio.
+    const newUser = await userService.createUser(req.body);
 
     return res.status(201).json({
       message: "Usuario creado correctamente",
