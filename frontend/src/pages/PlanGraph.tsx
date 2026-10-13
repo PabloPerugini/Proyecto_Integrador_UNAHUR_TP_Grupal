@@ -284,6 +284,37 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
   const navigate = useNavigate();
   const { careerId: selectedCareerId, setCareerId: setSelectedCareerId } = useCareerSelection();
   const [graph, setGraph] = useState<GraphData | null>(null);
+  const [tab, setTab] = useState<'lic' | 'tec'>('lic');
+  const [interCodes, setInterCodes] = useState<Set<string> | null>(null);
+
+  // Subgrafo de la vista: Licenciatura completa o solo tecnicatura.
+  const displayGraph = useMemo(() => {
+    if (!graph || tab === 'lic' || !interCodes || interCodes.size === 0) return graph;
+    const nodes = graph.nodes.filter((n) => interCodes.has(n.code));
+    const inSet = new Set(nodes.map((n) => n.code));
+    const edges = graph.edges.filter((e) => inSet.has(e.source) && inSet.has(e.target));
+    const availableNow = (graph.availableNow ?? []).filter((c) => inSet.has(c));
+    const aprobadas = nodes.filter((n) => (n.status ?? 'Pendiente') === 'Aprobada');
+    const creditsTotal = nodes.reduce((a, n) => a + (n.credits ?? 0), 0);
+    const creditsAprobados = aprobadas.reduce((a, n) => a + (n.credits ?? 0), 0);
+    return {
+      ...graph,
+      nodes,
+      edges,
+      availableNow,
+      criticalPath: (graph.criticalPath ?? []).filter((c) => inSet.has(c)),
+      topologicalOrder: (graph.topologicalOrder ?? []).filter((c) => inSet.has(c)),
+      stats: {
+        ...graph.stats,
+        total: nodes.length,
+        aprobadas: aprobadas.length,
+        disponibles: availableNow.length,
+        pendientes: nodes.length - aprobadas.length,
+        creditsTotal,
+        creditsAprobados,
+      },
+    };
+  }, [graph, tab, interCodes]);
   const view = initialView;
   const [pinnedCode, setPinnedCode] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -302,7 +333,15 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
     setSelectedCareerId(id); // el contexto guarda ahora el ID del StudyPlan
     setGraph(null);
     setPinnedCode(null);
+    setTab('lic');
+    setInterCodes(null);
     setErr(null);
+    if (selectedPlan.intermediateTitle) {
+      studyPlansApi.getIntermediate(id).then(
+        (v) => { if (active) setInterCodes(new Set(v.subjects.map((s) => s.code))); },
+        () => { if (active) setInterCodes(null); },
+      );
+    }
     getPlanGraph(selectedPlan).then(g => { if (active) setGraph(g); }).catch(e => {
       if (active) setErr(e instanceof Error ? e.message : 'No se pudo cargar el plan');
     });
@@ -331,15 +370,15 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
 
   const selectedCode = pinnedCode;
 
-  const selectedNode = useMemo(() => graph?.nodes.find((n) => n.code === selectedCode) ?? null, [graph, selectedCode]);
-  const byCodeMap = useMemo(() => new Map((graph?.nodes ?? []).map((n) => [n.code, n])), [graph]);
+  const selectedNode = useMemo(() => displayGraph?.nodes.find((n) => n.code === selectedCode) ?? null, [displayGraph, selectedCode]);
+  const byCodeMap = useMemo(() => new Map((displayGraph?.nodes ?? []).map((n) => [n.code, n])), [displayGraph]);
 
   const fastPath = useMemo(() => {
-    if (!graph || !selectedCode || !byCodeMap.has(selectedCode)) {
+    if (!displayGraph || !selectedCode || !byCodeMap.has(selectedCode)) {
       return { set: new Set<string>(), edgeSet: new Set<string>(), chain: [] as string[], chainNames: [] as string[], chainCosts: [] as number[], cost: 0 };
     }
     const prereqOf = new Map<string, string[]>();
-    for (const e of graph.edges) {
+    for (const e of displayGraph.edges) {
       const subs = prereqOf.get(e.target) ?? [];
       subs.push(e.source);
       prereqOf.set(e.target, subs);
@@ -387,7 +426,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
       chainCosts: chain.map(costOf),
       cost,
     };
-  }, [graph, selectedCode, byCodeMap]);
+  }, [displayGraph, selectedCode, byCodeMap]);
 
   const fastPathSteps = useMemo(
     () =>
@@ -400,11 +439,12 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
   );
 
   const flowNodes: Node[] = useMemo(() => {
-    if (!graph) return [];
-    const criticalSet = new Set(graph.criticalPath ?? []);
-    const availableSet = new Set(graph.availableNow ?? []);
+    const g = displayGraph;
+    if (!g) return [];
+    const criticalSet = new Set(g.criticalPath ?? []);
+    const availableSet = new Set(g.availableNow ?? []);
     const yearGroups = new Map<number, PlanNodeData[]>();
-    const planNodes: Node[] = graph.nodes.map((n) => {
+    const planNodes: Node[] = g.nodes.map((n) => {
       const data = toPlanNodeData(n, availableSet, criticalSet, fastPath.set);
       if (n.year != null) {
         const arr = yearGroups.get(n.year) ?? [];
@@ -415,8 +455,8 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
     });
     const labels: Node[] = [];
     for (const [year, list] of yearGroups) {
-      const x = list.reduce((a, d) => a + (graph.nodes.find((n) => n.code === d.code)?.position.x ?? 0), 0) / list.length;
-      const top = Math.min(...list.map((d) => graph.nodes.find((n) => n.code === d.code)?.position.y ?? 0)) - 40;
+      const x = list.reduce((a, d) => a + (g.nodes.find((n) => n.code === d.code)?.position.x ?? 0), 0) / list.length;
+      const top = Math.min(...list.map((d) => g.nodes.find((n) => n.code === d.code)?.position.y ?? 0)) - 40;
       labels.push({
         id: `year-${year}`,
         type: 'yearLabel' as const,
@@ -428,12 +468,12 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
     }
     labels.sort((a, b) => (a.data as { year: number }).year - (b.data as { year: number }).year);
     return [...planNodes, ...labels];
-  }, [graph, fastPath]);
+  }, [displayGraph, fastPath]);
 
   const flowEdges: Edge[] = useMemo(() => {
-    if (!graph) return [];
-    const criticalSet = new Set(graph.criticalPath ?? []);
-    return graph.edges.map((e) => {
+    if (!displayGraph) return [];
+    const criticalSet = new Set(displayGraph.criticalPath ?? []);
+    return displayGraph.edges.map((e) => {
       const onOptimal = fastPath.edgeSet.has(e.id);
       const onCritical = criticalSet.has(e.source) && criticalSet.has(e.target);
       return {
@@ -448,7 +488,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
             : undefined,
       };
     });
-  }, [graph, fastPath]);
+  }, [displayGraph, fastPath]);
 
   const boardGroups = useMemo(() => {
     interface YearGroup {
@@ -462,11 +502,11 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
       credits: number;
       creditsAprob: number;
     }
-    if (!graph) return [] as YearGroup[];
-    const criticalSet = new Set(graph.criticalPath ?? []);
-    const availableSet = new Set(graph.availableNow ?? []);
+    if (!displayGraph) return [] as YearGroup[];
+    const criticalSet = new Set(displayGraph.criticalPath ?? []);
+    const availableSet = new Set(displayGraph.availableNow ?? []);
     const m = new Map<number, YearGroup>();
-    for (const n of graph.nodes) {
+    for (const n of displayGraph.nodes) {
       const y = n.year ?? 999;
       const g = m.get(y) ?? { year: y, c1: [], c2: [], anual: [], cuat: [], total: 0, aprobadas: 0, credits: 0, creditsAprob: 0 };
       const data = toPlanNodeData(n, availableSet, criticalSet, fastPath.set);
@@ -495,21 +535,21 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
       g.anual.sort((a, b) => a.name.localeCompare(b.name));
     }
     return out;
-  }, [graph, fastPath]);
+  }, [displayGraph, fastPath]);
 
   const requires = useMemo(() => {
-    if (!selectedNode || !graph) return [];
+    if (!selectedNode || !displayGraph) return [];
     return Array.from(byCodeMap.values()).filter((n) =>
-      graph.edges.some((e) => e.target === selectedNode.code && e.source === n.code),
+      displayGraph.edges.some((e) => e.target === selectedNode.code && e.source === n.code),
     );
-  }, [selectedNode, byCodeMap, graph]);
+  }, [selectedNode, byCodeMap, displayGraph]);
 
   const successors = useMemo(() => {
-    if (!selectedNode || !graph) return [];
+    if (!selectedNode || !displayGraph) return [];
     return Array.from(byCodeMap.values()).filter((n) =>
-      graph.edges.some((e) => e.source === selectedNode.code && e.target === n.code),
+      displayGraph.edges.some((e) => e.source === selectedNode.code && e.target === n.code),
     );
-  }, [selectedNode, byCodeMap, graph]);
+  }, [selectedNode, byCodeMap, displayGraph]);
 
   if (err) {
     return <Alert variant="danger" className="mt-3">{err}</Alert>;
@@ -589,12 +629,36 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
             </div>
           </div>
 
-          {graph && (
+          {displayGraph && (
             <div className="d-flex gap-1 small text-muted flex-wrap">
-              <Badge bg="secondary">Materias {graph.stats.total}</Badge>
-              <Badge bg="success">{graph.stats.aprobadas} aprobadas</Badge>
-              <Badge bg="warning" text="dark">{graph.stats.disponibles} disponibles</Badge>
-              <Badge bg="secondary">Créditos {graph.stats.creditsAprobados}/{graph.stats.creditsTotal}</Badge>
+              <Badge bg="secondary">Materias {displayGraph.stats.total}</Badge>
+              <Badge bg="success">{displayGraph.stats.aprobadas} aprobadas</Badge>
+              <Badge bg="warning" text="dark">{displayGraph.stats.disponibles} disponibles</Badge>
+              <Badge bg="secondary">Créditos {displayGraph.stats.creditsAprobados}/{displayGraph.stats.creditsTotal}</Badge>
+            </div>
+          )}
+
+          {selectedPlan?.intermediateTitle && (
+            <div className="d-flex gap-1" role="tablist" aria-label="Vista del plan">
+              <Button
+                size="sm"
+                role="tab"
+                aria-selected={tab === 'lic'}
+                variant={tab === 'lic' ? 'primary' : 'outline-primary'}
+                onClick={() => { setTab('lic'); setPinnedCode(null); }}
+              >
+                Licenciatura
+              </Button>
+              <Button
+                size="sm"
+                role="tab"
+                aria-selected={tab === 'tec'}
+                variant={tab === 'tec' ? 'primary' : 'outline-primary'}
+                onClick={() => { setTab('tec'); setPinnedCode(null); }}
+                title={interCodes ? `${interCodes.size} materias de la tecnicatura` : selectedPlan.intermediateTitle}
+              >
+                Tecnicatura
+              </Button>
             </div>
           )}
 
@@ -604,9 +668,14 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
 
         {err && <Alert variant="danger" className="mx-3">{err}</Alert>}
         {id && !selectedPlan && plans.length > 0 && <Alert variant="warning" className="mx-3">Seleccioná un plan válido. Los enlaces antiguos de carrera ya no corresponden al grafo.</Alert>}
-        {graph && graph.edges.length === 0 && <Alert variant="info" className="mx-3 py-1 small">No hay correlatividades vinculadas todavía. Podés agregarlas desde Administrar plan.</Alert>}
+        {displayGraph && displayGraph.edges.length === 0 && <Alert variant="info" className="mx-3 py-1 small">No hay correlatividades vinculadas todavía. Podés agregarlas desde Administrar plan.</Alert>}
         {graph?.intermediate && graph.intermediate.total > 0 && (
           <IntermediateBanner intermediate={graph.intermediate} />
+        )}
+        {tab === 'tec' && (
+          <Alert variant="info" className="mx-3 py-1 small">
+            Vista de tecnicatura: tu avance acá cuenta para ambas titulaciones.
+          </Alert>
         )}
 
         <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', margin: '0 8px 8px' }}>
@@ -717,9 +786,9 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
             </div>
           )}
 
-          {graph && pinnedCode && (
+          {displayGraph && pinnedCode && (
             <DetailPanel
-              graph={graph}
+              graph={displayGraph}
               selectedNode={selectedNode}
               requires={requires}
               successors={successors}

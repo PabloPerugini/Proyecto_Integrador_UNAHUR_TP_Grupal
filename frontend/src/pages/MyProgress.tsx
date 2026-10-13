@@ -45,6 +45,7 @@ export default function MyProgress() {
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [historyPreview, setHistoryPreview] = useState<{ matched: number; missing: number } | null>(null);
+  const [tab, setTab] = useState<'lic' | 'tec'>('lic');
   const enrollment = enrollments.find(x => getId(x.studyPlan) === selectedId);
   const selectedPlan = plans.find(p => p._id === selectedId);
 
@@ -199,6 +200,8 @@ export default function MyProgress() {
   };
 
   const approved = subjects.filter(s => draft[s._id]?.status === 'APROBADA');
+  // Pestaña tecnicatura: mismo progreso, vista filtrada (cuenta para ambas).
+  const visibleSubjects = tab === 'tec' ? subjects.filter(s => s.intermediate) : subjects;
   const grades = approved
     .map(s => Number(draft[s._id]?.grade))
     .filter(n => Number.isFinite(n));
@@ -224,9 +227,9 @@ export default function MyProgress() {
     <MessageBanner message={msg} onClose={clear} />
     <div className="card mb-4"><div className="card-body">
       <Form.Label>Plan de estudios</Form.Label>
-      <Form.Select value={selectedId} onChange={e => { setSelectedId(e.target.value); setCareerId(e.target.value); }}>
+      <Form.Select value={selectedId} onChange={e => { setSelectedId(e.target.value); setCareerId(e.target.value); setTab('lic'); }}>
         {!selectedId && <option value="">Seleccioná un plan...</option>}
-        {plans.map(p => <option key={p._id} value={p._id}>{p.name} — {careerName(p)}</option>)}
+        {plans.filter((p) => p._id === selectedId || enrollments.some((e) => getId(e.studyPlan) === p._id)).map(p => <option key={p._id} value={p._id}>{p.name} — {careerName(p)}</option>)}
       </Form.Select>
     </div></div>
     {loading && <div className="text-center py-5"><Spinner animation="border" /> Cargando tu progreso…</div>}
@@ -251,13 +254,13 @@ export default function MyProgress() {
         <PdfDropzone onFiles={onHistory} multiple={false} text="Arrastrá tu historia académica acá" hint="Se reconocerán las materias aprobadas; revisalas antes de guardar" />
         {historyPreview && <Alert variant="info" className="mt-3">{historyPreview.matched} aprobadas reconocidas; {historyPreview.missing} sin coincidencia. Los cambios aún no se guardaron.</Alert>}
       </div></div>}
-      <div className="card mb-4"><div className="card-header d-flex justify-content-between align-items-center gap-2 flex-wrap"><span className="d-flex align-items-center gap-2"><IconCoins size={16} /> Estado por materia</span><span className="d-flex gap-2">{enrollment && <Button size="sm" variant="outline-secondary" onClick={() => exportCsv()}>Exportar CSV</Button>}{enrollment && <Button size="sm" disabled={working || dirty.length === 0} onClick={() => void saveAll()}>{working ? 'Guardando…' : `Guardar cambios (${dirty.length})`}</Button>}</span></div>
-        <div className="card-body"><Table size="sm" responsive striped hover><thead><tr><th>Materia</th><th>Año</th><th>Estado</th><th>Nota</th><th>Créditos</th></tr></thead><tbody>
-          {subjects.map(s => <tr key={s._id}><td><strong>{subjectName(s)}</strong><div className="text-muted small">{s.code || 'Sin código'}</div></td><td>{s.year ?? '—'}{s.period != null ? ` · ${s.period}º` : ''}</td>
+      <div className="card mb-4"><div className="card-header d-flex justify-content-between align-items-center gap-2 flex-wrap"><span className="d-flex align-items-center gap-2"><IconCoins size={16} /> Estado por materia</span><span className="d-flex gap-2">{selectedPlan?.intermediateTitle && <><Button size="sm" variant={tab === 'lic' ? 'primary' : 'outline-primary'} onClick={() => setTab('lic')}>Licenciatura</Button><Button size="sm" variant={tab === 'tec' ? 'primary' : 'outline-primary'} onClick={() => setTab('tec')}>Tecnicatura</Button></>}{enrollment && <Button size="sm" variant="outline-secondary" onClick={() => exportCsv()}>Exportar CSV</Button>}{enrollment && <Button size="sm" disabled={working || dirty.length === 0} onClick={() => void saveAll()}>{working ? 'Guardando…' : `Guardar cambios (${dirty.length})`}</Button>}</span></div>
+        <div className="card-body">{tab === 'tec' && <p className="small text-muted">Vista de tecnicatura{selectedPlan?.intermediateTitle ? `: ${selectedPlan.intermediateTitle}` : ''}: lo que cargues acá cuenta para ambas titulaciones.</p>}<Table size="sm" responsive striped hover><thead><tr><th>Materia</th><th>Año</th><th>Estado</th><th>Nota</th><th>Créditos</th></tr></thead><tbody>
+          {visibleSubjects.map(s => <tr key={s._id}><td><strong>{subjectName(s)}</strong><div className="text-muted small">{s.code || 'Sin código'}</div></td><td>{s.year ?? '—'}{s.period != null ? ` · ${s.period}º` : ''}</td>
             <td><Form.Select size="sm" disabled={!enrollment || working} value={draft[s._id]?.status ?? 'PENDIENTE'} onChange={e => update(s._id, { status: e.target.value as ProgressStatus })}>{(Object.keys(STATUS) as ProgressStatus[]).map(k => <option key={k} value={k}>{STATUS[k]}</option>)}</Form.Select></td>
             <td><Form.Control size="sm" type="number" min={0} max={10} style={{ width: 86 }} disabled={!enrollment || working} value={draft[s._id]?.grade ?? ''} onChange={e => update(s._id, { grade: e.target.value })} /></td><td>{s.credits ?? 0}</td></tr>)}
         </tbody></Table>
-        {!subjects.length && <p className="text-muted">Este plan todavía no tiene materias.</p>}
+        {!visibleSubjects.length && <p className="text-muted">Este plan todavía no tiene materias.</p>}
         {enrollment && dirty.length > 0 && <Button disabled={working} onClick={() => void saveAll()}>{working ? 'Guardando…' : `Guardar cambios (${dirty.length})`}</Button>}
       </div></div>
     </>}
