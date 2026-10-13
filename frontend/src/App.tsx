@@ -4,14 +4,14 @@ import { ThemeProvider } from './context/ThemeContext'
 import { CareerSelectionProvider } from './context/CareerContext'
 import PageLoader from './components/PageLoader'
 import ErrorBoundary from './components/ErrorBoundary'
-import UserLayout from './layouts/UserLayout'
-import AdminLayout from './layouts/AdminLayout'
+import AppShell from './layouts/AppShell'
 import SplashScreen from './components/SplashScreen'
 import Favicon from './components/Favicon'
 import Home from './pages/Home'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import ProtectedRoute from './components/ProtectedRoute'
+import Forbidden from './pages/Forbidden'
 import { AuthProvider } from './context/AuthContext'
 import { useAuth } from './hooks/useAuth'
 import { Navigate, Outlet } from 'react-router-dom'
@@ -24,8 +24,17 @@ const UploadPlan = lazy(() => import('./pages/UploadPlan'))
 const Error404 = lazy(() => import('./pages/Error404'))
 
 function AdminRoute() {
-  const { user } = useAuth();
-  return user?.rol === 'ADMIN' ? <Outlet /> : <Navigate to="/" replace />;
+  const { user, status } = useAuth();
+  if (status === 'loading') {
+    return <PageLoader />;
+  }
+  if (user?.rol === 'ADMIN') {
+    return <Outlet />;
+  }
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  return <Navigate to="/403" replace />;
 }
 
 const SPLASH_DURATION_MS = 2600
@@ -74,20 +83,21 @@ export default function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route element={<ProtectedRoute />}>
-              <Route element={<UserLayout />}>
+              <Route element={<AppShell />}>
                 <Route path="/" element={<Home />} />
                 <Route path="/progreso" element={<PageSuspense><MyProgress /></PageSuspense>} />
                 <Route path="/grafo/:id?" element={<PageSuspense><PlanGraph /></PageSuspense>} />
                 <Route path="/tablero/:id?" element={<PageSuspense><PlanBoard /></PageSuspense>} />
-                <Route path="*" element={<PageSuspense><Error404 /></PageSuspense>} />
+                <Route path="/403" element={<Forbidden />} />
               </Route>
               <Route element={<AdminRoute />}>
-              <Route element={<AdminLayout />}>
+              <Route element={<AppShell />}>
                 <Route path="/cargar" element={<PageSuspense><UploadPlan /></PageSuspense>} />
                 <Route path="/admin/:id?" element={<PageSuspense><PlanAdmin /></PageSuspense>} />
               </Route>
               </Route>
               </Route>
+              <Route path="*" element={<PageSuspense><Error404 /></PageSuspense>} />
             </Routes>
           </ErrorBoundary>
         </BrowserRouter>
