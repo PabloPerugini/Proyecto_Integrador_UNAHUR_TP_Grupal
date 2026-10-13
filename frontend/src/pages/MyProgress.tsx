@@ -260,7 +260,7 @@ export default function MyProgress() {
             <td><Form.Select size="sm" disabled={!enrollment || working} value={draft[s._id]?.status ?? 'PENDIENTE'} onChange={e => update(s._id, { status: e.target.value as ProgressStatus })}>{(Object.keys(STATUS) as ProgressStatus[]).map(k => <option key={k} value={k}>{STATUS[k]}</option>)}</Form.Select></td>
             <td><Form.Control size="sm" type="number" min={0} max={10} style={{ width: 86 }} disabled={!enrollment || working} value={draft[s._id]?.grade ?? ''} onChange={e => update(s._id, { grade: e.target.value })} /></td><td>{s.credits ?? 0}</td></tr>)}
         </tbody></Table>
-        {!visibleSubjects.length && <p className="text-muted">Este plan todavía no tiene materias.</p>}
+        {!visibleSubjects.length && <p className="text-muted">{tab === 'tec' && subjects.length > 0 ? 'La tecnicatura todavía no tiene materias marcadas.' : 'Este plan todavía no tiene materias.'}</p>}
         {enrollment && dirty.length > 0 && <Button disabled={working} onClick={() => void saveAll()}>{working ? 'Guardando…' : `Guardar cambios (${dirty.length})`}</Button>}
       </div></div>
     </>}

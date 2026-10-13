@@ -368,6 +368,9 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
+  // Tec sin materias marcadas: se muestra aviso en vez de canvas vacío.
+  const tecEmpty = tab === 'tec' && (displayGraph?.nodes.length ?? -1) === 0;
+
   const selectedCode = pinnedCode;
 
   const selectedNode = useMemo(() => displayGraph?.nodes.find((n) => n.code === selectedCode) ?? null, [displayGraph, selectedCode]);
@@ -678,8 +681,15 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
           </Alert>
         )}
 
+        {tecEmpty && (
+          <Alert variant="warning" className="mx-3">
+            La tecnicatura de este plan todavía no tiene materias marcadas.
+            El administrador las marca desde Editar plan.
+          </Alert>
+        )}
+
         <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', margin: '0 8px 8px' }}>
-          {view === 'grafo' && graph && (
+          {view === 'grafo' && graph && !tecEmpty && (
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8, flexShrink: 0 }}>
               <div
                 style={{
@@ -721,7 +731,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
           )}
 
           <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
-            {view === 'grafo' && graph && (
+            {view === 'grafo' && graph && !tecEmpty && (
               <ReactFlow
                 nodes={flowNodes}
                 edges={flowEdges}
@@ -741,7 +751,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
               </ReactFlow>
             )}
 
-          {view === 'tablero' && graph && (
+          {view === 'tablero' && graph && !tecEmpty && (
             <div style={{ height: '100%', overflow: 'auto', padding: '4px 12px 20px' }}>
               {boardGroups.map((g) => (
                 <div

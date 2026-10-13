@@ -208,6 +208,12 @@ function PlanCard({
 
             {inter && (
               <div className="mt-2" style={{ maxHeight: 280, overflowY: 'auto' }}>
+                {inter.total === 0 ? (
+                  <p className="text-muted small mt-2">
+                    La tecnicatura todavía no tiene materias marcadas.
+                  </p>
+                ) : (
+                <>
                 <p className="small mb-1">
                   {inter.total} materias
                   {(inter.creditsIntermediate ?? 0) > 0 && ` · ${inter.creditsIntermediate} créditos`}
@@ -237,6 +243,8 @@ function PlanCard({
                     </li>
                   ))}
                 </ul>
+                </>
+                )}
               </div>
             )}
           </details>
