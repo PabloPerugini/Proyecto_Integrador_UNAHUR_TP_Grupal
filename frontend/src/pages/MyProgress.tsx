@@ -154,7 +154,37 @@ export default function MyProgress() {
     finally { setWorking(false); }
   };
 
+  const exportCsv = () => {
+    const rows = [
+      ['codigo', 'materia', 'año', 'estado', 'nota', 'creditos'],
+      ...subjects.map((s) => [
+        s.code ?? '',
+        subjectName(s),
+        s.year ?? '',
+        draft[s._id]?.status ?? 'PENDIENTE',
+        draft[s._id]?.grade ?? '',
+        s.credits ?? 0,
+      ]),
+    ];
+    const csv = rows
+      .map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(';'))
+      .join('\r\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `progreso-${selectedPlan?.name ?? 'plan'}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const approved = subjects.filter(s => draft[s._id]?.status === 'APROBADA');
+  const grades = approved
+    .map(s => Number(draft[s._id]?.grade))
+    .filter(n => Number.isFinite(n));
+  const average = grades.length
+    ? Math.round((grades.reduce((a, b) => a + b, 0) / grades.length) * 100) / 100
+    : null;
   const creditsTotal = subjects.reduce((a,s) => a + (s.credits ?? 0), 0);
   const creditsApproved = approved.reduce((a,s) => a + (s.credits ?? 0), 0);
   const percentage = creditsTotal ? Math.round(creditsApproved * 100 / creditsTotal) : subjects.length ? Math.round(approved.length * 100 / subjects.length) : 0;
@@ -192,6 +222,7 @@ export default function MyProgress() {
         <div className="stat-card"><span className="stat-card__label">créditos</span><span className="stat-card__value">{fmt.format(creditsApproved)}<span className="fs-6 text-muted fw-semibold"> / {fmt.format(creditsTotal)}</span></span><span className="stat-card__foot">aprobados sobre total del plan</span></div>
         <div className="stat-card"><span className="stat-card__label">avance</span><div className="ring-wrap"><Ring value={percentage} color="#198754" /></div></div>
         <div className="stat-card"><span className="stat-card__label">te faltan</span><span className="stat-card__value">{subjects.length - approved.length}</span><span className="stat-card__foot">materias por aprobar</span></div>
+        <div className="stat-card"><span className="stat-card__label">promedio</span><span className="stat-card__value">{average === null ? '—' : average.toFixed(2)}</span><span className="stat-card__foot">{grades.length === 1 ? '1 materia con nota' : `${grades.length} materias con nota`}</span></div>
       </div>
       {byYear.length > 0 && <div className="card mb-4"><div className="card-header d-flex align-items-center gap-2"><IconBoard size={16} /> Avance por año</div><div className="card-body d-grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))' }}>
         {byYear.map(([year,v]) => <div key={year}><div className="yr-row mb-1"><span className="yr-row__label">{year === 0 ? 'Sin año' : `Año ${year}`}</span><span className="text-muted small">{v.approved}/{v.total}</span></div><div className="mini-progress"><div className="mini-progress__bar" style={{ width: `${v.total ? v.approved * 100 / v.total : 0}%` }} /></div></div>)}
@@ -200,7 +231,7 @@ export default function MyProgress() {
         <PdfDropzone onFiles={onHistory} multiple={false} text="Arrastrá tu historia académica acá" hint="Se reconocerán las materias aprobadas; revisalas antes de guardar" />
         {historyPreview && <Alert variant="info" className="mt-3">{historyPreview.matched} aprobadas reconocidas; {historyPreview.missing} sin coincidencia. Los cambios aún no se guardaron.</Alert>}
       </div></div>}
-      <div className="card mb-4"><div className="card-header d-flex justify-content-between align-items-center gap-2 flex-wrap"><span className="d-flex align-items-center gap-2"><IconCoins size={16} /> Estado por materia</span>{enrollment && <Button size="sm" disabled={working || dirty.length === 0} onClick={() => void saveAll()}>{working ? 'Guardando…' : `Guardar cambios (${dirty.length})`}</Button>}</div>
+      <div className="card mb-4"><div className="card-header d-flex justify-content-between align-items-center gap-2 flex-wrap"><span className="d-flex align-items-center gap-2"><IconCoins size={16} /> Estado por materia</span><span className="d-flex gap-2">{enrollment && <Button size="sm" variant="outline-secondary" onClick={() => exportCsv()}>Exportar CSV</Button>}{enrollment && <Button size="sm" disabled={working || dirty.length === 0} onClick={() => void saveAll()}>{working ? 'Guardando…' : `Guardar cambios (${dirty.length})`}</Button>}</span></div>
         <div className="card-body"><Table size="sm" responsive striped hover><thead><tr><th>Materia</th><th>Año</th><th>Estado</th><th>Nota</th><th>Créditos</th></tr></thead><tbody>
           {subjects.map(s => <tr key={s._id}><td><strong>{subjectName(s)}</strong><div className="text-muted small">{s.code || 'Sin código'}</div></td><td>{s.year ?? '—'}{s.period != null ? ` · ${s.period}º` : ''}</td>
             <td><Form.Select size="sm" disabled={!enrollment || working} value={draft[s._id]?.status ?? 'PENDIENTE'} onChange={e => update(s._id, { status: e.target.value as ProgressStatus })}>{(Object.keys(STATUS) as ProgressStatus[]).map(k => <option key={k} value={k}>{STATUS[k]}</option>)}</Form.Select></td>
