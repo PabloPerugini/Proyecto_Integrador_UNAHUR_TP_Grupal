@@ -8,6 +8,7 @@ import PageHeader from '../components/PageHeader';
 import MessageBanner from '../components/MessageBanner';
 import PdfDropzone from '../components/PdfDropzone';
 import { IconBoard, IconCheck, IconCoins } from '../components/icons';
+import { instituteColor, instituteGradientTec } from '../utils/instituteColors';
 
 const STATUS: Record<ProgressStatus, string> = {
   PENDIENTE: 'Pendiente', CURSANDO: 'Cursando', REGULARIZADA: 'Regularizada', APROBADA: 'Aprobada',
@@ -200,6 +201,15 @@ export default function MyProgress() {
   };
 
   const approved = subjects.filter(s => draft[s._id]?.status === 'APROBADA');
+  const baseColor = (() => {
+    const c = selectedPlan?.career;
+    if (c && typeof c === 'object') {
+      if (c.color) return c.color;
+      const u = c.academicUnit;
+      if (u && typeof u === 'object' && u.name) return instituteColor(u.name);
+    }
+    return '#6841df';
+  })();
   // Pestaña tecnicatura: mismo progreso, vista filtrada (cuenta para ambas).
   const visibleSubjects = tab === 'tec' ? subjects.filter(s => s.intermediate) : subjects;
   const grades = approved
@@ -254,7 +264,7 @@ export default function MyProgress() {
         <PdfDropzone onFiles={onHistory} multiple={false} text="Arrastrá tu historia académica acá" hint="Se reconocerán las materias aprobadas; revisalas antes de guardar" />
         {historyPreview && <Alert variant="info" className="mt-3">{historyPreview.matched} aprobadas reconocidas; {historyPreview.missing} sin coincidencia. Los cambios aún no se guardaron.</Alert>}
       </div></div>}
-      <div className="card mb-4"><div className="card-header d-flex justify-content-between align-items-center gap-2 flex-wrap"><span className="d-flex align-items-center gap-2"><IconCoins size={16} /> Estado por materia</span><span className="d-flex gap-2">{selectedPlan?.intermediateTitle && <><Button size="sm" variant={tab === 'lic' ? 'primary' : 'outline-primary'} onClick={() => setTab('lic')}>Licenciatura</Button><Button size="sm" variant={tab === 'tec' ? 'primary' : 'outline-primary'} onClick={() => setTab('tec')}>Tecnicatura</Button></>}{enrollment && <Button size="sm" variant="outline-secondary" onClick={() => exportCsv()}>Exportar CSV</Button>}{enrollment && <Button size="sm" disabled={working || dirty.length === 0} onClick={() => void saveAll()}>{working ? 'Guardando…' : `Guardar cambios (${dirty.length})`}</Button>}</span></div>
+      <div className="card mb-4"><div className="card-header d-flex justify-content-between align-items-center gap-2 flex-wrap"><span className="d-flex align-items-center gap-2"><IconCoins size={16} /> Estado por materia</span><span className="d-flex gap-2">{selectedPlan?.intermediateTitle && <><Button size="sm" variant={tab === 'lic' ? 'primary' : 'outline-primary'} onClick={() => setTab('lic')}>Licenciatura</Button><Button size="sm" variant={tab === 'tec' ? 'primary' : 'outline-primary'} style={tab === 'tec' ? { background: instituteGradientTec(baseColor), borderColor: 'transparent' } : undefined} onClick={() => setTab('tec')}>Tecnicatura</Button></>}{enrollment && <Button size="sm" variant="outline-secondary" onClick={() => exportCsv()}>Exportar CSV</Button>}{enrollment && <Button size="sm" disabled={working || dirty.length === 0} onClick={() => void saveAll()}>{working ? 'Guardando…' : `Guardar cambios (${dirty.length})`}</Button>}</span></div>
         <div className="card-body">{tab === 'tec' && <p className="small text-muted">Vista de tecnicatura{selectedPlan?.intermediateTitle ? `: ${selectedPlan.intermediateTitle}` : ''}: lo que cargues acá cuenta para ambas titulaciones.</p>}<Table size="sm" responsive striped hover><thead><tr><th>Materia</th><th>Año</th><th>Estado</th><th>Nota</th><th>Créditos</th></tr></thead><tbody>
           {visibleSubjects.map(s => <tr key={s._id}><td><strong>{subjectName(s)}</strong><div className="text-muted small">{s.code || 'Sin código'}</div></td><td>{s.year ?? '—'}{s.period != null ? ` · ${s.period}º` : ''}</td>
             <td><Form.Select size="sm" disabled={!enrollment || working} value={draft[s._id]?.status ?? 'PENDIENTE'} onChange={e => update(s._id, { status: e.target.value as ProgressStatus })}>{(Object.keys(STATUS) as ProgressStatus[]).map(k => <option key={k} value={k}>{STATUS[k]}</option>)}</Form.Select></td>

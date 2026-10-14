@@ -20,10 +20,20 @@ export function instituteColor(unitName?: string | null): string {
 }
 
 export function instituteGradient(base: string): string {
-  return `linear-gradient(135deg, ${base} 0%, color-mix(in srgb, ${base} 52%, #0b0f14) 100%)`;
+  return (
+    `linear-gradient(135deg, ` +
+    `color-mix(in srgb, ${base} 72%, #ffffff) 0%, ` +
+    `${base} 46%, ` +
+    `color-mix(in srgb, ${base} 58%, #0b0f14) 100%)`
+  );
 }
 
 // Tono diferenciado para la tecnicatura (misma identidad, más claro).
 export function instituteGradientTec(base: string): string {
-  return `linear-gradient(135deg, color-mix(in srgb, ${base} 68%, #ffffff) 0%, color-mix(in srgb, ${base} 72%, #0b0f14) 100%)`;
+  return (
+    `linear-gradient(135deg, ` +
+    `color-mix(in srgb, ${base} 38%, #ffffff) 0%, ` +
+    `color-mix(in srgb, ${base} 62%, #ffffff) 55%, ` +
+    `color-mix(in srgb, ${base} 78%, #0b0f14) 100%)`
+  );
 }

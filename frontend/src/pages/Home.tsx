@@ -23,7 +23,7 @@ import PageLoader from '../components/PageLoader';
 import EmptyState from '../components/EmptyState';
 
 import { IconCap, IconBoard } from '../components/icons';
-import { instituteColor, instituteGradient } from '../utils/instituteColors';
+import { instituteColor, instituteGradient, instituteGradientTec } from '../utils/instituteColors';
 
 function unitNameOfCareer(career: Career): string | null {
   const unit = career.academicUnit as unknown as { _id: string; name: string } | string | null;
@@ -194,7 +194,7 @@ function PlanCard({
           )}
 
           {plan.intermediateTitle && (
-            <span className="chip" title="Incluye tecnicatura intermedia">
+            <span className="chip" title="Incluye tecnicatura intermedia" style={{ background: instituteGradientTec(careerColor), color: '#fff', border: 'none' }}>
               🎓 {plan.intermediateTitle}
             </span>
           )}
