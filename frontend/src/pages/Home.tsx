@@ -31,6 +31,14 @@ function unitNameOfCareer(career: Career): string | null {
   return null;
 }
 
+function unitNameOfPlanCareer(plan: StudyPlan): string | null {
+  const career = plan.career;
+  if (!career || typeof career === 'string') return null;
+  const unit = career.academicUnit as unknown as { _id: string; name: string } | string | null;
+  if (unit && typeof unit === 'object') return unit.name ?? null;
+  return null;
+}
+
 function careerCoverColor(career: Career): string {
   return career.color || instituteColor(unitNameOfCareer(career));
 }
@@ -399,9 +407,9 @@ function planCareerName(plan: StudyPlan): string {
 
 function planCareerColor(plan: StudyPlan): string {
   if (plan.career && typeof plan.career === 'object') {
-    return plan.career.color || '#6841df';
+    return plan.career.color || instituteColor(unitNameOfPlanCareer(plan));
   }
-  return '#6841df';
+  return instituteColor(null);
 }
 
 // =========================================

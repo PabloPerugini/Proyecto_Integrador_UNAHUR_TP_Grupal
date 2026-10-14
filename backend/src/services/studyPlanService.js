@@ -6,6 +6,12 @@ const UserStudyPlan = require("../models/userStudyPlan");
 const SubjectProgress = require("../models/subjectProgress");
 const PlanImport = require("../models/planImport");
 
+// Carreras con unidad populada (para colores por instituto en el front).
+const populateCareer = {
+  path: "career",
+  populate: { path: "academicUnit", select: "name" },
+};
+
 // Visibilidad: ADMIN ve todo; el resto ve oficiales publicados + propios.
 // (También filtra isActive salvo admin; ver F4.)
 const visibleTo = (user) =>
@@ -29,14 +35,14 @@ const getAllStudyPlans = async (user, { career } = {}) => {
   const careerFilter = career ? { career } : {};
 
   return StudyPlan.find({ ...careerFilter, ...visibleTo(user) })
-    .populate("career")
+    .populate(populateCareer)
     .populate("createdBy");
 };
 
 // Obtener un plan por ID
 const findStudyPlanById = async (id, user) => {
   return StudyPlan.findOne({ _id: id, ...visibleTo(user) })
-    .populate("career")
+    .populate(populateCareer)
     .populate("createdBy");
 };
 

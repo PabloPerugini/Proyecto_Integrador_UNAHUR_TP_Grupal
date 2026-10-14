@@ -5,6 +5,7 @@ export interface CareerRef {
   name?: string;
   color?: string;
   university?: string | { _id: string; name: string } | null;
+  academicUnit?: string | { _id: string; name: string } | null;
 }
 export interface CorrRow {
   name: string;

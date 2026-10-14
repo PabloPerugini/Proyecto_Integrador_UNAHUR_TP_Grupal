@@ -20,6 +20,7 @@ import type { GraphData, IntermediateProgress } from '../types';
 import { useCareerSelection } from '../context/CareerContext';
 import { yearLabel } from '../utils/subjects';
 import { STATUS_COLOR, STATUS_BADGE, statusColor, statusLabel } from '../utils/status';
+import { instituteColor, instituteGradientTec } from '../utils/instituteColors';
 import ColorDot from '../components/ColorDot';
 
 interface PlanNodeData {
@@ -323,6 +324,17 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
   const [plans, setPlans] = useState<StudyPlan[]>([]);
   const selectedPlan = useMemo(() => plans.find((p) => p._id === id) ?? null, [plans, id]);
 
+  // Color del instituto (oficial UNAHUR) con fallback a carrera/grafo.
+  const planBaseColor = useMemo(() => {
+    const c = selectedPlan?.career;
+    if (c && typeof c === 'object') {
+      if (c.color) return c.color;
+      const u = c.academicUnit;
+      if (u && typeof u === 'object' && u.name) return instituteColor(u.name);
+    }
+    return graph?.color ?? '#0d6efd';
+  }, [selectedPlan, graph]);
+
   useEffect(() => {
     let active = true;
     studyPlansApi.getAll().then(result => { if (active) setPlans(result); }).catch(e => { if (active) setErr(e instanceof Error ? e.message : 'Error cargando planes'); });
@@ -625,9 +637,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
       <div className="plan-graph" style={{ height: 'calc(100dvh - 118px)', display: 'flex', flexDirection: 'column', maxWidth: 1400, margin: '0 auto' }}>
         <div className="d-flex align-items-center gap-3 px-3 pt-3 pb-2 flex-wrap">
           <div className="d-flex align-items-center gap-2 me-auto">
-            {graph?.color && (
-              <ColorDot color={graph.color} size={16} />
-            )}
+            <ColorDot color={planBaseColor} size={16} />
             <div>
               <h1 className="mb-0 fs-4">
                 {selectedPlan ? `${careerName(selectedPlan)} · ${selectedPlan.name}` : 'Plan de estudios'} ·{' '}
@@ -676,6 +686,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
                 role="tab"
                 aria-selected={tab === 'tec'}
                 variant={tab === 'tec' ? 'primary' : 'outline-primary'}
+                style={tab === 'tec' ? { background: instituteGradientTec(planBaseColor), borderColor: 'transparent' } : undefined}
                 onClick={() => { setTab('tec'); setPinnedCode(null); }}
                 title={interCodes ? `${interCodes.size} materias de la tecnicatura` : selectedPlan.intermediateTitle}
               >
@@ -776,10 +787,10 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
                 <div
                   key={g.year}
                   className="card mb-3"
-                  style={{ borderLeft: `5px solid ${graph.color ?? '#0d6efd'}`, borderRadius: 10 }}
+                  style={{ borderLeft: `5px solid ${planBaseColor}`, borderRadius: 10 }}
                 >
                   <div className="card-body py-2 px-3 d-flex flex-wrap align-items-center gap-3">
-                    <div className="fw-bold" style={{ color: graph.color ?? '#0d6efd', minWidth: 90 }}>
+                    <div className="fw-bold" style={{ color: planBaseColor, minWidth: 90 }}>
                       {yearLabel(g.year)}
                     </div>
                     <div className="small text-muted">
