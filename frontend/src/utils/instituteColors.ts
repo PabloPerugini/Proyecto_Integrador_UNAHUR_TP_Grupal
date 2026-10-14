@@ -10,7 +10,7 @@ export const INSTITUTE_COLORS: Record<string, string> = {
   'Instituto de Educación': '#ea4f51',
 };
 
-export const DEFAULT_INSTITUTE_COLOR = '#6841df';
+export const DEFAULT_INSTITUTE_COLOR = '#238a42';
 
 export function instituteColor(unitName?: string | null): string {
   if (unitName && INSTITUTE_COLORS[unitName]) {

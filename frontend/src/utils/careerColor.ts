@@ -1,51 +1,33 @@
 import type { Career } from '../types';
+import { instituteColor, DEFAULT_INSTITUTE_COLOR } from './instituteColors';
 
-const INSTITUTE_COLORS: Record<string, string> = {
-  biotecnologia: '#219ecf',
-  'tecnologia e ingenieria': '#f08100',
-  'salud comunitaria': '#00a79f',
-  educacion: '#ef7a70',
-};
-
-const FALLBACK_COLORS = [
-  '#219ecf',
-  '#f08100',
-  '#00a79f',
-  '#ef7a70',
-  '#609e2f',
-  '#8b5cf6',
-  '#ea4f51',
-  '#0089cd',
-];
-
-function normalizeName(value: string | undefined): string {
-  return (
-    (value ?? '')
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/\s+/g, ' ')
-      .trim()
-      .toLowerCase()
-  );
+// Fuente canónica de color por instituto (hex oficiales UNAHUR).
+// Se resuelve por nombre de unidad académica; `institute`/`name` quedan
+// como compatibilidad para llamadores viejos.
+export function deriveCareerColor(
+  institute: string | undefined,
+  name: string | undefined,
+  academicUnitName?: string | null,
+): string {
+  if (academicUnitName) return instituteColor(academicUnitName);
+  if (institute && instituteColor(institute) !== DEFAULT_INSTITUTE_COLOR) {
+    return instituteColor(institute);
+  }
+  void name;
+  return DEFAULT_INSTITUTE_COLOR;
 }
 
-function hashString(value: string): number {
-  let hash = 0;
-  for (const ch of value) hash = (hash * 31 + ch.charCodeAt(0)) % 997;
-  return hash;
-}
-
-// ESPEJO del backend (backend/src/utils/careerColor.js) — la fuente canónica
-// es el backend, que persiste el color al crear. No cambiar hex ni hash acá
-// sin cambiarlo allá: misma carrera, distinto color en admin vs lista.
-export function deriveCareerColor(institute: string | undefined, name: string | undefined): string {
-  const inst = normalizeName(institute);
-  if (INSTITUTE_COLORS[inst]) return INSTITUTE_COLORS[inst];
-  const key = inst || normalizeName(name);
-  return FALLBACK_COLORS[hashString(key) % FALLBACK_COLORS.length];
-}
-
-export function getCareerColor(career: Pick<Career, 'color' | 'institute' | 'name'> | null | undefined): string {
+export function getCareerColor(
+  career:
+    | Pick<Career, 'color' | 'institute' | 'name'> & {
+        academicUnit?: string | { _id: string; name: string } | null;
+      }
+    | null
+    | undefined,
+): string {
   if (career?.color) return career.color;
-  return deriveCareerColor(career?.institute, career?.name);
+  const unit = career?.academicUnit;
+  const unitName =
+    unit && typeof unit === 'object' ? unit.name : undefined;
+  return deriveCareerColor(career?.institute, career?.name, unitName);
 }

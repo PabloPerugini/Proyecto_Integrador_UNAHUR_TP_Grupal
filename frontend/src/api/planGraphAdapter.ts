@@ -61,7 +61,7 @@ export async function getPlanGraph(plan: StudyPlan): Promise<GraphData> {
   const intermediateItems = itemsSorted.filter(s => s.intermediate);
   return {
     title: `${careerName(plan)} · ${plan.name}`,
-    color: typeof plan.career === 'object' && plan.career ? getCareerColor({ name: plan.career.name || '', color: plan.career.color }) : '#6841df',
+    color: typeof plan.career === 'object' && plan.career ? getCareerColor({ name: plan.career.name || '', color: plan.career.color, academicUnit: plan.career.academicUnit ?? null }) : '#238a42',
     nodes, edges, availableNow, criticalPath: [], hasCycle: false, topologicalOrder: [],
     stats: {
       total: nodes.length, aprobadas: approved.length, disponibles: availableNow.length,

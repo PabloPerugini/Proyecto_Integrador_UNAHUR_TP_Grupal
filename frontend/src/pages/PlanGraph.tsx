@@ -38,7 +38,7 @@ interface PlanNodeData {
 
 function nodeBorder(d: Pick<PlanNodeData, 'optimal' | 'critical' | 'available'>, selected = false): string {
   if (selected) return '3px solid #212529';
-  if (d.optimal) return '3px solid #6f42c1';
+  if (d.optimal) return '3px solid #d9870b';
   if (d.critical) return '3px solid #fd7e14';
   if (d.available) return '3px solid #ffc107';
   return '3px solid rgba(0,0,0,.15)';
@@ -48,7 +48,7 @@ function StatusBadges({ d }: { d: Pick<PlanNodeData, 'available' | 'optimal' | '
   return (
     <>
       {d.available && <span className="badge text-bg-warning" style={{ fontSize: 9 }}>disponible</span>}
-      {d.optimal && <span className="badge" style={{ fontSize: 9, background: '#6f42c1' }}>óptima</span>}
+      {d.optimal && <span className="badge" style={{ fontSize: 9, background: '#d9870b' }}>óptima</span>}
       {d.critical && <span className="badge text-bg-dark" style={{ fontSize: 9 }}>crítico</span>}
     </>
   );
@@ -173,7 +173,7 @@ const LEGEND: { color: string; label: string }[] = [
   { color: STATUS_COLOR.Pendiente, label: 'Pendiente' },
   { color: '#ffc107', label: 'Disponible' },
   { color: '#fd7e14', label: 'Camino crítico' },
-  { color: '#6f42c1', label: 'Ruta óptima' },
+  { color: '#d9870b', label: 'Ruta óptima' },
 ];
 
 function FitButton() {
@@ -237,8 +237,8 @@ function DetailPanel({ graph, selectedNode, requires, successors, fastPath, onCl
               </ul>
 
               {fastPath.cost > 0 && (
-                <div className="mt-3 p-2" style={{ background: 'rgba(111,66,193,.14)', borderRadius: 8, borderLeft: '3px solid #6f42c1' }}>
-                  <div className="fw-semibold" style={{ color: '#6f42c1', fontSize: 13 }}>
+                <div className="mt-3 p-2" style={{ background: 'rgba(217,135,11,.14)', borderRadius: 8, borderLeft: '3px solid #d9870b' }}>
+                  <div className="fw-semibold" style={{ color: '#b26a00', fontSize: 13 }}>
                     ¡Podés cursarla en ≈ {fastPath.cost}{' '}
                     {fastPath.cost === 1 ? 'cuatrimestre' : 'cuatrimestres'}!
                   </div>
@@ -258,7 +258,7 @@ function DetailPanel({ graph, selectedNode, requires, successors, fastPath, onCl
                             {s.cost > 0 && <span> (acumulado ≈ {acc})</span>}
                           </span>
                           {isLast && (
-                            <span className="badge ms-1" style={{ background: '#6f42c1' }}>
+                            <span className="badge ms-1" style={{ background: '#d9870b' }}>
                               esta materia
                             </span>
                           )}
@@ -332,7 +332,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
       const u = c.academicUnit;
       if (u && typeof u === 'object' && u.name) return instituteColor(u.name);
     }
-    return graph?.color ?? '#0d6efd';
+    return graph?.color ?? '#238a42';
   }, [selectedPlan, graph]);
 
   useEffect(() => {
@@ -514,7 +514,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
         target: e.target,
         animated: onOptimal || onCritical,
         style: onOptimal
-          ? { stroke: '#6f42c1', strokeWidth: 2.5, strokeDasharray: '6 3' }
+          ? { stroke: '#d9870b', strokeWidth: 2.5, strokeDasharray: '6 3' }
           : onCritical
             ? { stroke: '#fd7e14', strokeWidth: 2 }
             : undefined,

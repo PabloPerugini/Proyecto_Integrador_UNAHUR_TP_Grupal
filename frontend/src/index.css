@@ -4,10 +4,10 @@
   color-scheme: light dark;
 
   --gradify-font: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
-  --gradify-brand: #6d28d9;
-  --gradify-brand-2: #4f46e5;
-  --gradify-brand-rgb: 109, 40, 217;
-  --gradify-accent: #22d3ee;
+  --gradify-brand: #238a42;
+  --gradify-brand-2: #0a6b4e;
+  --gradify-brand-rgb: 35, 138, 66;
+  --gradify-accent: #ffb020;
 
   --gradify-app-bg: #f3f4f9;
   --gradify-surface: #ffffff;

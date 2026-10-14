@@ -208,7 +208,7 @@ export default function MyProgress() {
       const u = c.academicUnit;
       if (u && typeof u === 'object' && u.name) return instituteColor(u.name);
     }
-    return '#6841df';
+    return '#238a42';
   })();
   // Pestaña tecnicatura: mismo progreso, vista filtrada (cuenta para ambas).
   const visibleSubjects = tab === 'tec' ? subjects.filter(s => s.intermediate) : subjects;

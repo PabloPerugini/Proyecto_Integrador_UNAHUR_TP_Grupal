@@ -797,7 +797,7 @@ export default function Home() {
                 key={entry.plan._id}
                 entry={entry}
                 careerName={selectedCareer?.name ?? 'Carrera asociada'}
-                careerColor={selectedCareer ? careerCoverColor(selectedCareer) : '#6841df'}
+                careerColor={selectedCareer ? careerCoverColor(selectedCareer) : '#238a42'}
                 enrollmentId={enrollmentIdFor(entry.plan._id)}
                 onEnroll={handleEnroll}
                 onOpen={handleOpen}
