@@ -13,6 +13,8 @@ import {
 } from 'react-bootstrap';
 
 import { request } from '../api/client';
+import { careersApi } from '../api/careers';
+import type { Career } from '../types';
 
 interface University {
   _id: string;
@@ -54,6 +56,63 @@ export default function AdminCatalog({
 
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+
+  const [allCareers, setAllCareers] = useState<Career[]>([]);
+  const [articCareerId, setArticCareerId] = useState('');
+  const [articChecked, setArticChecked] = useState<string[]>([]);
+  const [savingArtic, setSavingArtic] = useState(false);
+
+  const loadCareersForArtic = async () => {
+    try {
+      const list = await careersApi.getAll();
+      setAllCareers(Array.isArray(list) ? list : []);
+    } catch {
+      // se informa al guardar
+    }
+  };
+
+  useEffect(() => {
+    void loadCareersForArtic();
+  }, []);
+
+  useEffect(() => {
+    const found = allCareers.find((c) => c._id === articCareerId);
+    setArticChecked(
+      (found?.continuesIn ?? []).map((c) =>
+        typeof c === 'string' ? c : c._id,
+      ),
+    );
+  }, [articCareerId, allCareers]);
+
+  const toggleArtic = (id: string) => {
+    setArticChecked((current) =>
+      current.includes(id)
+        ? current.filter((x) => x !== id)
+        : [...current, id],
+    );
+  };
+
+  const saveArticulation = async () => {
+    if (!articCareerId || savingArtic) return;
+    setError('');
+    setMessage('');
+    setSavingArtic(true);
+    try {
+      await careersApi.update(articCareerId, {
+        continuesIn: articChecked,
+      });
+      await loadCareersForArtic();
+      setMessage('Articulación guardada correctamente.');
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'No se pudo guardar la articulación'
+      );
+    } finally {
+      setSavingArtic(false);
+    }
+  };
 
   // ----------------------------------------
   // CARGAR UNIVERSIDADES
@@ -368,6 +427,71 @@ export default function AdminCatalog({
             </Form>
           </div>
         </div>
+
+        {/* ARTICULACIÓN ENTRE CARRERAS */}
+
+        <hr />
+
+        <h5>3. Articulación (continuidad entre carreras)</h5>
+
+        <p className="text-muted small">
+          Elegí una carrera y marcá en cuáles se puede continuar
+          (ej. la Tecnicatura en Producción Agroecológica continúa
+          en Desarrollo Agrario). Se muestra al estudiante como el
+          mismo trayecto.
+        </p>
+
+        <Form.Group className="mb-3" style={{ maxWidth: 420 }}>
+          <Form.Label>Carrera</Form.Label>
+
+          <Form.Select
+            value={articCareerId}
+            onChange={(event) =>
+              setArticCareerId(event.target.value)
+            }
+          >
+            <option value="">
+              Seleccionar carrera...
+            </option>
+
+            {allCareers.map((career) => (
+              <option key={career._id} value={career._id}>
+                {career.name}
+              </option>
+            ))}
+          </Form.Select>
+        </Form.Group>
+
+        {articCareerId && (
+          <>
+            <div
+              className="d-flex flex-column gap-1 mb-3"
+              style={{ maxHeight: 220, overflowY: 'auto' }}
+            >
+              {allCareers
+                .filter((career) => career._id !== articCareerId)
+                .map((career) => (
+                  <Form.Check
+                    key={career._id}
+                    type="checkbox"
+                    label={career.name}
+                    checked={articChecked.includes(career._id)}
+                    onChange={() => toggleArtic(career._id)}
+                  />
+                ))}
+            </div>
+
+            <Button
+              className="btn-gradify"
+              disabled={savingArtic}
+              onClick={() => { void saveArticulation(); }}
+            >
+              {savingArtic
+                ? 'Guardando...'
+                : 'Guardar articulación'}
+            </Button>
+          </>
+        )}
       </Card.Body>
     </Card>
   );

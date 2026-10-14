@@ -26,6 +26,19 @@ const careerSchema = new mongoose.Schema(
       default: null,
     },
 
+    // Articulación: carreras en las que se puede continuar (ej. TUPAP →
+    // Lic. en Desarrollo Agrario → Ing. Agronómica). La app las muestra
+    // como el mismo trayecto formativo.
+    continuesIn: {
+      type: [
+        {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Career",
+        },
+      ],
+      default: [],
+    },
+
     color: {
       type: String,
       default: "",

@@ -716,6 +716,18 @@ export default function Home() {
                     <span className="career-card__cover-title">{career.name}</span>
                   </div>
 
+                  {(career.continuesIn ?? []).length > 0 && (
+                    <div className="career-card__body">
+                      <div className="chips">
+                        <span className="chip" title="Articulación oficial: el trayecto continúa">
+                          ➡️ Continúa en {(career.continuesIn ?? [])
+                            .map((c) => (typeof c === 'string' ? c : c.name))
+                            .join(' · ')}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="career-card__actions d-flex flex-wrap gap-2">
                     <Button size="sm" variant="primary" onClick={() => { void openCareer(career); }}>
                       Ver planes

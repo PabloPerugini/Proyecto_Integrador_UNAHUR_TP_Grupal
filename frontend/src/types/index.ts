@@ -43,6 +43,7 @@ export interface Career {
   university?: string | { _id: string; name: string } | null;
   academicUnit?: string | null;
   isArchived?: boolean;
+  continuesIn?: Array<{ _id: string; name: string }>;
   createdAt?: string;
   updatedAt?: string;
   reused?: boolean;

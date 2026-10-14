@@ -49,7 +49,10 @@ const getAllCareers = async ({ unit, includeArchived } = {}) => {
     query.setOptions({ includeArchived: true });
   }
 
-  return query.populate("university").populate("academicUnit");
+  return query
+    .populate("university")
+    .populate("academicUnit")
+    .populate("continuesIn", "name academicUnit");
 };
 
 // Obtener una carrera por ID (archivadas solo con opt-in).
@@ -60,7 +63,10 @@ const findCareerById = async (id, { includeArchived } = {}) => {
     query.setOptions({ includeArchived: true });
   }
 
-  return query.populate("university").populate("academicUnit");
+  return query
+    .populate("university")
+    .populate("academicUnit")
+    .populate("continuesIn", "name academicUnit");
 };
 
 // Crear una carrera
@@ -135,6 +141,27 @@ const updateCareer = async (id, careerData) => {
   // Archivar/desarchivar (rutas admin).
   if (careerData.isArchived !== undefined) {
     updateData.isArchived = Boolean(careerData.isArchived);
+  }
+
+  // Articulación (admin): valida IDs existentes y evita auto-referencia.
+  if (careerData.continuesIn !== undefined) {
+    if (!Array.isArray(careerData.continuesIn)) {
+      throw new Error("continuesIn debe ser una lista de carreras");
+    }
+    const ids = careerData.continuesIn.filter((v) => v);
+    for (const otherId of ids) {
+      if (!mongoose.isValidObjectId(otherId)) {
+        throw new Error("Hay un ID de carrera inválido en continuesIn");
+      }
+      if (String(otherId) === String(id)) {
+        throw new Error("Una carrera no puede continuar en sí misma");
+      }
+      const exists = await Career.exists({ _id: otherId });
+      if (!exists) {
+        throw new Error("Una carrera de continuesIn no existe");
+      }
+    }
+    updateData.continuesIn = ids;
   }
 
   return Career.findByIdAndUpdate(
