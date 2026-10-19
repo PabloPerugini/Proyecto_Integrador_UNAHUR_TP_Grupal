@@ -206,7 +206,8 @@ export default function MyProgress() {
     if (c && typeof c === 'object') {
       if (c.color) return c.color;
       const u = c.academicUnit;
-      if (u && typeof u === 'object' && u.name) return instituteColor(u.name);
+      if (u && typeof u === 'object' && u.name)
+        return instituteColor(u.name, u.color);
     }
     return '#238a42';
   })();

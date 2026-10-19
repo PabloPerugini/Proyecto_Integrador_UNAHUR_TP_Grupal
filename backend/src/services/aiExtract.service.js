@@ -134,4 +134,105 @@ async function extractPlanWithAI(buffer, { careerHint, expectedMin, expectedMax 
   };
 }
 
-module.exports = { extractPlanWithAI };
+// --- Clasificación del título intermedio -----------------------------------
+// Cuando el parser detecta el nombre del título intermedio pero no pudo marcar
+// sus materias (PDFs sin la sección "Estructura del título del intermedio"),
+// se le pide a la IA que indique qué materias de la lista pertenecen al
+// subconjunto. Se valida contra la lista real: la IA no puede inventar materias.
+const SYSTEM_INTERMEDIATE = `Sos un lector experto de planes de estudios de la Universidad Nacional de Hurlingham (UNAHUR, Argentina).
+Recibís la lista COMPLETA de materias de un plan que otorga un TÍTULO INTERMEDIO (tecnicatura) y el nombre de ese título.
+Tenés que indicar qué materias del plan integran el título intermedio. En UNAHUR el título intermedio suele cubrir
+el ciclo inicial de la carrera (aproximadamente los dos primeros años, o el tramo que fija la resolución),
+e incluye TODAS las materias de ese tramo, no una muestra.
+Respondé SOLO con un objeto JSON válido, sin markdown ni texto extra, con esta forma exacta:
+{"intermediateSubjects":["Nombre exacto de la materia 1","Nombre exacto de la materia 2"]}
+Reglas:
+- Usá EXACTAMENTE los nombres tal como aparecen en la lista; no inventes, traduzcas ni abrevies.
+- Incluí TODAS las materias del tramo del título intermedio (no una selección parcial).
+- NUNCA incluyas filas que no sean materias, como "Actividades Curriculares Acreditables (ACA)".
+- Si el título intermedio no coincide con un tramo claro del plan, devolvé {"intermediateSubjects":[]}.
+- No agregues comentarios ni texto fuera del JSON.`;
+
+const normalizeName = (v) =>
+  String(v || "").replace(/\s+/g, " ").trim().toLowerCase();
+
+// Filas que no son materias del plan (ACA, etc.): nunca entran en la propuesta.
+const isNonSubject = (s) =>
+  !s ||
+  s.kind === "ACA" ||
+  /actividades curriculares acreditables/i.test(String(s.name || ""));
+
+// Validación pura (testeable) de la propuesta de la IA: devuelve solo nombres
+// que existen en el plan, sin filas que no son materias (ACA), y con dos cotas
+// de coherencia: mínimo de materias y tramo de a lo sumo 3 años lectivos.
+function pickIntermediateNames(subjects, wanted) {
+  const candidates = (subjects || []).filter(
+    (s) => s && s.name && !isNonSubject(s),
+  );
+  const byName = new Map(
+    candidates.map((s) => [normalizeName(s.name), s]),
+  );
+
+  const names = [];
+  for (const candidate of Array.isArray(wanted) ? wanted : []) {
+    const real = byName.get(normalizeName(candidate));
+    if (real && !names.includes(real.name)) names.push(real.name);
+  }
+
+  const reject = () => ({ names: [], rejected: names.length });
+
+  // (1) pocas materias o casi todo el plan: no es creíble que sea un tramo.
+  const maxAllowed = Math.max(4, Math.floor(candidates.length * 0.7));
+  if (names.length < 4 || names.length > maxAllowed) return reject();
+
+  // (2) el tramo no puede saltar más de 3 años lectivos (ej. 1º a 4º mezclados).
+  const years = names
+    .map((n) => byName.get(normalizeName(n))?.year)
+    .filter((y) => typeof y === "number");
+  const span = years.length
+    ? Math.max(...years) - Math.min(...years)
+    : 0;
+  if (span > 2) return reject();
+
+  return { names, rejected: 0 };
+}
+
+async function classifyIntermediateWithAI(
+  subjects,
+  { intermediateTitle, careerHint },
+) {
+  const candidates = (subjects || []).filter(
+    (s) => s && s.name && !isNonSubject(s),
+  );
+  const list = candidates
+    .map((s) => `- ${s.name}${s.year != null ? ` (año ${s.year})` : ""}`)
+    .join("\n");
+  if (!list) throw new Error("no hay materias para clasificar");
+
+  const user = `Carrera: ${careerHint || "desconocida"}.\nTítulo intermedio: ${intermediateTitle}.\nEl plan tiene ${candidates.length} materias en total.\n\nMATERIAS DEL PLAN:\n${list}`;
+  const cacheKey =
+    "ai:intermedio:v2:" +
+    crypto
+      .createHash("sha256")
+      .update([PROMPT_VERSION, intermediateTitle, list].join("|"))
+      .digest("hex");
+  const { reply, provider } = await chat(
+    SYSTEM_INTERMEDIATE,
+    user,
+    cacheKey,
+    "gemini",
+  );
+  const raw = parseJsonStrict(reply);
+  const wanted = Array.isArray(raw?.intermediateSubjects)
+    ? raw.intermediateSubjects
+    : [];
+
+  const { names, rejected } = pickIntermediateNames(subjects, wanted);
+  return { names, provider, rejected };
+}
+
+module.exports = {
+  extractPlanWithAI,
+  classifyIntermediateWithAI,
+  pickIntermediateNames,
+};

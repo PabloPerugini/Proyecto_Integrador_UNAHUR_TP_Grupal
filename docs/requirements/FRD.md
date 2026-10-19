@@ -11,8 +11,8 @@
 | Institución           | Universidad Nacional de Hurlingham (UNAHUR)                          |
 | Unidad Académica      | Facultad de Informática — Proyecto Integrador Programación           |
 | Tipo de documento     | FRD — Documentación de Requerimientos Funcionales                    |
-| Versión               | 2.2                                                                  |
-| Fecha                 | 09 de octubre de 2026                                              |
+| Versión               | 2.5                                                                  |
+| Fecha                 | 16 de octubre de 2026                                              |
 | Sponsor Operación     | Secretaría Académica / Dirección de Carrera                          |
 | Sponsor Organización  | UNAHUR                                                               |
 | Integrantes           | Perugini, Pablo; Acuña, Marcos; Masgo Sandoval, Joaquín; Renaud, Román; Remonda, Eliel; Cotera, Dylan |
@@ -40,6 +40,9 @@
 | 2.0     | 24/09/2026   | Equipo | Revisión mayor alineada con la implementación actual. Se retiran los requerimientos que **no corresponden** a la aplicación (historial 1.1–1.9): autenticación por cookie y usuarios, roles, recuperación de contraseña, chat del orientador con IA, matching semántico por embeddings, selector de carrera `?degree=`, compartir/exportar imagen y suites de tests con CI. Se documentan las pantallas reales, la identificación anónima por `x-user-id`, el título intermedio y el manejo centralizado de errores. |
 | 2.1     | 30/09/2026   | Equipo | Sugerencias AR-3, RN03/`x-user-id`, SEG-1/5 (módulo `/users` sin UI), envelope de errores, Swagger 16 paths, suite `npm test` (14 tests). |
 | 2.2     | 09/10/2026   | Equipo | Nueva arquitectura: cuentas JWT (USUARIO/ADMIN); universidades, carreras, planes e inscripciones; correlativas resueltas en el confirm; `GET /study-plans/:id/graph` y `/study-plans/:id/sugerencias`; borrado en cascada; scripts E2E con auth; compose único de 4 servicios; Swagger v2.0. |
+| 2.3     | 14/10/2026   | Equipo | Catálogo por instituto (colores oficiales, `isArchived`, filtros `?unit`/`includeArchived`, `withCounts`); Home Institutos→Carreras→Planes; **tecnicatura intermedia** (`subject.intermediate`, `/study-plans/:id/intermediate`, pestañas Lic/Tec y avisos); **articulación** `continuesIn`; **RN05** correlativas que bloquean el avance (backend + pre-chequeo); promedio/CSV en Mi progreso; seguridad (ADMIN en import, `checkOrigin`, logout invalida JWT) + versionado liviano de planes; pantallas Mi cuenta/Usuarios/Archivadas/403; 26 unitarios. |
+| 2.4     | 16/10/2026   | Equipo | **Tipo de carrera** (`Career.careerType` + chip 🎓 Tecnicatura en el catálogo); **marcado en lote** del título intermedio (`PATCH /study-plans/:id/subjects/intermediate` con alcance todo/año/período) y **avisos** de tecnicatura incompleta en Cargar plan y Editar plan; **clasificación IA revisable** del subconjunto del intermedio (columna *Tec* en el preview, validación dura con regresión unitaria); caché de extractos v3 (reintenta la clasificación al reutilizar un extracto pendiente por cuota — BUG-019); 32 unitarios (6 archivos). |
+| 2.5     | 16/10/2026   | Equipo | **Panel ADMIN completo:** edición/borrado de institutos con **color persistido** y guardas `409` (carreras/subunidades), corrección de los typos históricos de `PATCH`/`GET` de institutos (BUG-020); edición, **archivado** y borrado de carreras (`409` con planes); articulación con selectores **buscables**, búsqueda y marcado múltiple; pestañas *Administrar entidades* en Cargar plan (flujo del PDF limpio); **default `REGULARIZADA`** para correlativas importadas + control masivo por plan; dropzone con estado de arrastre y vista previa (nombre + MB); notificaciones flotantes. Verificado: E2E v2.5 14/14 + correlativas 5/5 (scratch) + `npm test` 32/32. |
 
 ---
 
@@ -94,19 +97,22 @@ Los planes de estudio universitarios suelen ser complejos y estar llenos de depe
 | Docentes                     | Consulta opcional (solo lectura), si lo requiere la secretaría.      |
 
 > [!NOTE]
-> La implementación actual tiene cuentas con roles (`USUARIO`/`ADMIN`, JWT): cargar y administrar el catálogo requiere `ADMIN`; cada usuario gestiona sus planes, inscripciones y progreso.
+> La implementación actual tiene cuentas con roles (`USUARIO`/`ADMIN`, JWT en cookie httpOnly `SameSite=Lax` 7 días, Bearer admitido): cargar y administrar el catálogo requiere `ADMIN`; cada usuario gestiona sus planes, inscripciones, perfil y progreso. Cerrar sesión invalida el token vigente (`tokenVersion`).
 
 ### 2.8 Alcance del Proyecto
 
 El alcance incluye:
 
 - Visualizador gráfico del plan de estudios en forma de nodos interactivos (grafo) y en vista de tablero.
+- Catálogo institucional **Instituto → Carrera → Plan** con colores oficiales, búsqueda y ocultamiento de carreras archivadas.
 - Lógica backend de validación de correlatividades (matching clásico: exacto, compacto, difuso y por prefijo), con camino crítico, orden topológico y detección de ciclos.
-- Seguimiento del progreso por materia y por plan, asociado a la cuenta del usuario.
-- Carga de planes y de historiales académicos desde PDF, con edición de materias, correlatividades y publicación del plan.
-- Soporte del **título intermedio**: detección en el PDF, créditos y materias del subconjunto, y banner de progreso en el grafo.
+- Seguimiento del progreso por materia y por plan, asociado a la cuenta del usuario, **con bloqueo del avance cuando falta una correlativa** (RN05).
+- Carga de planes y de historiales académicos desde PDF, con edición de materias, correlatividades y publicación del plan (solo `ADMIN`).
+- Soporte del **título intermedio / tecnicatura**: detección en el PDF, flag `intermediate` por materia, sub-plan virtual y pestañas Licenciatura/Tecnicatura.
+- **Articulación** entre carreras (`continuesIn`).
 - Motor de sugerencias de inscripción basado en reglas de negocio (C1–C6, R0–R6): `GET /study-plans/:id/sugerencias` + sección en Mi progreso.
-- Panel de estadísticas básicas del progreso del estudiante (porcentaje de carrera avanzada).
+- Panel de estadísticas del progreso (avance, créditos, **promedio**, exportación a **CSV**).
+- Administración de usuarios y de carreras archivadas, más **Mi cuenta** (perfil y contraseña).
 - Manejo centralizado de errores en la API y en la interfaz.
 
 ---
@@ -123,6 +129,7 @@ El alcance incluye:
 | RN02 | Habilitación por correlativas | El estudiante marca una materia como *Aprobada* o *Regular* (según exija el plan).      | El sistema evalúa el grafo y habilita las materias sucesivas (disponibles, clickeables).                                   |
 | RN03 | Persistencia de progreso | El usuario modifica el estado de un nodo.                                                 | El cambio se guarda asociado a su inscripción al plan en la base de datos (tiempo real o guardado explícito).                |
 | RN04 | Restricción de desmarcado | El usuario desmarca una materia como aprobada.                                           | El sistema revierte el estado de las materias dependientes subsiguientes que quedaron sin sustento correlativo.            |
+| RN05 | Bloqueo del avance por correlativas | El usuario intenta marcar una materia como *Cursando*, *Regularizada* o *Aprobada* sin tener cumplidas sus correlativas. | El backend rechaza el cambio (`400` con el detalle de la correlativa faltante) y el front lo pre-chequea antes de guardar; volver a *Pendiente* siempre está permitido. |
 
 #### 3.1.2 Reglas de sugerencia de inscripción
 
@@ -279,9 +286,17 @@ flowchart LR
 | ----- | ------------- | ----------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ----------- |
 | AR-1  | Estudiante    | Visualizar mi progreso académico en un grafo interactivo.                                                         | Planificar mi cursada.                                                                   | El sistema muestra materias aprobadas, regularizadas, cursando y pendientes con colores/nodos diferenciados. | —           |
 | AR-2  | Administrador | Importar el plan de estudios en PDF y editar correlatividades.                                                    | Publicar la carrera.                                                                     | El sistema permite cargar PDF del plan y modificar relaciones entre materias.                               | —           |
-| AR-3  | Estudiante    | Recibir sugerencias automáticas de inscripción dentro de la plataforma.                                           | Decidir mi inscripción según mi recorrido académico.                                    | **Pendiente:** el sistema aplicará las reglas de negocio (R0–R6, ver §3.1.2) y mostrará las recomendaciones en pantalla. | —           |
+| AR-3  | Estudiante    | Recibir sugerencias automáticas de inscripción dentro de la plataforma.                                           | Decidir mi inscripción según mi recorrido académico.                                    | **Implementado:** `GET /study-plans/:id/sugerencias` aplica las reglas R0–R6/C1–C6 (§3.1.2) y muestra las recomendaciones en *Mi progreso* y en "Qué puedo cursar" del Home. | —           |
 | US-02 | Estudiante    | Visualizar el plan de estudios en forma de grafo interactivo.                                                     | Identificar rápidamente qué materias puedo cursar, cuáles tengo aprobadas y cuáles están bloqueadas. | Diferenciar claramente por colores según su estado (aprobada, disponible, bloqueada). **Título intermedio:** si la carrera lo otorga, un banner sobre el grafo muestra materias y créditos aprobados sobre el total del título intermedio. | —           |
 | US-03 | Estudiante    | Hacer clic en una materia disponible para cambiar su estado.                                                       | Ver cómo se actualizan dinámicamente las materias subsiguientes en el grafo.             | Clickear en un nodo habilitado lo cambia de color e inmediatamente desbloquea los nodos hijos en pantalla.  | —           |
+| US-04 | Estudiante    | Explorar el catálogo por instituto y carrera.                                                                     | Llegar rápido al plan que me interesa.                                                  | El Home muestra Institutos con su color oficial y `careerCount`; al elegir uno lista las carreras con planes publicados (ADMIN ve borradores) y permite buscar por nombre. | —           |
+| US-05 | Estudiante    | Ver la **tecnicatura intermedia** de mi plan.                                                                     | Saber qué materias la componen y si sus correlativas cierran.                            | Pestañas Licenciatura/Tecnicatura en Grafo/Tablero/Progreso + detalle en Home (`/study-plans/:id/intermediate` con `closed`/`externalRequires`); aviso si no hay materias marcadas. | US-02       |
+| US-06 | Administrador | Marcar la tecnicatura y la **articulación** entre carreras.                                                       | Publicar el trayecto completo.                                                           | Se marca `intermediate` por materia (una por una o **en lote**: todo el plan, un año o un período) y se editan `intermediateTitle`/`creditsIntermediate`; si el PDF declara el título sin tabular sus materias, la app **avisa** y la **IA puede proponer** el subconjunto (revisable en la columna *Tec* del preview); `continuesIn` se edita desde el catálogo (sin autorreferencia ni IDs inexistentes). | AR-2        |
+| US-07 | Estudiante    | Ver mi **promedio** y **exportar** mi progreso.                                                                   | Compartir o respaldar mi avance.                                                         | Mi progreso calcula el promedio de las aprobadas con nota y ofrece "Exportar CSV" (código, materia, año, estado, nota, créditos). | AR-1        |
+| US-08 | Administrador | Gestionar **usuarios** y **carreras archivadas**.                                                                 | Mantener el catálogo y los roles.                                                        | Admin Usuarios: cambiar rol USUARIO/ADMIN y eliminar; Admin Archivadas: restaurar carreras `isArchived`. | —           |
+| US-09 | Usuario       | Editar **mi cuenta** y **cerrar sesión**.                                                                         | Mantener mis datos y mi seguridad.                                                       | Mi cuenta edita nombre/apellido/email y contraseña; cerrar sesión invalida el JWT vigente. | SC000       |
+| US-10 | Administrador | Identificar el **tipo de carrera** (licenciatura, tecnicatura, profesorado, ingeniería).                          | Distinguir el pregrado del grado y ordenar el catálogo.                                  | `Career.careerType` (default `null`) se edita en el catálogo; las carreras `Tecnicatura` muestran el chip **🎓 Tecnicatura** en el Home. | US-06       |
+| US-11 | Administrador | Administrar el **catálogo completo**: institutos (con color), carreras (editar/archivar/borrar) y articulación. | Mantener el catálogo al día sin romper dependencias ni planes. | Pestañas *Institutos · Universidades · Carreras · Articulación*: edición con whitelist, color con autoguardado, `409` con mensaje si hay carreras/planes/subunidades; carreras archivables (restaurables en *Carreras archivadas*) y borrables; articulación buscable. | SC005/SC006 |
 
 ### 4.2 Criterios de Bondad
 
@@ -292,12 +307,18 @@ flowchart LR
 - **ORDEN DE ESTADÍSTICAS:** Mostrar las estadísticas de MATERIAS B en orden **decreciente** — implementado (`materiasB` ordenado).
 - **FUSIÓN DE CONDICIONES:** Si no hay materias C4 en MATERIAS A, usar solo C1, C2, C3. Si no hay materias C1/C2, fusionarlas en C5 [APROBADA] (nota ≥ 4) — implementado (las aprobadas sin nota van a C5 solo si no hay C1/C2, si no a C2).
 - **CORRELATIVIDADES:** el matching entre el plan oficial y el PDF de correlativas es clásico (exacto, compacto, difuso/Levenshtein y por prefijo), con nivel de confianza devuelto en la respuesta (`exact` | `compact` | `fuzzy` | `null`).
-- **TÍTULO INTERMEDIO:** si el PDF del plan declara un título intermedio, el backend expone sus créditos y materias (`creditsIntermediate`, `intermediateTitle`, `subject.intermediate`) y el grafo muestra el banner con el avance de ese título; en carreras sin título intermedio no se muestra.
+- **TÍTULO INTERMEDIO:** si el PDF del plan declara un título intermedio, el backend expone sus créditos y materias (`creditsIntermediate`, `intermediateTitle`, `subject.intermediate`) y ofrece un **sub-plan virtual** (`GET /study-plans/:id/intermediate`, con `closed` y `externalRequires`); el grafo, el tablero y Mi progreso muestran **pestañas Licenciatura/Tecnicatura** y avisan cuando la tecnicatura no tiene materias marcadas. En carreras sin título intermedio no se muestran.
+- **TÍTULO INTERMEDIO — HONESTIDAD DEL DATO:** el subconjunto solo se marca de forma determinística cuando el PDF trae la sección que lo tabula (Lic. en Informática); si no la trae, el sistema **no inventa**: avisa al ADMIN (preview y Editar plan), permite marcar **en lote** y, si la IA propone un subconjunto, la propuesta se **valida contra las materias reales** (sin filas ACA, mínimo 4 materias, tramo ≤ 3 años lectivos), se muestra en la columna *Tec* del preview y es descartable. La IA nunca persiste nada por su cuenta.
+- **TIPO DE CARRERA:** `Career.careerType` ∈ {Licenciatura, Tecnicatura, Profesorado, Ingenieria, Otro} ∪ {null}; se edita en el catálogo (ADMIN) y las tecnicaturas se etiquetan en el Home con el chip 🎓. El tipo no altera permisos ni correlativas: es información de catálogo.
+- **CATÁLOGO ADMINISTRABLE:** el panel *Administrar entidades* (pestañas *Institutos · Universidades · Carreras · Articulación*) permite **editar** institutos (con **color** persistido y autoguardado), **eliminarlos** (`409` con mensaje si tienen carreras o subunidades), **editar/archivar/borrar** carreras (`409` si tienen planes; el archivado es restaurable) y **guardar articulación** con selector buscable y marcado múltiple. Las guardas preservan la integridad: nunca se borra en cascada una carrera o un instituto con dependencias.
+- **CORRELATIVAS BLOQUEANTES:** al guardar el progreso, el backend rechaza avanzar (CURSANDO/REGULARIZADA/APROBADA) si no se cumple cada `prerequisite` con su `requiredStatus`; el front avisa antes de guardar. Las correlativas **importadas** (confirm del plan y correlativas desde PDF) se guardan con `requiredStatus: REGULARIZADA` por defecto —regular habilita la correlativa, criterio UNAHUR—; exigir `APROBADA` es una decisión explícita del ADMIN, por materia o en bloque por plan. Volver a PENDIENTE siempre se permite.
+- **ARTICULACIÓN:** una carrera puede declarar `continuesIn` con **una o más** carreras; el panel admin permite buscar la carrera y marcar sus continuaciones, y el catálogo del inicio las muestra como el mismo trayecto ("Continúa en …").
+- **PROMEDIO Y EXPORTACIÓN:** Mi progreso calcula el promedio de las materias aprobadas con nota y permite exportar el estado por materia a **CSV**.
 - **MANEJO DE ERRORES:** toda falla se responde en JSON con un mensaje en español (`400` validaciones y IDs inválidos, `404` recurso inexistente, `409` duplicados, `500` genérico); la interfaz no se rompe y muestra el mensaje (`ErrorBoundary` + `api/client.ts`).
 
 ### 4.3 Requisitos de Seguridad
 
-- **Con autenticación:** la aplicación tiene cuentas con roles (`USUARIO`/`ADMIN`, JWT Bearer + cookie httpOnly de 1 día). El catálogo es público; mutaciones de catálogo y administración requieren `ADMIN`; planes, importaciones e inscripciones son por dueño.
+- **Con autenticación:** la aplicación tiene cuentas con roles (`USUARIO`/`ADMIN`, JWT en cookie httpOnly `SameSite=Lax` de **7 días**; Bearer admitido). El catálogo es público; las mutaciones de catálogo y la importación de planes (`preview`/`confirm`) requieren `ADMIN`; planes, importaciones e inscripciones son por dueño. **Cerrar sesión invalida el token** (`tokenVersion`). Las mutaciones autenticadas por cookie pasan por `checkOrigin` (defensa CSRF).
 - **Identificación del progreso:** el progreso se asocia a la inscripción del usuario al plan. Las rutas exigen JWT (`401` sin token, `403`/`404` sin permiso).
 - **Subida de archivos:** solo se aceptan archivos PDF (firma `%PDF-` verificada en servidor, además del mimetype) de hasta **10 MB**, que se procesan en memoria y no se persisten en disco; el preview tiene cota de IA (`aiRateLimit`, redes privadas exentas).
 - **Errores:** todas las respuestas de error vienen en JSON con un mensaje en español (`400` para IDs inválidos y validaciones, `401` sin auth, `404` para recursos inexistentes, `409` para duplicados y conflictos de borrado, `500` genérico sin detalle interno); la interfaz las muestra sin romperse.
@@ -310,11 +331,11 @@ flowchart LR
 ### SC001 · Inicio (`/`)
 
 - **Acceso:** requiere login (`/login`); registro en `/register`.
-- **Comportamiento:** listado de carreras en tarjetas con su color e instituto, diferenciando las **publicadas** de los **borradores**, con accesos a *Cargar plan* y *Editar plan*. Si todavía no hay planes cargados, muestra un estado vacío con la acción para crear uno.
+- **Comportamiento:** si el usuario tiene inscripciones, aterriza en **Mis inscripciones** (tarjetas de esos planes); si no, en **Institutos**. Navega **Instituto → Carrera → Plan** (con color oficial por instituto y búsqueda de carreras). Cada tarjeta de plan ofrece detalles perezosos: **Tecnicatura** (materias y `closed`), **Qué puedo cursar** (sugerencias AR-3), **Mi avance** y **Ver materias**. Muestra la **articulación** ("Continúa en …"). El ADMIN ve además borradores y accesos de administración.
 
 ### SC000 · Acceso (`/login`, `/register`)
 
-- **Campos login:** nickName + password → JWT (Bearer + cookie httpOnly, 1 día).
+- **Campos login:** nickName + password → JWT en cookie httpOnly (7 días; Bearer admitido). Cerrar sesión invalida el token.
 - **Campos registro:** nickName, firstName, lastName, email, password (mín. 6); el rol siempre es `USUARIO` (el `ADMIN` lo asigna otro admin o directo en DB).
 
 ### SC002 · Grafo del plan (`/grafo/:id`)
@@ -324,30 +345,53 @@ flowchart LR
 - **Barra superior** con el progreso porcentual de la carrera y la leyenda del camino crítico.
 - **Panel de detalles** de la materia seleccionada al hacer clic, con sus correlatividades y la posibilidad de cambiar su estado.
 - **Banner de título intermedio** (solo si la carrera lo otorga): materias y créditos aprobados sobre el total del título intermedio, con barra de progreso.
+- **Pestañas Licenciatura/Tecnicatura:** acotan el subgrafo a la tecnicatura intermedia cuando el plan la declara; si la tecnicatura no tiene materias marcadas se muestra un aviso (no repite la Licenciatura).
 - **Cambio de vista** a tablero desde la misma pantalla.
 
 ### SC003 · Tablero del plan (`/tablero/:id`)
 
-- La misma información del grafo presentada en columnas por año/cuatrimestre, pensada para lectura lineal.
+- La misma información del grafo presentada en columnas por año/cuatrimestre, pensada para lectura lineal, con **pestañas Licenciatura/Tecnicatura** y aviso cuando la tecnicatura no tiene materias marcadas.
 
 ### SC004 · Mi progreso (`/progreso`)
 
-- Resumen del avance por año y total de la carrera.
-- **Importación del historial en PDF:** sube el PDF de la historia académica, muestra las materias detectadas y las aprobadas, y permite guardarlas de una vez ("Guardar en mi progreso").
-- **Edición manual:** se cambia el estado (*Aprobada, Regular, Cursando, Pendiente*) y la nota de cada materia, con guardado masivo ("Guardar todo"), recalculando las correlatividades habilitadas.
+- Resumen del avance: **materias aprobadas, créditos, avance (%), faltantes y promedio**, con **avance por año**.
+- **Plan de trabajo:** selector de plan limitado a los planes en los que el usuario está **inscripto** ("Agregar a mi progreso" si no lo está).
+- **Importación del historial en PDF:** sube el PDF de la historia académica, reconoce las materias aprobadas y las previsualiza antes de guardar.
+- **Edición manual:** se cambia el estado (*Aprobada, Regularizada, Cursando, Pendiente*) y la nota de cada materia, con **pestañas Licenciatura/Tecnicatura**, guardado masivo y **pre-chequeo de correlativas** (no deja avanzar sin ellas).
+- **Exportar CSV** del estado por materia.
 
 ### SC005 · Cargar plan (`/cargar`)
 
-- **Zona de arrastre** para subir uno o varios PDF del plan oficial: a partir del nombre del archivo se crea la carrera, se parsea el PDF y se guardan sus materias (incluidos créditos y título intermedio cuando el plan los declara).
+- **Zona de arrastre** (solo `ADMIN`) para subir el PDF del plan oficial: se previsualiza (`preview`, sin guardar), se revisa y se confirma (`confirm`); se guardan las materias con créditos y título intermedio cuando el plan los declara.
+- **Tabla de revisión con columna *Tec* editable:** permite ver y corregir qué materias pertenecen al título intermedio (incluida la propuesta de la IA) antes de confirmar; si el plan declara título intermedio y ninguna materia quedó marcada, se muestra un **aviso** con la recomendación de marcarlas luego en *Editar plan*.
 - **Lista de trabajos de importación** con su estado (*creando → parseando → guardando*) y mensaje de error si el PDF no tiene texto extraíble ("parece escaneado").
+- **Panel *Administrar entidades*** en la misma pantalla, en **pestañas** (*Institutos · Universidades · Carreras · Articulación*) para no ensuciar el flujo del PDF: institutos con **color autoguardado**, edición y borrado con guardas (`409` con carreras/subunidades); universidades para altas (la recién creada queda pre-seleccionada); carreras con alta/edición, archivado y borrado (`409` con planes); articulación con selector buscable y marcado múltiple. Cada acción avisa con **notificaciones flotantes** (arriba a la derecha, autocierre a los 6 s).
+- **Zona de arrastre** que resalta en verde punteado al arrastrar y muestra los archivos elegidos (nombre + tamaño en KB/MB) antes de procesarlos.
 - Accesos directos a *ver grafo*, *ver tablero* y *editar* una vez terminada la importación, más la opción de publicar o eliminar el plan.
 
 ### SC006 · Admin del plan (`/admin/:id`)
 
 - Tabla de carreras con su estado (**Publicada** / **Borrador**), selección de la carrera a editar y acceso al tablero.
-- **Edición de materias:** tabla con datos, horas, créditos y badge **"Título intermedio"** cuando corresponde.
+- **Edición de materias:** tabla con datos, horas, créditos y la marca **"Título intermedio"** / tecnicatura (`intermediate`) cuando corresponde, más una **barra de marcado en lote** (alcance: todas las materias o un año) con contador de materias marcadas y **aviso** cuando hay título intermedio sin materias marcadas.
 - **Editor de correlatividades:** se marcan los requisitos de cada materia y se muestran los cambios pendientes (contador de "cambios sin guardar") antes de guardar.
+- **Catálogo (panel *Administrar entidades* de *Cargar plan*):** pestañas *Institutos · Universidades · Carreras · Articulación*; institutos con **color persistido**, edición y borrado con guardas (`409` con carreras/subunidades); carreras con edición (nombre/tipo/universidad/instituto), **tipo de carrera** (`careerType`), **articulación** (`continuesIn`, múltiple y buscable), archivado (`isArchived`, restaurable) y borrado (`409` con planes).
 - **Publicación** del plan para que los estudiantes lo vean.
+
+### SC007 · Mi cuenta (`/cuenta`)
+
+- Muestra nickName y rol; permite editar nombre, apellido y email y cambiar la contraseña (mín. 6 caracteres).
+
+### SC008 · Usuarios (`/admin/users`, solo ADMIN)
+
+- Tabla de usuarios con nickName, email y rol; permite **hacer/quitar ADMIN** y **eliminar** usuarios.
+
+### SC009 · Carreras archivadas (`/admin/archivadas`, solo ADMIN)
+
+- Lista las carreras con `isArchived` y permite **restaurarlas**.
+
+### SC010 · Acceso denegado y 404 (`/403`, `*`)
+
+- `/403` se muestra cuando un `USUARIO` intenta acceder a rutas de administración; `*` renderiza la página 404 para rutas inexistentes.
 
 ---
 
@@ -365,6 +409,12 @@ flowchart LR
 | User Story              | Descripción corta y concisa desde el punto de vista del usuario final para definir una funcionalidad.  |
 | Criterio de aceptación  | Condiciones que la funcionalidad debe cumplir para darse por completada y aprobada.                    |
 | SIU-Guaraní             | Sistema informático utilizado por la universidad para la gestión de expedientes académicos y actas. La app importa su reporte "Plan de Estudios". |
+| Instituto               | Unidad académica UNAHUR (Biotecnología, Tecnología e Ingeniería, Salud Comunitaria, Educación) con color oficial propio. |
+| Tecnicatura intermedia  | Título intermedio modelado como sub-plan virtual (`subject.intermediate` + `intermediateTitle`/`creditsIntermediate`, `GET /study-plans/:id/intermediate`). |
+| Marcado en lote         | Marcar/desmarcar el flag `intermediate` de muchas materias a la vez (`PATCH /study-plans/:id/subjects/intermediate`): todo el plan o filtrado por año/período. |
+| Tipo de carrera         | `Career.careerType` (Licenciatura/Tecnicatura/Profesorado/Ingenieria/Otro): etiqueta el catálogo; "Tecnicatura" muestra el chip 🎓 en el Home. |
+| Articulación            | `Career.continuesIn`: carrera en la que un trayecto puede continuar. |
+| Carrera archivada       | Carrera con `isArchived` oculta del catálogo salvo opt-in de `ADMIN`. |
 
 ---
 

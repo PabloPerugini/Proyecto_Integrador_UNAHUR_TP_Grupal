@@ -14,6 +14,9 @@ const fs = require("fs");
 const path = require("path");
 const mongoose = require("mongoose");
 
+// MONGODB_URI desde backend/.env (nada declarado en el shell tiene prioridad).
+require("dotenv").config({ path: path.join(__dirname, "..", ".env"), quiet: true });
+
 const AcademicUnit = require("../src/models/academicUnit");
 const Career = require("../src/models/career");
 const StudyPlan = require("../src/models/studyPlan");

@@ -10,16 +10,16 @@
   "scripts": {
     "dev": "nodemon src/main.js",
     "start": "node src/main.js",
-    "test": "node --test tests/unitarios.test.js tests/sugerencias.test.js tests/rn04.test.js tests/registro.test.js tests/seguridad.test.js",
+    "test": "node --test tests/unitarios.test.js tests/sugerencias.test.js tests/rn04.test.js tests/registro.test.js tests/seguridad.test.js tests/intermedio.test.js",
     "test:planes": "node scripts/validaciones.js masiva",
     "test:salud": "node scripts/validaciones.js salud",
+    "test:cobertura": "node scripts/validaciones.js cobertura",
     "snapshot:planes": "node scripts/validaciones.js golden",
     "validar": "node scripts/validaciones.js todo",
     "seed:planes": "node scripts/seed-planes.js",
     "curar:catalogo": "node scripts/curar-catalogo.js"
   },
   "dependencies": {
-    "@xenova/transformers": "^2.17.2",
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",

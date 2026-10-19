@@ -20,6 +20,9 @@ frontend/dist/
 backend/*.tmp.js
 backend/scripts/tmp-debug-*.js
 
+# Estado del tooling de OpenCode (lo recrea la app; no va al repo)
+.opencode/
+
 # Sistema
 .DS_Store
 Thumbs.db

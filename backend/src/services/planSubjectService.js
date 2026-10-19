@@ -299,6 +299,54 @@ const updatePlanSubject = async (studyPlanId, id, data) => {
   return planSubject.save();
 };
 
+// Marcar/desmarcar en lote el flag `intermediate` (título intermedio).
+// Si se pasan `ids`, aplica solo a esas materias; si no, a todo el plan,
+// opcionalmente acotado por year y/o period.
+const bulkSetIntermediate = async (
+  studyPlanId,
+  { ids, year, period, intermediate } = {}
+) => {
+  if (typeof intermediate !== "boolean") {
+    throw new Error("El valor de 'intermediate' debe ser booleano");
+  }
+
+  const query = { studyPlan: studyPlanId };
+
+  if (Array.isArray(ids) && ids.length) {
+    for (const id of ids) {
+      if (!mongoose.isValidObjectId(id)) {
+        throw new Error("Hay un ID de materia inválido");
+      }
+    }
+    query._id = { $in: ids };
+  } else {
+    if (year !== undefined && year !== null && year !== "") {
+      query.year = Number(year);
+    }
+    if (period !== undefined && period !== null && period !== "") {
+      query.period = Number(period);
+    }
+  }
+
+  // `matchedCount` cuenta todos los que cumplen el filtro. Como Mongoose
+  // actualiza `updatedAt` en cada documento alcanzado, `modifiedCount` daría
+  // siempre igual a matched: se informa como `modified` solo las materias
+  // que realmente cambian de valor.
+  const willChange = await PlanSubject.countDocuments({
+    ...query,
+    intermediate: { $ne: intermediate },
+  });
+
+  const result = await PlanSubject.updateMany(query, {
+    $set: { intermediate },
+  });
+
+  return {
+    matched: result.matchedCount ?? result.n ?? 0,
+    modified: willChange,
+  };
+};
+
 // Eliminar una materia del plan
 const deletePlanSubject = async (studyPlanId, id) => {
   const planSubject = await PlanSubject.findOne({
@@ -342,5 +390,6 @@ module.exports = {
   findPlanSubjectById,
   createPlanSubject,
   updatePlanSubject,
+  bulkSetIntermediate,
   deletePlanSubject,
 };

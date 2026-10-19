@@ -9,10 +9,23 @@ interface PdfDropzoneProps {
   multiple?: boolean;
 }
 
+interface PickedFile {
+  name: string;
+  size: number;
+}
+
+function formatSize(bytes: number): string {
+  if (bytes >= 1024 * 1024) {
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+  return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
+
 // Solo PDF (el backend rechaza el resto con firma %PDF-): sin rama de imágenes.
 export default function PdfDropzone({ onFiles, disabled, text, hint, multiple = false }: PdfDropzoneProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [drag, setDrag] = useState(false);
+  const [picked, setPicked] = useState<PickedFile[]>([]);
 
   const acceptFiles = (list: FileList | null) => {
     if (!list) return;
@@ -20,7 +33,10 @@ export default function PdfDropzone({ onFiles, disabled, text, hint, multiple = 
       const n = f.name.toLowerCase();
       return f.type === 'application/pdf' || n.endsWith('.pdf');
     });
-    if (files.length) onFiles(files);
+    if (!files.length) return;
+    // Vista previa liviana: nombre + tamaño de lo último soltado/elegido.
+    setPicked(files.map((f) => ({ name: f.name, size: f.size })));
+    onFiles(files);
   };
 
   const handleDrop = (e: DragEvent<HTMLDivElement>) => {
@@ -77,6 +93,18 @@ export default function PdfDropzone({ onFiles, disabled, text, hint, multiple = 
       <p className="dropzone__hint">
         {hint ?? (multiple ? 'o hacé clic para elegir tus archivos · se admiten varios PDF' : 'o hacé clic para elegir el PDF')}
       </p>
+
+      {picked.length > 0 && (
+        <ul className="dropzone__files">
+          {picked.map((file, index) => (
+            <li key={`${file.name}-${index}`} className="dropzone__file">
+              <span className="dropzone__file-check" aria-hidden="true">✓</span>
+              <span className="dropzone__file-name" title={file.name}>{file.name}</span>
+              <span className="dropzone__file-size">{formatSize(file.size)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

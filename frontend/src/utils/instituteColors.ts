@@ -12,7 +12,13 @@ export const INSTITUTE_COLORS: Record<string, string> = {
 
 export const DEFAULT_INSTITUTE_COLOR = '#238a42';
 
-export function instituteColor(unitName?: string | null): string {
+// El color guardado en la DB (unidad académica) tiene prioridad sobre
+// el hex oficial por nombre.
+export function instituteColor(
+  unitName?: string | null,
+  dbColor?: string | null,
+): string {
+  if (dbColor) return dbColor;
   if (unitName && INSTITUTE_COLORS[unitName]) {
     return INSTITUTE_COLORS[unitName];
   }

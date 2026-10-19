@@ -31,6 +31,14 @@ router.post(
   planSubjectController.createPlanSubject
 );
 
+// Marcar/desmarcar en lote el título intermedio (debe ir antes de /:id).
+router.patch(
+  "/:studyPlanId/subjects/intermediate",
+  authUser,
+  authStudyPlanOwnerOrAdmin,
+  planSubjectController.bulkSetIntermediate
+);
+
 // Actualizar materia del plan
 router.patch(
   "/:studyPlanId/subjects/:id",

@@ -2,7 +2,7 @@
  "kind": "plan",
  "sourceKind": "oficial",
  "count": 41,
- "credits": 1337,
+ "credits": 0,
  "intermediateTitle": null,
  "names": [
   "Introducción al desarrollo agrario",
@@ -15,7 +15,7 @@
   "Matemática aplicada",
   "Geografía agraria nacional",
   "Nutrición y soberanía alimentaria",
-  "lenguajes: la producción de conocimiento en la",
+  "Nuevos entornos y lenguajes: la producción de conocimiento en la",
   "Ecofisiología vegetal",
   "Química general",
   "Inmersión a la realidad social agraria",
@@ -58,7 +58,7 @@
   "Matemática aplicada||y1||c2",
   "Geografía agraria nacional||y1||c2",
   "Nutrición y soberanía alimentaria||y1||c2",
-  "lenguajes: la producción de conocimiento en la||y1||c2",
+  "Nuevos entornos y lenguajes: la producción de conocimiento en la||y1||c2",
   "Ecofisiología vegetal||y2||c3",
   "Química general||y2||c3",
   "Inmersión a la realidad social agraria||y2||c3",
@@ -90,5 +90,5 @@
   "Ateneo de casos de estudio||y4||c2",
   "Formulación y evaluación de proyectos||y4||c2"
  ],
- "file": "Instituto de Biotecnología/Plan-de-estudios-Licenciatura-en-Desarrollo-Agrario-EXP.-898-23.pdf"
+ "file": "Instituto de Biotecnología/Licenciatura en Desarrollo Agrario/Plan-de-estudios-Licenciatura-en-Desarrollo-Agrario-EXP.-898-23.pdf"
 }

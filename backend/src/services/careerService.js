@@ -82,6 +82,7 @@ const createCareer = async (careerData) => {
     university: careerData.university,
     academicUnit: careerData.academicUnit || null,
     color: careerData.color,
+    careerType: careerData.careerType || null,
   });
 };
 
@@ -136,6 +137,11 @@ const updateCareer = async (id, careerData) => {
 
   if (careerData.color !== undefined) {
     updateData.color = careerData.color;
+  }
+
+  // Tipo de carrera (admin): null lo borra; el enum del modelo lo valida.
+  if (careerData.careerType !== undefined) {
+    updateData.careerType = careerData.careerType || null;
   }
 
   // Archivar/desarchivar (rutas admin).

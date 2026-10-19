@@ -32,7 +32,7 @@ const REF_PATH = path.join(REPO_ROOT, "docs", "testing", "planes-referencia.json
 const { requireCorpus, resolvePlanesDir } = require("./lib/requireCorpus");
 const PLANES_DIR = resolvePlanesDir(REPO_ROOT);
 const INFORMES_DIR = path.join(__dirname, "informes");
-const { API, setupTestUser, reqPdf } = require("./lib/testAuth");
+const { API, setupTestUser, promoteToAdmin, reqPdf } = require("./lib/testAuth");
 
 // Guard de corpus (plan maestro §1.5.3 C6/C7).
 requireCorpus(PLANES_DIR, "carga-masiva");
@@ -71,6 +71,7 @@ async function runPlan(entry) {
     estado: "FAIL", mensaje: "", warns: [],
     httpParse: null, detectedCount: null, sourceKind: null,
     creditsFinal: null, creditsIntermediate: null, intermediateTitle: null,
+    intermediateMarked: null, intermediateClassified: false,
     saved: null, total: null, sumCredits: null, sinAnio: null,
   };
   if (!fs.existsSync(abs)) {
@@ -82,7 +83,7 @@ async function runPlan(entry) {
   // 1. preview (mismo camino que la UI: parseo + validación, sin guardar).
   let parsed = null;
   try {
-    const { status, body } = await preview(abs, 180000);
+    const { status, body } = await preview(abs, 300000);
     r.httpParse = status;
     if (status !== 200) {
       r.mensaje = `preview -> HTTP ${status}: ${body?.error?.message || body?.message || ""}`;
@@ -98,6 +99,8 @@ async function runPlan(entry) {
   r.creditsFinal = parsed.creditsFinal;
   r.creditsIntermediate = parsed.creditsIntermediate;
   r.intermediateTitle = parsed.intermediateTitle || null;
+  r.intermediateMarked = (parsed.subjects || []).filter((s) => s.intermediate).length;
+  r.intermediateClassified = parsed.intermediateClassified === true;
 
   if (!parsed.subjects?.length) {
     r.mensaje = "detectedCount 0: el PDF no tiene texto extraíble (escaneado?) o formato no soportado";
@@ -140,7 +143,7 @@ async function runCorrelativas(entry) {
   }
   let parsed = null;
   try {
-    const { status, body } = await preview(abs, 240000);
+    const { status, body } = await preview(abs, 300000);
     r.httpParse = status;
     if (status !== 200) {
       // El formato correlativas suele requerir IA (cuotas externas): WARN, no FAIL,
@@ -186,7 +189,8 @@ async function main() {
   }
 
   TEST = await setupTestUser(RUN_TAG);
-  console.log(`usuario de prueba: ${TEST.nick}`);
+  await promoteToAdmin(TEST.nick);
+  console.log(`usuario de prueba: ${TEST.nick} (ADMIN)`);
 
   const results = [];
   const planEntries = entries.filter((e) => e.tipo !== "correlativas");
@@ -219,18 +223,29 @@ async function main() {
     ``,
     `Resumen: OK=${counts.OK} OK-IA=${counts["OK-IA"]} WARN=${counts.WARN} FAIL=${counts.FAIL} SKIP=${counts.SKIP} (total ${results.length})`,
     ``,
-    `| Archivo | Tipo | Detect. | Origen | Créd. | Estado | Detalle |`,
-    `| --- | --- | --- | --- | --- | --- | --- |`,
+    `| Archivo | Tipo | Detect. | Origen | Créd. | Tec. (mat/cr) | Estado | Detalle |`,
+    `| --- | --- | --- | --- | --- | --- | --- | --- |`,
   ];
   for (const r of results) {
     const det = r.tipo === "correlativas" ? (r.total ?? "–") : (r.detectedCount ?? "–");
     const cred = r.sumCredits ?? r.creditsFinal ?? "–";
+    const tec = r.tipo !== "correlativas" && r.intermediateTitle
+      ? `${r.intermediateMarked}/${r.creditsIntermediate ?? "–"}${r.intermediateClassified ? " IA" : ""}`
+      : "–";
     const det2 = [r.mensaje, ...r.warns].filter(Boolean).join("<br>").replace(/\|/g, "\\|");
-    lines.push(`| ${r.file.split("/").pop()} | ${r.tipo} | ${det} | ${r.sourceKind ?? "–"} | ${cred} | **${r.estado}** | ${det2} |`);
+    lines.push(`| ${r.file.split("/").pop()} | ${r.tipo} | ${det} | ${r.sourceKind ?? "–"} | ${cred} | ${tec} | **${r.estado}** | ${det2} |`);
+  }
+  const withInt = results.filter((r) => r.tipo !== "correlativas" && r.intermediateTitle);
+  if (withInt.length) {
+    lines.push(``);
+    lines.push(`Planes con título intermedio declarado: **${withInt.length}**, con materias marcadas: **${withInt.filter((r) => r.intermediateMarked > 0).length}**, clasificados por IA: **${withInt.filter((r) => r.intermediateClassified).length}**.`);
   }
   lines.push(``);
   fs.writeFileSync(path.join(INFORMES_DIR, fname), lines.join("\n"), "utf8");
   console.log(`\nResumen: OK=${counts.OK} OK-IA=${counts["OK-IA"]} WARN=${counts.WARN} FAIL=${counts.FAIL} SKIP=${counts.SKIP}`);
+  if (withInt.length) {
+    console.log(`Título intermedio: ${withInt.length} declarados, ${withInt.filter((r) => r.intermediateMarked > 0).length} con materias marcadas, ${withInt.filter((r) => r.intermediateClassified).length} por IA`);
+  }
   console.log(`Informe: backend/scripts/informes/${fname}`);
   if (counts.FAIL) process.exitCode = 1;
 

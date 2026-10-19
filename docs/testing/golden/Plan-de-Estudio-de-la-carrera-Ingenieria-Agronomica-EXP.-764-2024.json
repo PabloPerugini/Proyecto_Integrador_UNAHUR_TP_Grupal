@@ -1,7 +1,7 @@
 {
  "kind": "plan",
  "sourceKind": "oficial",
- "count": 59,
+ "count": 58,
  "credits": 1531,
  "intermediateTitle": null,
  "names": [
@@ -10,7 +10,6 @@
   "Agroecología",
   "Biología",
   "Matemática aplicada",
-  "Nuevos entornos y",
   "lenguajes: la producción de conocimiento en la",
   "UNAHUR I",
   "Introducción a la botánica",
@@ -71,7 +70,6 @@
   "Agroecología||y1||c1",
   "Biología||y1||c1",
   "Matemática aplicada||y1||c1",
-  "Nuevos entornos y||y1||c1",
   "lenguajes: la producción de conocimiento en la||y1||c1",
   "UNAHUR I||y1||c1",
   "Introducción a la botánica||y1||c2",
@@ -126,5 +124,5 @@
   "Cerealicultura||y5||c10",
   "Cannabicultura||y5||c10"
  ],
- "file": "Instituto de Biotecnología/Agronomia/Plan-de-Estudio-de-la-carrera-Ingenieria-Agronomica-EXP.-764-2024.pdf"
+ "file": "Instituto de Biotecnología/Ingeniería Agronómica/Plan-de-Estudio-de-la-carrera-Ingenieria-Agronomica-EXP.-764-2024.pdf"
 }

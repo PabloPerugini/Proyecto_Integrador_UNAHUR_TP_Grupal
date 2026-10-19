@@ -111,6 +111,19 @@ function cleanName(parts) {
   return parts
     .map((p) => p.replace(/\s+/g, " "))
     .join(" ")
+    // Artefactos de extracción de los PDFs: la ñ puede venir descompuesta
+    // (n + tilde combinante), la i puede ser la "ı" sin punto, y algunos
+    // glifos dejan controles (p. ej. NUL donde falta la "f" en
+    // "Eco\0isiología" del TUPAP-2025). NFC compone los acentos.
+    .replace(/\u0131/g, "i")
+    .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, "")
+    .normalize("NFC")
+    // En algunos anexos (RES-1467) la extracción pega la duración al nombre
+    // en un solo token: "Economía de la innovación Cuatrimestral".
+    .replace(
+      /\s+(?:Cuatrimestral|Bimestral|Semestral|Trimestral|Mensual|Anual)\s*$/iu,
+      "",
+    )
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -127,20 +140,32 @@ function cleanName(parts) {
 //    cada columna según las etiquetas del encabezado (HIS/HIT/IPP/HTAT/CRE…).
 // ---------------------------------------------------------------------------
 
-const TAB_DURATION_RE = /^(C|A|Cuatr\.?|Cuatrimestral|Anual)$/i;
+const TAB_DURATION_RE =
+  /^(C|A|Cuatr\.?|Cuatrimestral|Bimestral|Anual)$/i;
 // Periodicidad que en algunas tablas aparece en la columna de duración pero NO
 // es duración de la materia (p. ej. "Mensual"/"Semestral" en Prácticas). Se usa
 // sólo para excluir la palabra del nombre, no para detectar anclas.
 const TAB_PERIODICITY_RE = /^(Mensual|Semestral)$/i;
+// Valor de la columna "Modalidad de dictado" (a la derecha de las horas): no
+// desborda la fila hacia la banda de horas (los DI de Enfermería/Metalúrgica
+// traen "Presencial" a x>=300 en cada fila de materia).
+const TAB_MODALITY_RE =
+  /^(Presencial|Semipresencial|Virtual|A distancia|Distancia|Mixta)$/i;
 const TAB_AREA_RE =
   /^(CFB|CFC|CFE|CIC|CP|CBGyE|ASOyR|ISBDySO|OTRAS|TALLER|AyL|ASyP)$/i;
 const TAB_TOTAL_RE = /^(TOTAL|SUBTOTAL)\b/i;
 const TAB_ACA_RE = /ACTIVIDADES CURRICULARES (?:ACREDITABLES|DE)|(^|\s)ACA([\s(]|$)/i;
 // Tabla-resumen de carga horaria por campo (CFC/CFE/CIC) en los planes de
 // licenciaturas: filas "Común", "Básica", "Específica", "Integración
-// curricular", ... que NO son materias.
+// curricular", ... que NO son materias. También las filas de las tablas
+// comparativas del final del plan ("Bloque de fundamentos…", "Formación…",
+// "Horas según decisión de cada institución…").
 const TAB_SUMMARY_ROW_RE =
-  /^(Com[\u00fa]n|B[\u00e1]sica|Espec[i\u00ed]fica|Integraci[\u00f3]n curricular|Integraci[\u00f3]n|Curriculares|Actividades([\u00b4\u2019'`\s]|$)|Acreditables)(?=[\u00b4\u2019'`\s]|$)/i;
+  /^(Com[\u00fa]n|B[\u00e1]sica|Espec[i\u00ed]fica|Integraci[\u00f3]n curricular|Integraci[\u00f3]n|Curriculares|Actividades([\u00b4\u2019'`\s]|$)|Acreditables|Bloque de|Formaci[\u00f3]n|Horas seg[\u00fa]n decisi[\u00f3]n de cada)(?=[\u00b4\u2019'`\s]|$)|\bcr[e\u00e9]\u0301?ditos?\b|CARGA HORARIA TOTAL/i;
+// El texto extraído puede venir con acentos descompuestos (NFD): se prueba
+// sobre la forma compuesta para que "créditos"/"Común"/"Formación" matcheen.
+const isSummaryRowText = (text) =>
+  TAB_SUMMARY_ROW_RE.test(String(text).normalize("NFC"));
 
 const TAB_FIELD_BY_LABEL = {
   HS: "his",
@@ -149,6 +174,7 @@ const TAB_FIELD_BY_LABEL = {
   SEMANAL: "his",
   HIT: "hit",
   IP: "hit",
+  IPT: "hit",
   HITE: "hite",
   IPP: "hite",
   PRÁCTICA: "hite",
@@ -166,7 +192,7 @@ const TAB_FIELD_BY_LABEL = {
   TF: "tf",
 };
 const TAB_LABEL_TOKEN_RE =
-  /^(HS\.?|HIS|HIT|HITE|HIP|HITAT|HTAT|IPS|IP|IPP|TAE|TTE|HT|TF|CRE|SEMANAL|TE[ÓO]RICA|PR[ÁA]CTICA|TOTAL|CR[EÉ]DITOS)$/i;
+  /^(HS\.?|HIS|HIT|HITE|HIP|HITAT|HTAT|IPS|IP|IPP|IPT|TAE|TTE|HT|TF|CRE|SEMANAL|TE[ÓO]RICA|PR[ÁA]CTICA|TOTAL|CR[EÉ]DITOS)$/i;
 const TAB_LABEL_KEY = (t) =>
   String(t).trim().toUpperCase().replace(/[.\s:]/g, "");
 
@@ -207,7 +233,7 @@ const TAB_HEADER_ROW_RE =
 const TAB_TITLE_ROW_RE =
   /^(LICENCIAD[AO]|T[EÉ]CNIC[AO]|PROFESORADO|UNIVERSIDAD|DISE[ÑN]O CURRICULAR|NOMENCLATURA|ACTIVIDADES CURRICULARES ACREDITABLES|Gr[áa]fica)/i;
 const TAB_HEADER_TOKEN_RE =
-  /^(?:A[ÑN]O|NRO|N[°º]?|COD|C[ÓO]DIGO|N[ÚU]MERO|ASIGNATURA|UNIDAD|CURRICULAR|CAMP|IP|HS\.?|SEMA|NAL|HTAT|HITAT|TAE|TTE|TOTAL|CRE|HIS|HIT|HITE|HIP|TF|HT|CP|D|O|HORAS|CANTIDAD|TRABAJO|PEDAG|AUT[ÓO]N|INTERACCI|TOTALES|SELECCIONES)$/i;
+  /^(?:A[ÑN]O|NRO|N[°º]?|COD|C[ÓO]DIGO|N[ÚU]MERO|ASIGNATURA|UNIDAD|CURRICULAR|CAMP|IP|IPT|HS\.?|SEMA|NAL|HTAT|HITAT|TAE|TTE|TOTAL|CRE|HIS|HIT|HITE|HIP|TF|HT|CP|D|O|HORAS|CANTIDAD|TRABAJO|PEDAG|AUT[ÓO]N|INTERACCI|TOTALES|SELECCIONES)$/i;
 
 const numVal = (s) => {
   const t = String(s).trim();
@@ -226,10 +252,13 @@ const isDurToken = (it) =>
 // tabla principal, y es la única con marcadores de cuatrimestre. Acá se detecta
 // ese rango de páginas para marcar las materias que lo integran y el nombre.
 
+// Además del encabezado "…del título intermedio", algunas carreras titulan la
+// sección numerada "7.x.y TITULACIÓN DE TÉCNICA/O UNIVERSITARIA/O …"
+// (p. ej. Lic. en Tecnología de los Alimentos).
 const INTERMEDIO_START_RE =
-  /estructura del (?:t[u\u00fa]tulo|t\u00edtulo)(?:[^.]*?)intermedio|7\.\d+\.\d+\s+[^.]*intermedio/i;
+  /estructura del (?:t[u\u00fa]tulo|t\u00edtulo)(?:[^.]*?)intermedio|7\.\d+\.\d+\s+[^.]*intermedio|\d+(?:\.\d+)+\s+titulaci[o\u00f3]n\s+(?:de\s+)?t[e\u00e9]cnica/i;
 const INTERMEDIO_END_RE =
-  /seguimiento curricular|correlativid?ades?|\bcorrelativ\b|materias?\s+optativas|pr[a\u00e1]ctica\s+profesional|proyecto\s+(?:fi[ñn]al|final)|formaci[o\u00f3]n\s+pr[a\u00e1]ctica|contenidos\s+m[i\u00ed]nimos|actividades curriculares acreditables|estructura de (?:la|el) (?:licenciad|profesorad|ingenier|t[u\u00fa]tulo)|^\s*\d{1,2}\.(?:\.\d+)?\s+[A-ZÑÁÉÍÓÚÜ][\wẂẄ]/m;
+  /seguimiento curricular|correlativid?ades?|\bcorrelativ\b|materias?\s+optativas|pr[a\u00e1]ctica\s+profesional|proyecto\s+(?:fi[ñn]al|final)|formaci[o\u00f3]n\s+pr[a\u00e1]ctica|contenidos\s+m[i\u00ed]nimos|actividades curriculares acreditables|estructura de (?:la|el) (?:licenciad|profesorad|ingenier|t[u\u00fa]tulo)|\d+(?:\.\d+)+\s+licenciatura\b|^\s*\d{1,2}\.(?:\.\d+)?\s+[A-ZÑÁÉÍÓÚÜ][\wẂẄ]/im;
 
 function pageConcat(page) {
   return page.items
@@ -298,10 +327,19 @@ function detectOfficialMeta(rawPages) {
     let yearX = null;
     let codeX = null;
     let sawData = false;
+    // Encabezado con "Carga horaria" (semanal/total) y sin columna de
+    // créditos: el plan no declara créditos (p. ej. Lic. en Desarrollo
+    // Agrario). Sin esto, el fallback "último número = créditos" sumaría
+    // horas como si fueran créditos.
+    let sawCargaHoraria = false;
     for (const row of [...rows].sort((a, b) => b.y - a.y)) {
       if (isDurToken(row.items[0]) || row.items.some(isDurToken)) {
         sawData = true;
         break;
+      }
+      const lineTxt = row.items.map((it) => it.t).join(" ");
+      if (/\bcarga\b/i.test(lineTxt) && /\bhoraria\b/i.test(lineTxt)) {
+        sawCargaHoraria = true;
       }
       for (const it of row.items) {
         if (TAB_LABEL_TOKEN_RE.test(it.t) && TAB_FIELD_BY_LABEL[TAB_LABEL_KEY(it.t)]) {
@@ -312,11 +350,12 @@ function detectOfficialMeta(rawPages) {
       }
     }
     const realLabels = [...labels].filter(([, x]) => x >= 300);
+    const noCredits = sawCargaHoraria && !labels.has("credits");
     if (realLabels.length >= 2) {
-      return { labels: new Map(realLabels), yearX, codeX };
+      return { labels: new Map(realLabels), yearX, codeX, noCredits };
     }
     if (sawData && realLabels.length) {
-      return { labels: new Map(realLabels), yearX, codeX };
+      return { labels: new Map(realLabels), yearX, codeX, noCredits };
     }
   }
   return null;
@@ -374,6 +413,7 @@ function rowSpillsRight(row) {
       it.x >= 300 &&
       !isNumber(it.t) &&
       !TAB_DURATION_RE.test(it.t) &&
+      !TAB_MODALITY_RE.test(it.t) &&
       !TAB_AREA_RE.test(it.t) &&
       !TAB_LABEL_TOKEN_RE.test(it.t) &&
       !TAB_HEADER_TOKEN_RE.test(it.t) &&
@@ -387,7 +427,7 @@ function isOfficialNameLine(row) {
   if (rowSpillsRight(row)) return false;
   if (isPeriodMarkerRow(row)) return false;
   if (TAB_TOTAL_RE.test(joined) || TAB_ACA_RE.test(joined)) return false;
-  if (TAB_SUMMARY_ROW_RE.test(joined)) return false;
+  if (isSummaryRowText(joined)) return false;
   if (TAB_HEADER_ROW_RE.test(joined)) {
     // Un encabezado de tabla es una fila de puras etiquetas. "Asignatura
     // UNAHUR …" también empieza con "ASIGNATURA", pero es una materia real
@@ -875,7 +915,13 @@ async function parseOfficialPlan(data) {
         ht: byC.ht ?? 0,
         ...(tf != null ? { tf } : {}),
       };
-      if (credits == null) credits = nums.length ? nums[nums.length - 1].v : 0;
+      if (credits == null) {
+        credits = meta.noCredits
+          ? 0
+          : nums.length
+            ? nums[nums.length - 1].v
+            : 0;
+      }
     } else {
       facts = splitRowFacts({
         nums: nums.map((n) => n.v),
@@ -926,7 +972,14 @@ async function parseOfficialPlan(data) {
       for (const [k, v] of Object.entries(entry.hours || {})) {
         if (!existing.hours[k]) existing.hours[k] = v;
       }
-      if (!existing.credits) existing.credits = entry.credits;
+      if (!existing.credits) {
+        existing.credits = entry.credits;
+      } else if (existing.kind === "ACA" && entry.credits > existing.credits) {
+        // La misma fila ACA aparece en la tabla del título intermedio y en la
+        // de la licenciatura con créditos distintos (p. ej. 10 y 30): el total
+        // del plan (creditsFinal) debe usar la de la licenciatura.
+        existing.credits = entry.credits;
+      }
       return existing;
     }
     seen.set(key, entry);
@@ -996,6 +1049,9 @@ async function parseOfficialPlan(data) {
     const wrappedDataY = new Set();
     const consumedFragY = new Set();
     const wrappedAnchors = [];
+    // Filas de nombre ya colgadas de una materia: permiten encadenar líneas de
+    // continuación (incluidas las que siguen en la página siguiente).
+    const nameAttach = new Map();
     const hasPlanData = (r) =>
       r.items.some(isDurToken) ||
       r.items.some((it) => isNumber(it.t) && it.x >= 300) ||
@@ -1022,14 +1078,61 @@ async function parseOfficialPlan(data) {
         !isPeriodMarkerRow(r)
       );
     });
+    // Competidores para el veto de fragmentos: toda fila con datos de tabla
+    // (incluidas las que traen el prefijo de período "PRIMER/SEGUNDO AÑO …",
+    // que isPeriodMarkerRow deja fuera de dataRows2 por compatibilidad con el
+    // pipeline de años/créditos). Si no compitieran, un fragmento pegado a
+    // ellas (p. ej. "Eléctrica" en Energía P17 o "Mineralogía y tratamiento"
+    // en Metalúrgica P21) quedaría a merced de la materia vecina.
+    const competitors = dataRows2.concat(
+      rows.filter(
+        (r) =>
+          !dataRows2.includes(r) &&
+          hasPlanData(r) &&
+          !TAB_TOTAL_RE.test(rowText(r)) &&
+          !TAB_ACA_RE.test(rowText(r)),
+      ),
+    );
     const fragRows2 = rows.filter(isNameFragRow);
+    // Distancia de un fragmento a la fila de datos más cercana que no sea la
+    // propia celda (una celda puede ocupar 2 líneas pegadas: número, datos y
+    // a veces el hueco de 6-8 px entre ambas, p. ej. GA 275/283 o Nutrición
+    // 566/572). Esa banda se excluye para no vetar el fragmento propio.
+    const otherDataDist = (f, d) => {
+      let best = Infinity;
+      for (const dd of competitors) {
+        if (dd.y === d.y || Math.abs(dd.y - d.y) <= 8) continue;
+        // En el dialecto agro (TUPAP) el nombre de una materia se despliega
+        // debajo de su fila y puede invadir la distancia de la materia
+        // siguiente: esa fila (nombre inline, p. ej. "6 Sistemas…") no
+        // compite. En tablas estándar SÍ compite: es el veto que impide
+        // robarle el fragmento a la materia vecina (p. ej. "Eléctrica" en
+        // Energía P17, "Mineralogía y tratamiento" en Metalúrgica P21,
+        // "Investigación en Salud"/"Enfermería en" en Enfermería P5).
+        if (agroPage && officialNameTokens(dd).length) continue;
+        const dist = Math.abs(f.y - dd.y);
+        if (dist < best) best = dist;
+      }
+      return best;
+    };
+    // Primera x de la columna del nombre de una fila: los fragmentos del mismo
+    // nombre comparten sangría (evita encadenar títulos centrados como
+    // "Licenciado/a en Enfermería", x≈222, al nombre de la tabla, x≈49).
+    const firstTokX = (r) => {
+      const t = officialNameTokens(r)[0];
+      return t ? t.x : null;
+    };
     for (const d of dataRows2) {
+      // Un fragmento sólo se consume si no está más cerca de otra fila de
+      // datos (el nombre partido pertenece a la materia que lo contiene).
+      const own = (f) => Math.abs(f.y - d.y) <= otherDataDist(f, d) + 1;
       let fa = null;
       let faD = 15;
       let fb = null;
       let fbD = 15;
       for (const f of fragRows2) {
         if (consumedFragY.has(f.y)) continue;
+        if (!own(f)) continue;
         const above = d.y - f.y;
         const below = f.y - d.y;
         if (above >= 0 && above < faD) {
@@ -1041,10 +1144,81 @@ async function parseOfficialPlan(data) {
           fb = f;
         }
       }
-      if (!fa || !fb) continue;
-      consumedFragY.add(fa.y);
-      consumedFragY.add(fb.y);
+      // Líneas adicionales del mismo nombre (p. ej. "Nuevos Entornos y" sobre
+      // "Lenguajes: …" en el DI de Enfermería, o las 4 líneas de "Nuevos
+      // entornos y lenguajes: …" del dialecto agro): fragmentos encadenados a
+      // <= 18 px del elegido, en la misma columna del nombre y sin alejarse
+      // más de ~media fila de la celda de datos (excepto en el dialecto agro,
+      // donde los nombres largos se despliegan en varias líneas).
+      const used = [fa, fb].filter(Boolean);
+      const xRef =
+        (fa ? firstTokX(fa) : null) ?? (fb ? firstTokX(fb) : null) ?? null;
+      for (const side of [fa, fb]) {
+        const down = side === fa; // fa: fragmentos hacia abajo (y menor)
+        let prev = side;
+        while (prev) {
+          let nx = null;
+          let nxD = 19;
+          for (const f of fragRows2) {
+            if (f === prev || consumedFragY.has(f.y) || used.includes(f)) {
+              continue;
+            }
+            const dy = prev.y - f.y;
+            const gap = Math.abs(dy);
+            if (gap === 0 || gap >= nxD) continue;
+            if (down ? dy <= 0 : dy >= 0) continue;
+            if (!agroPage && Math.abs(f.y - d.y) > 24) continue;
+            // El salto sólo vale si el fragmento pertenece a esta celda: más
+            // cerca de esta fila de datos que de otra (evita colgar "Nuevos
+            // entornos y" tras "…alimentaria" en Agrario, cuyo fragmento ya
+            // pertenece a la materia de abajo).
+            if (!own(f)) continue;
+            const fx = firstTokX(f);
+            if (xRef != null && fx != null && Math.abs(fx - xRef) > 45) {
+              continue;
+            }
+            nxD = gap;
+            nx = f;
+          }
+          if (!nx) break;
+          used.push(nx);
+          prev = nx;
+        }
+      }
+      if (agroPage && (!fa || !fb)) continue;
+      // Un solo lado sólo dispara si está pegado a la fila (mitad de celda
+      // partida): un wrap de un lado lejano le roba el nombre a la materia
+      // vecina (p. ej. "Dispositivos e instalaciones" en Energía, que debe
+      // fusionarse por cercanía con "eléctricas I" en el merge de anclas).
+      // Además la fila debe tener datos "de cuerpo" (D, código o números de
+      // horas en la zona de la tabla): las filas que sólo traen un número de
+      // la columna de correlativas (p. ej. "13"/"6" en Desarrollo Agrario)
+      // no son media celda partida y no capturan el fragmento de arriba.
+      const durOwn = d.items.find(isDurToken);
+      const codeOwn =
+        meta && meta.codeX != null
+          ? d.items.find(
+              (it) =>
+                /^\d{1,2}$/.test(it.t) && Math.abs(it.x - meta.codeX) <= 14,
+            )
+          : null;
+      const bodyNums = d.items.filter(
+        (it) => isNumber(it.t) && it.x >= 300 && it.x < 460,
+      ).length;
+      const dTiny = !durOwn && !codeOwn && bodyNums === 0;
+      const oneSideStrong =
+        ((fa && !fb && faD <= 3) || (fb && !fa && fbD <= 3)) && !dTiny;
+      if (!(fa && fb) && !oneSideStrong) continue;
+      if (!used.length) continue;
+      for (const f of used) consumedFragY.add(f.y);
       wrappedDataY.add(d.y);
+      if (process.env.PARSE_DEBUG && page.num === Number(process.env.PARSE_PAGE || 17)) {
+        console.log(
+          `[wrap] d=${d.y} fa=${fa ? fa.y : "-"} fb=${fb ? fb.y : "-"} used=[${used
+            .map((f) => f.y)
+            .join(",")}] txt="${used.map((f) => rowText(f)).join(" | ").slice(0, 70)}"`,
+        );
+      }
       const durTok = d.items.find(isDurToken);
       const codeTok =
         meta && meta.codeX != null
@@ -1053,15 +1227,14 @@ async function parseOfficialPlan(data) {
                 /^\d{1,2}$/.test(it.t) && Math.abs(it.x - meta.codeX) <= 14,
             )
           : null;
-      wrappedAnchors.push({
+      const w = {
         y: d.y,
         duration: durTok ? normalizeDurationToken(durTok.t) : null,
         num: codeTok ? parseInt(codeTok.t, 10) : null,
         yearCol: null,
         nameParts: [
-          ...officialNameTokens(fa),
+          ...used.flatMap((f) => officialNameTokens(f)),
           ...officialNameTokens(d),
-          ...officialNameTokens(fb),
         ],
         nums: [],
         ownNums300: d.items.filter(
@@ -1069,7 +1242,11 @@ async function parseOfficialPlan(data) {
         ).length,
         group: null,
         merged: false,
-      });
+      };
+      wrappedAnchors.push(w);
+      for (const f of used) {
+        nameAttach.set(f.y, { anchor: w, x: firstTokX(f) });
+      }
     }
 
     const anchors = [];
@@ -1199,7 +1376,7 @@ async function parseOfficialPlan(data) {
     // el mismo nombre si:
     //  - entre ellas hay una "fila fuerte" (D + 4+ números: la fila de horas que
     //    queda entre los dos fragmentos del nombre, p. ej. Profesorados), o
-    //  - están muy juntas (<= 13 px) y el fragmento inferior trae números
+    //  - están muy juntas (<= 15 px) y el fragmento inferior trae números
     //    (p. ej. "Sistemas de representación gráfica" partido en las Ingenierías).
     const groups = [];
     const strongBetween = (a, b) => {
@@ -1216,6 +1393,21 @@ async function parseOfficialPlan(data) {
       }
       return hasDur && numCount >= 4;
     };
+    // Tokens del nombre de un ancla, en orden de lectura, para chequear la
+    // continuidad textual al fusionar: los anclas de wrap ya traen nameParts
+    // armadas; los anclas propias, la fila original.
+    const anchorTokens = (an) => {
+      if (wrappedDataY.has(an.y)) {
+        const w = wrappedAnchors.find((x) => x.y === an.y);
+        return w
+          ? [...w.nameParts].sort((p, q) => q.y - p.y || p.x - q.x)
+          : [];
+      }
+      const r = rows.find((x) => x.y === an.y);
+      return r ? officialNameTokens(r) : [];
+    };
+    const OPEN_TAIL_RE =
+      /[-–—,;]$|(?:^|\s)(?:y|e|o|u|de|del|la|las|el|los|al|en|con|sin|para|por|a|ante|bajo|contra|desde|entre|hacia|hasta|según|sobre|tras|su|sus)$/i;
     for (const a of anchors) {
       // anchors ya vienen ordenados de arriba hacia abajo (rows vienen desc).
       if (!groups.length) {
@@ -1226,19 +1418,43 @@ async function parseOfficialPlan(data) {
       const top = groups[groups.length - 1].top;
       const gap = top.y - a.y;
       const strong = strongBetween(top, a);
-      // El merge por cercanía (<= 13 px) es para nombres partidos en dos líneas
-      // donde la línea superior sólo trae fragmento de nombre (sin D ni nro.) y
-      // los datos caen en la inferior. Dos filas reales a esa distancia (ambas
-      // con D y números, p. ej. "Tecnología educativa" / "Política educativa" en
+      // El merge por cercanía es para nombres partidos en dos líneas donde la
+      // línea superior sólo trae fragmento de nombre (sin D ni nro.) y los
+      // datos caen en la inferior (p. ej. "Laboratorio de Química Instrumental
+      // y" / "Analítica" en Alimentos: 14 px de separación con la tabla a ~35
+      // px por fila — media fila). Dos filas reales a esa distancia (ambas con
+      // D y números, p. ej. "Tecnología educativa" / "Política educativa" en
       // Profesorado, o "Introducción a la Biotecnología" / "Matemática I") NO
-      // deben fusionarse.
+      // deben fusionarse; tampoco filas consecutivas de una tabla cuyo paso es
+      // parecido al gap (Chino: "Lenguas (CMER)" / "A1" a 14 px con la página
+      // a 22 — no es media fila, son dos renglones reales). Por eso el extra
+      // de 13-14 px exige gap <= mitad del paso de fila de la página.
       const topHasData = top.duration != null || top.num != null;
+      const pagePitch = medianGap(anchors.map((x) => x.y));
+      // Continuidad textual: evita fusionar dos materias distintas pegadas
+      // (p. ej. "Cultura Digital" / "3 Anátomo-Fisiología I…" en el DI de
+      // Enfermería) pero completa un nombre partido cuando la línea superior
+      // queda abierta ("…de la" / "Investigación en Salud", "…Instrumental
+      // y" / "Analítica", "Dispositivos e" / "eléctricas I").
+      const topToks = anchorTokens(top);
+      const topTail = topToks.length ? topToks[topToks.length - 1].t : "";
+      const aToks = anchorTokens(a);
+      const continues =
+        !aToks.length ||
+        /^\p{Ll}/u.test(aToks[0].t) ||
+        OPEN_TAIL_RE.test(topTail);
       const sameCell = strong
         ? gap <= 20
-        : gap <= 13 && a.ownNums300 >= 1 && !topHasData;
+        : (gap <= 13 ||
+            (gap <= 14 &&
+              (gap * 2 <= pagePitch ||
+                (aToks[0] && /^\p{Ll}/u.test(aToks[0].t))))) &&
+          (a.ownNums300 >= 1 || aToks.length) &&
+          continues &&
+          (!topHasData || OPEN_TAIL_RE.test(topTail));
       if (process.env.PARSE_DEBUG && page.num === Number(process.env.PARSE_PAGE || 17)) {
         console.log(
-          `[pmerge][merge?] pag=${page.num} cur=${a.y} top=${top.y} gap=${gap} strong=${strong} ownN=${a.ownNums300}`,
+          `[pmerge][merge?] pag=${page.num} cur=${a.y} top=${top.y} gap=${gap.toFixed(2)} pitch=${pagePitch.toFixed(2)} strong=${strong} ownN=${a.ownNums300}`,
         );
       }
       if (sameCell) {
@@ -1260,20 +1476,36 @@ async function parseOfficialPlan(data) {
 
     const W = windowFor(medianGap(groups.map((g) => g.top.y)));
 
-    // Continuación del nombre de la última materia de la página anterior
-    // (los fragmentos envueltos pueden terminar en el tope de la página siguiente).
-    if (carry && carry.nameParts) {
-      const firstAnchor = [...anchors].sort((a, b) => a.y - b.y)[0];
-      const topLimit = firstAnchor.y + W;
-      for (const row of rows) {
-        if (row.y <= topLimit) break;
-        if (anchors.some((a) => Math.abs(a.y - row.y) < 1)) continue;
-        if (!isOfficialNameLine(row)) continue;
-        if (row.items.some(isDurToken)) continue;
-        if (isOfficialDataRow(row, meta)) continue;
-        const tokens = officialNameTokens(row);
-        if (!tokens.length) continue;
-        carry.nameParts.push(...tokens);
+    // Continuación del nombre de la última materia de la página anterior: sólo
+    // en el dialecto agro (p. ej. TUPAP: "…conocimiento en la" / "cultura
+    // digital" al tope de la página siguiente). Esa materia ya se publicó, así
+    // que el texto se anexa a su entry.
+    if (carry) {
+      if (carry.entry && carry.agro) {
+        const topAnchor = anchors.reduce(
+          (best, a) => (!best || a.y > best.y ? a : best),
+          null,
+        );
+        const extra = [];
+        if (topAnchor) {
+          for (const row of rows) {
+            if (row.y <= topAnchor.y) break;
+            if (!isOfficialNameLine(row)) continue;
+            if (TAB_TITLE_ROW_RE.test(rowText(row))) continue;
+            if (row.items.some(isDurToken)) continue;
+            if (isOfficialDataRow(row, meta)) continue;
+            const tokens = officialNameTokens(row);
+            if (!tokens.length) continue;
+            extra.push(...tokens.map((p) => p.t));
+            consumedFragY.add(row.y);
+          }
+        }
+        if (extra.length) {
+          carry.entry.name = cleanName([
+            ...carry.entry.name.split(/\s+/),
+            ...extra,
+          ]);
+        }
       }
       carry = null;
     }
@@ -1286,12 +1518,59 @@ async function parseOfficialPlan(data) {
     for (const row of rows) {
       const joined = rowText(row);
       if (TAB_TOTAL_RE.test(joined) || TAB_ACA_RE.test(joined)) continue;
-      if (TAB_SUMMARY_ROW_RE.test(joined)) continue;
+      if (isSummaryRowText(joined)) continue;
       if (isPeriodMarkerRow(row)) continue;
       if (consumedFragY.has(row.y)) continue;
       if (!officialNumberRowUsable(row) && !isOfficialNameLine(row)) continue;
 
       let best = anchors.find((a) => Math.abs(a.y - row.y) < 1) || null;
+      if (!best) {
+        // Ancla pegada (±2 px): rescata la mitad de una fila partida que la
+        // regla general descartaría por lejos (caso Alimentos: "86 150 6" a
+        // 1 px del nombre, con la fila de arriba a 28-35 px). Sólo se usa
+        // cuando NO hay ancla de arriba a distancia de fila normal (≤ W): en
+        // tablas con filas cada ~20 px la duración "Cuatrimestral" a 1 px del
+        // nombre vecino se colgaría mal de él y robaría datos entre materias
+        // (p. ej. Probabilidad/Mineralogía en Metalúrgica).
+        let near = null;
+        let nearD = 3;
+        for (const a of anchors) {
+          const d = Math.abs(a.y - row.y);
+          if (d <= 2 && d < nearD) {
+            nearD = d;
+            near = a;
+          }
+        }
+        if (near) {
+          let above = null;
+          for (const a of anchors) {
+            if (a.y > row.y && (!above || a.y < above.y)) above = a;
+          }
+          if (!above || above.y - row.y > W) best = near;
+        }
+      }
+      let chained = false;
+      if (!best && isOfficialNameLine(row)) {
+        // Línea de continuación del mismo nombre: cuelga del ancla del
+        // fragmento inmediatamente anterior (<= 18 px arriba, misma columna),
+        // aunque el ancla quede fuera de la ventana W de la página.
+        let chain = null;
+        let chainD = 19;
+        const rowX = firstTokX(row);
+        for (const [y, e] of nameAttach) {
+          const g = y - row.y;
+          if (g <= 0 || g >= chainD) continue;
+          if (rowX != null && e.x != null && Math.abs(rowX - e.x) > 45) {
+            continue;
+          }
+          chainD = g;
+          chain = e.anchor;
+        }
+        if (chain) {
+          best = chain;
+          chained = true;
+        }
+      }
       if (!best) {
         let above = null;
         for (const a of anchors) {
@@ -1311,7 +1590,7 @@ async function parseOfficialPlan(data) {
       }
       if (!best) continue;
       const selfRow = Math.abs(best.y - row.y) < 1;
-      if (!selfRow && Math.abs(row.y - best.y) > W) continue;
+      if (!selfRow && !chained && Math.abs(row.y - best.y) > W) continue;
 
       if (officialNumberRowUsable(row)) {
         // Dialecto agro: la carga semanal vive en x>=250 (la banda de 300 la
@@ -1328,7 +1607,15 @@ async function parseOfficialPlan(data) {
         best.duration = normalizeDurationToken(durTok.t);
       }
       if (isOfficialNameLine(row) && !wrappedDataY.has(row.y)) {
+        if (process.env.PARSE_DEBUG && page.num === Number(process.env.PARSE_PAGE || 17)) {
+          console.log(
+            `[attach] row=${row.y} -> best=${best.y} self=${selfRow} txt="${rowText(row).slice(0, 40)}"`,
+          );
+        }
         best.nameParts.push(...officialNameTokens(row));
+        if (agroPage) {
+          nameAttach.set(row.y, { anchor: best, x: firstTokX(row) });
+        }
       }
     }
 
@@ -1396,9 +1683,7 @@ async function parseOfficialPlan(data) {
       }
       const entry = pushSubject(a);
       if (!a.isAcaRow && a === bottomGroupTop) {
-        carry = entry
-          ? { ...entry, nameParts: a.nameParts, anchorY: a.y }
-          : null;
+        carry = entry ? { entry, agro: agroPage, anchorY: a.y } : null;
       }
     }
   }
@@ -1668,6 +1953,10 @@ function stripPeriodPrefix(s) {
 function isPeriodMarkerRow(row) {
   // Una fila con números es de datos (p. ej. "PRIMER AÑO 4 64 111 175 7" en las
   // Ingenierías: resto de la celda), nunca un marcador de período.
+  // NOTA: se mantiene la comparación histórica (sobre el ítem, no sobre .t)
+  // para no alterar la atribución de año/créditos de los planes ya validados;
+  // el veto de fragmentos usa una lista de competidores propia (ver
+  // otherDataDist), que sí incluye estas filas de datos con prefijo de período.
   if (row.items.some(isNumber)) return false;
   const peri = classifyPeriodHeader(rowText(row));
   if (!peri) return false;

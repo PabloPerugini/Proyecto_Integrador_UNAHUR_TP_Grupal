@@ -1,8 +1,8 @@
 {
  "kind": "plan",
  "sourceKind": "oficial",
- "count": 48,
- "credits": 385,
+ "count": 46,
+ "credits": 393,
  "intermediateTitle": "Técnico/a Universitario/a en Laboratorios",
  "names": [
   "conjunto de posibilidades que brinda y/o reconoce el Instituto de Biotecnología. Las ACA",
@@ -30,8 +30,6 @@
   "Bioquímica I",
   "ACTIVIDADES CURRICULARES ACREDITABLES (ACA):",
   "Laboratorios",
-  "Introducción a la Biotecnología Matemática I",
-  "Biología General Introducción a la Química",
   "Matemática III",
   "Física Aplicada",
   "Fisicoquímica",
@@ -80,8 +78,6 @@
   "Bioquímica I||y3||c1",
   "ACTIVIDADES CURRICULARES ACREDITABLES (ACA):||ynull||cnull",
   "Laboratorios||y3||c1",
-  "Introducción a la Biotecnología Matemática I||y1||c1",
-  "Biología General Introducción a la Química||y1||c1",
   "Matemática III||y2||c1",
   "Física Aplicada||y2||c2",
   "Fisicoquímica||y3||c1",

@@ -13,6 +13,7 @@ import MessageBanner from '../components/MessageBanner';
 import PageHeader from '../components/PageHeader';
 import ImportJobList from '../components/ImportJobList';
 import AdminCatalog from '../components/AdminCatalog';
+import SearchSelect from '../components/SearchSelect';
 import SavedPlansPanel from '../components/SavedPlansPanel';
 
 import { makeJobId } from '../utils/importJobs';
@@ -56,6 +57,8 @@ interface PreviewResponse {
   intermediateTitle?: string | null;
   creditsFinal?: number;
   creditsIntermediate?: number;
+
+  intermediateClassified?: boolean;
 
   aiFallback?: boolean;
   aiProvider?: string | null;
@@ -478,7 +481,7 @@ export default function UploadPlan() {
 
       {/* ADMINISTRACIÓN */}
 
-      <AdminCatalog onCareerCreated={reload} />
+      <AdminCatalog onCareerCreated={reload} onNotify={flash} />
 
       {/* SUBIR PDF */}
 
@@ -545,6 +548,31 @@ export default function UploadPlan() {
                 </p>
               )}
 
+              {preview.result.intermediateTitle &&
+                preview.subjects.length > 0 &&
+                !preview.subjects.some(
+                  (subject) => subject.intermediate
+                ) && (
+                  <div className="alert alert-warning py-2">
+                    <strong>Atención:</strong> el plan declara
+                    el título intermedio «
+                    {preview.result.intermediateTitle}» pero
+                    ninguna materia quedó marcada como parte de
+                    la tecnicatura. Después de guardar vas a
+                    poder marcarlas en{' '}
+                    <em>Administrar planes</em> con el marcado
+                    en lote.
+                  </div>
+                )}
+
+              {preview.result.intermediateClassified && (
+                <p className="text-warning">
+                  La IA propuso qué materias pertenecen al
+                  título intermedio. Revisalas antes de
+                  guardar.
+                </p>
+              )}
+
               {/* TABLA EDITABLE */}
 
               <div className="table-responsive">
@@ -561,6 +589,9 @@ export default function UploadPlan() {
                       <th>Materia</th>
                       <th>Año</th>
                       <th>Cuatrimestre</th>
+                      <th title="Pertenece al título intermedio (tecnicatura)">
+                        Tec
+                      </th>
                       <th>Correlatividades</th>
                     </tr>
                   </thead>
@@ -668,6 +699,25 @@ export default function UploadPlan() {
                             />
                           </td>
 
+                          <td className="text-center">
+                            <Form.Check
+                              title="Pertenece al título intermedio (tecnicatura)"
+                              checked={Boolean(
+                                subject.intermediate
+                              )}
+                              disabled={
+                                preview.saving ||
+                                Boolean(preview.saved)
+                              }
+                              onChange={(event) =>
+                                updateSubject(id, index, {
+                                  intermediate:
+                                    event.target.checked,
+                                })
+                              }
+                            />
+                          </td>
+
                           <td style={{ minWidth: 180 }}>
                             <small>
                               {subject.correlativasTexto ||
@@ -772,28 +822,26 @@ export default function UploadPlan() {
                         Carrera
                       </Form.Label>
 
-                      <Form.Select
+                      <SearchSelect
+                        options={careers.map((career) => ({
+                          value: career._id,
+                          label: career.name,
+                          hint:
+                            career.university &&
+                            typeof career.university === 'object'
+                              ? career.university.name
+                              : undefined,
+                        }))}
                         value={careerId}
                         disabled={preview.saving}
-                        onChange={(event) =>
+                        onChange={(next) =>
                           updatePreview(id, {
-                            careerId: event.target.value,
+                            careerId: next,
                           })
                         }
-                      >
-                        <option value="">
-                          Seleccionar carrera...
-                        </option>
-
-                        {careers.map((career) => (
-                          <option
-                            key={career._id}
-                            value={career._id}
-                          >
-                            {career.name}
-                          </option>
-                        ))}
-                      </Form.Select>
+                        placeholder="Buscar carrera…"
+                        ariaLabel="Carrera del plan"
+                      />
                     </Form.Group>
                   )}
 

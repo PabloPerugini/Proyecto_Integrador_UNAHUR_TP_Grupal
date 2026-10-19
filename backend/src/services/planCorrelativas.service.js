@@ -132,7 +132,9 @@ async function saveCorrelativas(studyPlanId, updates) {
                 .filter(Boolean)
                 .map((refId) => ({
                   planSubject: refId,
-                  requiredStatus: "APROBADA",
+                  // Alcanza regularizada para avanzar (editable luego en
+                  // Administrar planes, materia por materia).
+                  requiredStatus: "REGULARIZADA",
                 })),
             },
           },

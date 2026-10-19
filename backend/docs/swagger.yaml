@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
   title: Gradify API
-  description: API REST del Proyecto Integrador UNAHUR (nueva arquitectura: universidades, carreras, planes de estudio y progreso por usuario con JWT).
-  version: 2.0.0
+  description: "API REST del Proyecto Integrador UNAHUR (nueva arquitectura: universidades, carreras, planes de estudio y progreso por usuario con JWT)."
+  version: 2.1.0
 servers:
   - url: http://localhost:3000
 tags:
@@ -140,6 +140,9 @@ paths:
                 sourceKind: oficial
                 detectedCount: 19
                 subjects: []
+                intermediateTitle: "Técnico/a Universitario/a en Programación"
+                creditsIntermediate: 120
+                intermediateClassified: false
                 aiFallback: false
                 aiProvider: null
         "400":
@@ -151,7 +154,7 @@ paths:
     post:
       tags:
         - PlanImports
-      summary: Guarda el plan (resuelve correlativas a prerequisites, anti-ciclos)
+      summary: Guarda el plan (resuelve correlativas a prerequisites con requiredStatus REGULARIZADA por defecto, anti-ciclos)
       requestBody:
         required: true
         content:
@@ -298,6 +301,48 @@ paths:
         "201":
           description: Materia agregada
 
+  /study-plans/{id}/subjects/intermediate:
+    patch:
+      tags:
+        - StudyPlans
+      summary: Marca/desmarca en lote el título intermedio (dueño o ADMIN)
+      description: >
+        Aplica el flag `intermediate` a las materias del plan. Si se envían
+        `ids` solo afecta a esas materias; si no, a todo el plan (opcionalmente
+        acotado por `year` y/o `period`). `matched` cuenta las materias
+        alcanzadas por el filtro y `modified` solo las que cambian de valor.
+      parameters:
+        - $ref: "#/components/parameters/id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [intermediate]
+              properties:
+                intermediate:
+                  type: boolean
+                ids:
+                  type: array
+                  items:
+                    type: string
+                year:
+                  type: number
+                period:
+                  type: number
+      responses:
+        "200":
+          description: Materias alcanzadas y modificadas
+          content:
+            application/json:
+              example:
+                message: Materias actualizadas
+                matched: 21
+                modified: 5
+        "400":
+          description: Body inválido
+
   /study-plans/{id}/subjects/{subjectId}:
     get:
       tags:
@@ -316,7 +361,7 @@ paths:
     patch:
       tags:
         - StudyPlans
-      summary: Actualiza materia (incluye prerequisites, con anti-ciclos)
+      summary: Actualiza materia (incluye prerequisites — default REGULARIZADA en correlativas nuevas — con anti-ciclos)
       parameters:
         - $ref: "#/components/parameters/id"
         - name: subjectId
@@ -655,7 +700,7 @@ paths:
     get:
       tags:
         - AcademicUnits
-      summary: Lista unidades académicas (público)
+      summary: Lista unidades académicas (público; withCounts=1 agrega careerCount)
       security: []
       responses:
         "200":
@@ -664,9 +709,21 @@ paths:
       tags:
         - AcademicUnits
       summary: Crea unidad académica (solo ADMIN)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AcademicUnitPayload"
       responses:
         "201":
           description: Unidad creada
+        "400":
+          description: Datos inválidos (tipo fuera del enum, color no hex, universidad inexistente)
+        "401":
+          description: Sin autenticación
+        "403":
+          description: No ADMIN
 
   /academic-units/{id}:
     get:
@@ -679,15 +736,27 @@ paths:
       responses:
         "200":
           description: Unidad académica
+        "404":
+          description: No existe
     patch:
       tags:
         - AcademicUnits
-      summary: Actualiza unidad (solo ADMIN)
+      summary: Actualiza unidad (solo ADMIN; whitelist name/type/description/color/university/parentUnit)
       parameters:
         - $ref: "#/components/parameters/id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AcademicUnitPayload"
       responses:
         "200":
           description: Unidad actualizada
+        "400":
+          description: Datos inválidos (color no hex #rrggbb, relaciones ajenas a la universidad)
+        "404":
+          description: No existe
     delete:
       tags:
         - AcademicUnits
@@ -697,6 +766,8 @@ paths:
       responses:
         "200":
           description: Unidad eliminada
+        "409":
+          description: Tiene carreras asignadas o subunidades
 
 components:
   securitySchemes:
@@ -726,6 +797,16 @@ components:
           type: string
         color:
           type: string
+        careerType:
+          type: string
+          nullable: true
+          enum: [Licenciatura, Tecnicatura, Profesorado, Ingenieria, Otro, null]
+          description: Tipo de carrera (curaduría); "Tecnicatura" la etiqueta en el catálogo.
+        continuesIn:
+          type: array
+          items:
+            type: string
+          description: Carreras en las que continúa el trayecto (articulación).
         status:
           type: string
           enum: [draft, published]
@@ -737,5 +818,33 @@ components:
           type: string
         institute:
           type: string
+        university:
+          type: string
+        academicUnit:
+          type: string
+        careerType:
+          type: string
+          enum: [Licenciatura, Tecnicatura, Profesorado, Ingenieria, Otro]
         durationYears:
           type: number
+
+    AcademicUnitPayload:
+      type: object
+      required: [name, university]
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum: [INSTITUTO, FACULTAD, DEPARTAMENTO, SEDE, OTRO]
+        description:
+          type: string
+        color:
+          type: string
+          pattern: "^#[0-9a-fA-F]{6}$"
+          description: Color del instituto en hex; en el frontend manda sobre el hex oficial por nombre.
+        university:
+          type: string
+        parentUnit:
+          type: string
+          nullable: true

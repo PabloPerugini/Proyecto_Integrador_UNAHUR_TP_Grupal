@@ -26,21 +26,38 @@ import { IconCap, IconBoard } from '../components/icons';
 import { instituteColor, instituteGradient, instituteGradientTec } from '../utils/instituteColors';
 
 function unitNameOfCareer(career: Career): string | null {
-  const unit = career.academicUnit as unknown as { _id: string; name: string } | string | null;
+  const unit = career.academicUnit;
   if (unit && typeof unit === 'object') return unit.name ?? null;
+  return null;
+}
+
+function unitColorOfCareer(career: Career): string | null {
+  const unit = career.academicUnit;
+  if (unit && typeof unit === 'object') return unit.color ?? null;
   return null;
 }
 
 function unitNameOfPlanCareer(plan: StudyPlan): string | null {
   const career = plan.career;
   if (!career || typeof career === 'string') return null;
-  const unit = career.academicUnit as unknown as { _id: string; name: string } | string | null;
+  const unit = career.academicUnit;
   if (unit && typeof unit === 'object') return unit.name ?? null;
   return null;
 }
 
+function unitColorOfPlanCareer(plan: StudyPlan): string | null {
+  const career = plan.career;
+  if (!career || typeof career === 'string') return null;
+  const unit = career.academicUnit;
+  if (unit && typeof unit === 'object') return unit.color ?? null;
+  return null;
+}
+
 function careerCoverColor(career: Career): string {
-  return career.color || instituteColor(unitNameOfCareer(career));
+  return (
+    career.color ||
+    instituteColor(unitNameOfCareer(career), unitColorOfCareer(career))
+  );
 }
 
 interface PlanEntry {
@@ -407,7 +424,10 @@ function planCareerName(plan: StudyPlan): string {
 
 function planCareerColor(plan: StudyPlan): string {
   if (plan.career && typeof plan.career === 'object') {
-    return plan.career.color || instituteColor(unitNameOfPlanCareer(plan));
+    return (
+      plan.career.color ||
+      instituteColor(unitNameOfPlanCareer(plan), unitColorOfPlanCareer(plan))
+    );
   }
   return instituteColor(null);
 }
@@ -668,7 +688,7 @@ export default function Home() {
               <article key={unit._id} className="career-card">
                 <div
                   className="career-card__cover"
-                  style={{ background: instituteGradient(instituteColor(unit.name)) }}
+                  style={{ background: instituteGradient(instituteColor(unit.name, unit.color)) }}
                 >
                   <span className="career-card__cover-icon"><IconCap /></span>
                   <span className="career-card__cover-title">{unit.name}</span>
@@ -724,14 +744,23 @@ export default function Home() {
                     <span className="career-card__cover-title">{career.name}</span>
                   </div>
 
-                  {(career.continuesIn ?? []).length > 0 && (
+                  {((career.continuesIn ?? []).length > 0 ||
+                    career.careerType === 'Tecnicatura') && (
                     <div className="career-card__body">
                       <div className="chips">
-                        <span className="chip" title="Articulación oficial: el trayecto continúa">
-                          ➡️ Continúa en {(career.continuesIn ?? [])
-                            .map((c) => (typeof c === 'string' ? c : c.name))
-                            .join(' · ')}
-                        </span>
+                        {career.careerType === 'Tecnicatura' && (
+                          <span className="chip" title="Carrera de pregrado: otorga el título de técnico/a">
+                            🎓 Tecnicatura
+                          </span>
+                        )}
+
+                        {(career.continuesIn ?? []).length > 0 && (
+                          <span className="chip" title="Articulación oficial: el trayecto continúa">
+                            ➡️ Continúa en {(career.continuesIn ?? [])
+                              .map((c) => (typeof c === 'string' ? c : c.name))
+                              .join(' · ')}
+                          </span>
+                        )}
                       </div>
                     </div>
                   )}

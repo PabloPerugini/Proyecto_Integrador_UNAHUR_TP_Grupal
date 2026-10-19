@@ -35,7 +35,7 @@ const getAcademicUnitById = async (req, res) => {
         const {id} = req.params;
 
         const academicUnit =
-            await academicUnitService.getAcademicUnitById(id);
+            await academicUnitService.findAcademicUnitById(id);
 
         if (!academicUnit) {
             return res.status(404).json({
@@ -55,7 +55,7 @@ const updateAcademicUnit = async (req, res) => {
         const { id } = req.params;
         
         const updatedAcademicUnit =
-            await academicUnitService.updatedAcademicUnit(
+            await academicUnitService.updateAcademicUnit(
                 id,
                 req.body
             );
@@ -93,8 +93,11 @@ const deleteAcademicUnit = async (req, res) => {
             message: "Unidad academica eliminada correctamente",
         });
     } catch (error) {
-        return res.status(500).json({
-            message: "Error al eliminar la unidad academica",
+        // 409 cuando la unidad tiene carreras o subunidades asociadas.
+        return res.status(error.statusCode || 500).json({
+            message: error.statusCode
+                ? error.message
+                : "Error al eliminar la unidad academica",
         });
     }
 };

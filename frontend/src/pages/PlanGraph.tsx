@@ -330,7 +330,8 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
     if (c && typeof c === 'object') {
       if (c.color) return c.color;
       const u = c.academicUnit;
-      if (u && typeof u === 'object' && u.name) return instituteColor(u.name);
+      if (u && typeof u === 'object' && u.name)
+        return instituteColor(u.name, u.color);
     }
     return graph?.color ?? '#238a42';
   }, [selectedPlan, graph]);

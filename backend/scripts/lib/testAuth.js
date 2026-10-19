@@ -1,9 +1,15 @@
 // Helper de auth para los scripts E2E (nueva arquitectura Gradify).
 // Los scripts crean un usuario de prueba propio, lo usan con JWT (Bearer)
-// en todas las llamadas y lo borran al final. Sin ADMIN ni carreras: los
-// scripts trabajan sobre preview/confirm con el catálogo existente.
+// en todas las llamadas y lo borran al final. Desde v2.3 `preview`/`confirm`
+// exigen ADMIN: los scripts lo promueven por DB con `promoteToAdmin` (no hay
+// endpoint de auto-promoción, a propósito). No crean carreras ni planes.
 const fs = require("fs");
 const path = require("path");
+
+// El entorno local (app y scripts desde Windows) apunta a la base real del
+// stack Docker; una variable de sistema ya definida tiene prioridad (dotenv
+// no sobreescribe).
+require("dotenv").config({ path: path.join(__dirname, "..", "..", ".env"), quiet: true });
 
 const API = process.env.API_URL || "http://localhost:3000";
 
@@ -81,6 +87,21 @@ async function setupTestUser(tag) {
   return { nick, token, cleanup };
 }
 
+// La API exige ADMIN para preview/confirm (v2.3): se promueve al usuario de
+// prueba por DB y se cierra la conexión enseguida (evita que el script cuelgue).
+async function promoteToAdmin(nick) {
+  const mongoose = require("mongoose");
+  const User = require("../../src/models/user");
+  await mongoose.connect(
+    process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/unahur-tp",
+  );
+  try {
+    await User.updateOne({ nickName: nick }, { $set: { rol: "ADMIN" } });
+  } finally {
+    await mongoose.disconnect();
+  }
+}
+
 // Arma el multipart para subir un PDF (mismo campo 'file' que la UI).
 function pdfForm(absPath, fileName) {
   const buf = fs.readFileSync(absPath);
@@ -152,4 +173,4 @@ async function reqPreviewRaw(token, { json, buffer, fileName = "probe.pdf", time
   }
 }
 
-module.exports = { API, reqJson, setupTestUser, pdfForm, reqPdf, reqPreviewRaw };
+module.exports = { API, reqJson, setupTestUser, promoteToAdmin, pdfForm, reqPdf, reqPreviewRaw };

@@ -125,7 +125,10 @@ const planSubjectSchema = new mongoose.Schema(
             requiredStatus: {
                 type: String,
                 enum: ["REGULARIZADA", "APROBADA"],
-                default: "APROBADA",
+                // Por defecto alcanza con tenerla regularizada para cursar
+                // la correlativa (regla habitual UNAHUR). El ADMIN puede
+                // subirla a APROBADA materia por materia.
+                default: "REGULARIZADA",
             },
         },
     ],

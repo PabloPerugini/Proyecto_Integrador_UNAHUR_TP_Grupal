@@ -28,7 +28,7 @@ const REPO_ROOT = path.join(__dirname, "..", "..");
 const { requireCorpus, resolvePlanesDir } = require("./lib/requireCorpus");
 const PLANES_DIR = resolvePlanesDir(REPO_ROOT);
 const INFORMES_DIR = path.join(__dirname, "informes");
-const { setupTestUser } = require("./lib/testAuth");
+const { setupTestUser, promoteToAdmin } = require("./lib/testAuth");
 const { reqPdf, reqPreviewRaw } = require("./lib/testAuth");
 
 // Guard de corpus (plan maestro §1.5.3 C6/C7).
@@ -44,17 +44,17 @@ const RUN_TAG = `TEST-CTRL-${stamp()}`;
 const CAREERS = [
   {
     career: "Licenciatura en Kinesiología y Fisiatría",
-    plan: "Instituto de Salud Comunitaria/Licenciadoa en Kinesiología y Fisiatría/Licenciatura-en-Kinesiologia-y-Fisiatria.pdf",
-    corr: "Instituto de Salud Comunitaria/Licenciadoa en Kinesiología y Fisiatría/Plan-de-correlatividades-Licenciatura-en-Kinesiologia-y-fisiatria-web-Unahur.pdf",
+    plan: "Instituto de Salud Comunitaria/Licenciatura en Kinesiología y Fisiatría/Licenciatura-en-Kinesiologia-y-Fisiatria.pdf",
+    corr: "Instituto de Salud Comunitaria/Licenciatura en Kinesiología y Fisiatría/Plan-de-correlatividades-Licenciatura-en-Kinesiologia-y-fisiatria-web-Unahur.pdf",
   },
   {
     career: "Licenciatura en Obstetricia",
-    plan: "Instituto de Salud Comunitaria/Licenciadoa en Obstetricia/Licenciatura-en-Obstetricia.pdf",
-    corr: "Instituto de Salud Comunitaria/Licenciadoa en Obstetricia/Plan-de-correlatividades-Licenciatura-en-Obstetricia-.pdf",
+    plan: "Instituto de Salud Comunitaria/Licenciatura en Obstetricia/Licenciatura-en-Obstetricia.pdf",
+    corr: "Instituto de Salud Comunitaria/Licenciatura en Obstetricia/Plan-de-correlatividades-Licenciatura-en-Obstetricia-.pdf",
   },
   {
     career: "Licenciatura en Enfermería",
-    plan: "Instituto de Salud Comunitaria/Licenciatura en Enfermería/RCS.-385-20-11-2024-EXP.-999-2024-Plan-de-Estudios-de-la-carrera-denominada-Licenciatura-en-Enfermeria-1-1_removed.pdf",
+    plan: "Instituto de Salud Comunitaria/_obsoletos/RCS.-385-20-11-2024-EXP.-999-2024-Plan-de-Estudios-de-la-carrera-denominada-Licenciatura-en-Enfermeria-1-1_removed.pdf",
     corr: "Instituto de Salud Comunitaria/Licenciatura en Enfermería/RCS.-246-15-10-2025-EXP.-088-2025-Modificacion-al-plan-de-correlatividad-de-la-carrera-Licenciatura-en-Enfermeria.pdf",
   },
   {
@@ -66,11 +66,28 @@ const CAREERS = [
 
 let TEST = null;
 
+// El corpus puede reordenarse en subcarpetas por carrera: si la ruta relativa
+// no existe, se resuelve por nombre de archivo dentro de PLANES_DIR.
+function findInPlanes(rel) {
+  const direct = path.join(PLANES_DIR, ...rel.split("/"));
+  if (fs.existsSync(direct)) return direct;
+  const wanted = path.basename(rel).toLowerCase();
+  const stack = [PLANES_DIR];
+  while (stack.length) {
+    const dir = stack.pop();
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (entry.isDirectory()) stack.push(path.join(dir, entry.name));
+      else if (entry.name.toLowerCase() === wanted) return path.join(dir, entry.name);
+    }
+  }
+  return direct;
+}
+
 async function previewPdf(rel, timeoutMs) {
   return reqPdf(
     TEST.token,
     "/plan-imports/preview",
-    path.join(PLANES_DIR, ...rel.split("/")),
+    findInPlanes(rel),
     { timeoutMs },
   );
 }
@@ -87,19 +104,35 @@ async function main() {
   }
 
   TEST = await setupTestUser(RUN_TAG);
-  console.log(`usuario de prueba: ${TEST.nick}`);
+  await promoteToAdmin(TEST.nick);
+  console.log(`usuario de prueba: ${TEST.nick} (ADMIN)`);
 
   const rows = [];
   let failed = false;
   for (const entry of CAREERS) {
     console.log(`[${entry.career}] ...`);
-    // eslint-disable-next-line no-await-in-loop
-    const p = await previewPdf(entry.plan, 180000);
+    let p;
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      p = await previewPdf(entry.plan, 300000);
+    } catch (e) {
+      failed = true;
+      rows.push({ career: entry.career, httpPlan: 0, detected: 0, aiPlan: false, cobertura: "—", httpCorr: 0, corrMaterias: 0, corrOrigen: `abortado: ${e.message}` });
+      console.log(`  FAIL plan: ${e.message}`);
+      continue;
+    }
     const subjects = p.body?.subjects || [];
     const detected = p.status === 200 ? (p.body.detectedCount ?? subjects.length) : 0;
     const withCorr = subjects.filter((s) => s.correlativasTexto).length;
-    // eslint-disable-next-line no-await-in-loop
-    const q = await previewPdf(entry.corr, 240000);
+    let q;
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      q = await previewPdf(entry.corr, 300000);
+    } catch (e) {
+      failed = true;
+      q = { status: 0, body: null };
+      console.log(`  FAIL corr: ${e.message}`);
+    }
     const corrSubjects = q.body?.subjects?.length ?? 0;
     const strictIA = process.env.STRICT_IA === "1";
     const row = {

@@ -205,6 +205,8 @@ async function main() {
           name: entry.career,
           fileName: entry.file.split("/").pop(),
           subjects: deduped,
+          creditsIntermediate: parsed.creditsIntermediate ?? 0,
+          intermediateTitle: parsed.intermediateTitle ?? null,
           official: true,
         },
       });

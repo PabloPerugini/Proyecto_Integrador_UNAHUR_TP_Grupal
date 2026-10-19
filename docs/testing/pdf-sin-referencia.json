@@ -1,0 +1,44 @@
+{
+  "_meta": {
+    "nota": "PDFs del corpus files/UNAHUR-Oferta-Academica que NO tienen entrada en planes-referencia.json (y por lo tanto no pasan por el golden). check-cobertura.js falla si aparece un PDF en files/ que no esté acá ni en la referencia: clasificar (referencia u exclusión con motivo) es una decisión humana, nunca silenciosa.",
+    "fecha": "2026-10-19"
+  },
+  "excluidos": [
+    {
+      "file": "Instituto de Biotecnología/Ingeniería Agronómica/Dictamen-CONEAU-Ingenieria-Agronomica.pdf",
+      "motivo": "Dictamen de acreditación CONEAU de Ingeniería Agronómica (contiene un cuadro resumen del plan, no la tabla). Parseo actual: 0 materias."
+    },
+    {
+      "file": "Instituto de Biotecnología/Licenciatura en Biotecnología/RES-1467-21-validez.pdf",
+      "motivo": "Resolución de validez nacional con anexo tabular del plan 2017 de Biotecnología (otra versión: los nombres no coinciden 1:1 con el plan vigente Licenciatura-en-Biotecnologia.pdf). Parseo actual: 45 materias, 1600 créditos. Limitación de geometría: en la celda inicial la línea 'Nuevos entornos y' se encadena a la materia anterior ('Introducción a la Biotecnología Nuevos entornos y' + 'lenguajes: la producción del conocimiento en la cultura' como entrada aparte) porque el fragmento está a 17 px de ambas filas. Se mantiene fuera del golden: el plan de referencia es el PDF del plan."
+    },
+    {
+      "file": "Instituto de Biotecnología/Licenciatura en Desarrollo Agrario/Validez-Nacional-Desarrollo-Agrario.pdf",
+      "motivo": "Resolución de validez nacional (3 pág.): solo texto legal, sin anexo de plan."
+    },
+    {
+      "file": "Instituto de Biotecnología/Licenciatura en Gestión Ambiental/RES-663-18-LIC.-EN-GESTION-AMBIENTAL.pdf",
+      "motivo": "Escaneado sin capa de texto (12 pág.): no parseable sin OCR. Decisión 2026-10-19: sin OCR; el plan ya está en la referencia desde Licenciatura-en-Gestion-Ambiental.pdf. Si se sube a la app, el import debe rechazarlo con error claro."
+    },
+    {
+      "file": "Instituto de Biotecnología/Licenciatura en Tecnología de los Alimentos/RES-1372-17-LIC.-EN-TECNOLOGIA-DE-LOS-ALIMENTOS.pdf",
+      "motivo": "Escaneado sin capa de texto (6 pág.): no parseable sin OCR. Decisión 2026-10-19: sin OCR; el plan ya está en la referencia desde Licenciatura-en-Tecnologia-de-los-Alimentos.pdf. Si se sube a la app, el import debe rechazarlo con error claro."
+    },
+    {
+      "file": "Instituto de Biotecnología/Tecnicatura Universitaria en Viverismo/VALIDEZ-NACIONAL-TEC-EN-VIVERISMO.pdf",
+      "motivo": "Resolución de validez nacional (2 pág.): solo texto legal, sin anexo de plan."
+    },
+    {
+      "file": "Instituto de Salud Comunitaria/Licenciatura en Enfermería/DI-295-25-LICENCIADO-A-EN-ENFERMERIA.pdf",
+      "motivo": "Disposición CONEAU con anexo tabular del plan 2025 de Enfermería (nombres nuevos, no coinciden 1:1 con el plan 2024 RCS-385). Parseo actual: 45 materias, 1435 créditos; bloque de 4.º/5.º año correcto. Limitaciones conocidas: 'Enfermería en crítica II' + 'Emergentología y Área' quedan como dos entradas (celda partida en dos filas) y 'Nuevos Entornos…' queda truncado en '…en la'. Se mantiene fuera del golden: el plan de referencia es RCS-385."
+    },
+    {
+      "file": "Instituto de Tecnología e Ingeniería/Ingeniería en Energía Eléctrica/DI-752-25-INGENIERO-A-EN-ENERGIA-ELECTRICA.pdf",
+      "motivo": "Disposición CONEAU con anexo tabular del plan de Energía Eléctrica. Parseo actual: 46 materias, 2071 créditos. Limitación de geometría: fusión 'Álgebra y Geometría Analítica Nuevos Entornos y Lenguajes: la' (fragmento a 11 px de ambas filas) y la línea siguiente como entrada aparte; el resto alinea con el plan de referencia (45). Se mantiene fuera del golden: el plan de referencia es el PDF del plan."
+    },
+    {
+      "file": "Instituto de Tecnología e Ingeniería/Ingeniería Metalúrgica/DI-681-2025-INGENIERO-A-METALURGICO-A-UNAHUR.pdf",
+      "motivo": "Disposición CONEAU con anexo tabular del plan de Metalúrgica. Parseo actual: 46 materias, 2173 créditos; nombres alineados con el plan de referencia (49) salvo la materia 'Nuevos Entornos…' que el plan nombra 'Cultura y alfabetización digital en la universidad'. Sin fusiones detectadas. Se mantiene fuera del golden: el plan de referencia es el PDF del plan."
+    }
+  ]
+}

@@ -33,10 +33,13 @@ export default function PlanAdmin() {
   const [intermediateTitle, setIntermediateTitle] = useState('');
   const [creditsIntermediate, setCreditsIntermediate] = useState('');
   const [corrResult, setCorrResult] = useState<CorrParseResult | null>(null);
+  const [bulkYear, setBulkYear] = useState('');
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const plan = plans.find(p => p._id === selected);
+  const intermediateCount = subjects.filter(s => s.intermediate).length;
+  const bulkYears = Array.from(new Set(subjects.map(s => s.year).filter((y): y is number => typeof y === 'number'))).sort((a, b) => a - b);
 
   const loadPlans = async () => {
     const list = await studyPlansApi.getAll();
@@ -110,7 +113,7 @@ export default function PlanAdmin() {
   };
   const togglePrerequisite = (subjectId: string, prerequisiteIdValue: string, enabled: boolean) => {
     const list = draft[subjectId]?.prerequisites ?? [];
-    modify(subjectId, { prerequisites: enabled ? [...list, { planSubject: prerequisiteIdValue, requiredStatus: 'APROBADA' }] : list.filter(p => prerequisiteId(p) !== prerequisiteIdValue) });
+    modify(subjectId, { prerequisites: enabled ? [...list, { planSubject: prerequisiteIdValue, requiredStatus: 'REGULARIZADA' }] : list.filter(p => prerequisiteId(p) !== prerequisiteIdValue) });
   };
   const updateRequirement = (subjectId: string, prerequisiteIdValue: string, requiredStatus: 'REGULARIZADA'|'APROBADA') => {
     modify(subjectId, { prerequisites: (draft[subjectId]?.prerequisites ?? []).map(p => prerequisiteId(p) === prerequisiteIdValue ? { ...p, requiredStatus } : p) });
@@ -118,6 +121,44 @@ export default function PlanAdmin() {
   const reloadSubjects = async (planId: string) => {
     const list = await studyPlansApi.getSubjects(planId);
     setSubjects(orderedSubjects(list)); setDraft(Object.fromEntries(list.map(s => [s._id, fromSubject(s)])));
+  };
+  const applyBulkIntermediate = async (intermediate: boolean) => {
+    if (!plan || working) return;
+    setWorking(true);
+    try {
+      const result = await studyPlansApi.bulkIntermediate(plan._id, {
+        intermediate,
+        ...(bulkYear ? { year: Number(bulkYear) } : {}),
+      });
+      await reloadSubjects(plan._id);
+      flash('success', `${intermediate ? 'Marcadas' : 'Desmarcadas'} ${result.modified} materia(s)${bulkYear ? ` de ${bulkYear}º año` : ''}.`);
+    } catch (e) { flashFromError(e, 'No se pudo actualizar la tecnicatura'); }
+    finally { setWorking(false); }
+  };
+  const setAllRequiredStatus = async (requiredStatus: 'REGULARIZADA' | 'APROBADA') => {
+    if (!plan || working) return;
+    const targets = subjects.filter(s => (s.prerequisites ?? []).length > 0);
+    if (!targets.length) { flash('danger', 'El plan no tiene correlativas cargadas.'); return; }
+    const label = requiredStatus === 'APROBADA' ? 'deben estar aprobadas' : 'alcanza regularizada';
+    if (!window.confirm(`¿Marcar las correlativas de ${targets.length} materia(s) como «${label}»?`)) return;
+    setWorking(true);
+    let saved = 0;
+    try {
+      for (const subject of targets) {
+        const edit = draft[subject._id];
+        if (!edit) continue;
+        await studyPlansApi.updateSubject(plan._id, subject._id, {
+          prerequisites: edit.prerequisites.map(p => ({ planSubject: prerequisiteId(p) || '', requiredStatus })),
+        });
+        saved += 1;
+      }
+      await reloadSubjects(plan._id);
+      flash('success', `Correlativas de ${saved} materia(s) marcadas como «${label}».`);
+    } catch (e) {
+      await reloadSubjects(plan._id).catch(() => undefined);
+      flashFromError(e, `Se actualizaron ${saved} materia(s) antes del error`);
+    }
+    finally { setWorking(false); }
   };
   const parseCorrFile = async (file: File) => {
     if (!plan || working) return;
@@ -188,6 +229,26 @@ export default function PlanAdmin() {
       </Card.Body></Card>
       <Card className="mb-4"><Card.Header className="d-flex justify-content-between flex-wrap gap-2"><strong>Materias y correlatividades ({subjects.length})</strong><Button size="sm" variant="outline-secondary" onClick={() => navigate(`/grafo/${plan._id}`)}>Ver grafo</Button></Card.Header><Card.Body>
         <p className="small text-muted">Las materias importadas se editan aquí. Los nombres pertenecen al catálogo general de materias; en esta pantalla se editan sus datos propios del plan.</p>
+        {intermediateTitle.trim() && intermediateCount === 0 && subjects.length > 0 && (
+          <div className="alert alert-warning py-2">
+            <strong>Atención:</strong> el plan declara el título intermedio «{intermediateTitle.trim()}» pero ninguna materia está marcada como parte de la tecnicatura. Marcá las que correspondan en la columna <em>Tec</em> o usá el marcado en lote.
+          </div>
+        )}
+        <div className="d-flex flex-wrap gap-2 align-items-center mb-3">
+          <Form.Select size="sm" style={{ maxWidth: 200 }} aria-label="Alcance del marcado en lote" value={bulkYear} onChange={e => setBulkYear(e.target.value)}>
+            <option value="">Todas las materias</option>
+            {bulkYears.map(y => <option key={y} value={y}>{y}º año</option>)}
+          </Form.Select>
+          <Button size="sm" variant="outline-primary" disabled={working || !subjects.length} onClick={() => void applyBulkIntermediate(true)}>Marcar tecnicatura</Button>
+          <Button size="sm" variant="outline-secondary" disabled={working || !subjects.length} onClick={() => void applyBulkIntermediate(false)}>Desmarcar</Button>
+          <span className="small text-muted">{intermediateCount} de {subjects.length} materias marcadas como tecnicatura</span>
+        </div>
+        <div className="d-flex flex-wrap gap-2 align-items-center mb-3">
+          <span className="small text-muted">Requisito de correlativas del plan:</span>
+          <Button size="sm" variant="outline-primary" disabled={working || !subjects.some(s => (s.prerequisites ?? []).length)} onClick={() => void setAllRequiredStatus('REGULARIZADA')}>Alcanza regularizada</Button>
+          <Button size="sm" variant="outline-secondary" disabled={working || !subjects.some(s => (s.prerequisites ?? []).length)} onClick={() => void setAllRequiredStatus('APROBADA')}>Deben estar aprobadas</Button>
+          <span className="small text-muted">Aplica el requisito a todas las correlativas del plan (después se ajusta materia por materia).</span>
+        </div>
         <div className="table-responsive"><Table size="sm" striped hover><thead><tr><th>Materia</th><th>Código</th><th>Año</th><th>Período</th><th>Créditos</th><th>Optativa</th><th title="Pertenece a la tecnicatura intermedia">Tec</th><th>Correlatividades</th><th>Acciones</th></tr></thead><tbody>
           {subjects.map(s => {
             const v = draft[s._id]; if (!v) return null;
@@ -202,7 +263,7 @@ export default function PlanAdmin() {
                 {subjects.filter(other => other._id !== s._id).map(other => {
                   const required = v.prerequisites.find(p => prerequisiteId(p) === other._id);
                   return <div key={other._id} className="mb-2"><Form.Check type="checkbox" label={`${other.code || '—'} · ${subjectName(other)}`} checked={Boolean(required)} onChange={e => togglePrerequisite(s._id, other._id, e.target.checked)} />
-                    {required && <Form.Select size="sm" className="mt-1" value={required.requiredStatus} onChange={e => updateRequirement(s._id, other._id, e.target.value as 'APROBADA'|'REGULARIZADA')}><option value="APROBADA">Debe estar aprobada</option><option value="REGULARIZADA">Alcanza regularizada</option></Form.Select>}
+                    {required && <Form.Select size="sm" className="mt-1" value={required.requiredStatus} onChange={e => updateRequirement(s._id, other._id, e.target.value as 'APROBADA'|'REGULARIZADA')}><option value="REGULARIZADA">Alcanza regularizada</option><option value="APROBADA">Debe estar aprobada</option></Form.Select>}
                   </div>;
                 })}
               </div></details></td>

@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 /*
  * Punto único de validaciones (plan maestro Fase 2).
- * Uso: node scripts/validaciones.js <masiva|salud|golden|todo|--help> [-- args...]
- *   npm run validar          -> todo (golden --check + salud + masiva)
+ * Uso: node scripts/validaciones.js <cobertura|masiva|salud|golden|todo|--help> [-- args...]
+ *   npm run validar          -> todo (cobertura + golden --check + salud + masiva)
+ *   npm run test:cobertura   -> cobertura (cada PDF de files/ clasificado: referencia o exclusión con motivo)
  *   npm run test:planes      -> masiva (carga E2E por API real, 43 PDFs)
  *   npm run test:salud       -> salud (control de correlativas + negativo)
  *   npm run snapshot:planes  -> golden (snapshot determinístico, -- --check)
@@ -22,6 +23,7 @@ const REPO_ROOT_VALID = path.join(__dirname, "..", "..");
 const PLANES_DIR = resolvePlanesDir(REPO_ROOT_VALID);
 
 const ENGINES = {
+  cobertura: "check-cobertura.js",
   masiva: "carga-masiva.test.js",
   salud: "verificar-salud.test.js",
   golden: "golden-snapshot.js",
@@ -30,11 +32,12 @@ const ENGINES = {
 function help() {
   console.log(`validaciones.js <comando> [-- args del motor]
 
-  masiva   carga E2E de planes por API real (necesita backend + Mongo + Redis)
-  salud    control de correlativas de Salud + control negativo (idem API)
-  golden   snapshot determinístico del parser (sin API; -- --check compara)
-  todo     golden --check, luego salud y masiva (falla rápido)
-  --help   esta ayuda
+  cobertura  control de corpus: cada PDF de files/ está en la referencia o excluido con motivo (sin API)
+  masiva     carga E2E de planes por API real (necesita backend + Mongo + Redis)
+  salud      control de correlativas de Salud + control negativo (idem API)
+  golden     snapshot determinístico del parser (sin API; -- --check compara)
+  todo       cobertura, golden --check, luego salud y masiva (falla rápido)
+  --help     esta ayuda
 
 Ej.: node scripts/validaciones.js golden -- --check`);
 }
@@ -53,11 +56,12 @@ async function main() {
     help();
     process.exit(cmd ? 0 : 1);
   }
-  // El golden no necesita API pero sí corpus; masiva/salud lo re-chequean
-  // en sus motores. Un solo mensaje claro si falta.
+  // La cobertura y el golden no necesitan API pero sí corpus; masiva/salud
+  // lo re-chequean en sus motores. Un solo mensaje claro si falta.
   requireCorpus(PLANES_DIR, "validaciones");
   if (cmd === "todo") {
     const steps = [
+      ["cobertura", []],
       ["golden", ["--check"]],
       ["salud", []],
       ["masiva", []],

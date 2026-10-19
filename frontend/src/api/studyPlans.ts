@@ -5,7 +5,10 @@ export interface CareerRef {
   name?: string;
   color?: string;
   university?: string | { _id: string; name: string } | null;
-  academicUnit?: string | { _id: string; name: string } | null;
+  academicUnit?:
+    | string
+    | { _id: string; name: string; color?: string | null }
+    | null;
 }
 export interface CorrRow {
   name: string;
@@ -164,6 +167,8 @@ export const studyPlansApi = {
     const result = await request<{ planSubject: PlanSubject }>(`/study-plans/${planId}/subjects/${subjectId}`, { method: 'PATCH', body: JSON.stringify(data) });
     return result.planSubject;
   },
+  bulkIntermediate: (planId: string, data: { intermediate: boolean; ids?: string[]; year?: number; period?: number }) =>
+    request<{ matched: number; modified: number }>(`/study-plans/${planId}/subjects/intermediate`, { method: 'PATCH', body: JSON.stringify(data) }),
   deleteSubject: (planId: string, subjectId: string) => request<unknown>(`/study-plans/${planId}/subjects/${subjectId}`, { method: 'DELETE' }),
   getGraph: (planId: string) => request<GraphLike>(`/study-plans/${planId}/graph`),
   getIntermediate: (planId: string) => request<IntermediateView>(`/study-plans/${planId}/intermediate`),

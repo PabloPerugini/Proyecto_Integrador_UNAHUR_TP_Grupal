@@ -50,6 +50,21 @@ const careerSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+
+    // Tipo de carrera (curaduría): permite distinguir una tecnicatura de una
+    // licenciatura/ingeniería y etiquetarla en el catálogo. null = sin definir.
+    careerType: {
+      type: String,
+      enum: [
+        "Licenciatura",
+        "Tecnicatura",
+        "Profesorado",
+        "Ingenieria",
+        "Otro",
+        null,
+      ],
+      default: null,
+    },
   },
   {
     timestamps: true,

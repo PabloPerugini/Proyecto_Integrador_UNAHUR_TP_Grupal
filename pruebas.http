@@ -91,3 +91,16 @@ Authorization: Bearer {{login.response.body.$.token}}
 ### 12. HISTORIAL DE IMPORTACIONES
 GET http://localhost:3000/plan-imports
 Authorization: Bearer {{login.response.body.$.token}}
+
+### 13. MARCAR TECNICATURA EN LOTE (pegar studyPlanId; opcional: "year": 1 o "period": 2 para acotar)
+PATCH http://localhost:3000/study-plans/PEGAR_studyPlanId/subjects/intermediate
+Authorization: Bearer {{login.response.body.$.token}}
+Content-Type: application/json
+
+{
+  "intermediate": true
+}
+
+### 14. VER TECNICATURA INTERMEDIA (sub-plan virtual: materias marcadas y si cierra con sus propias correlativas)
+GET http://localhost:3000/study-plans/PEGAR_studyPlanId/intermediate
+Authorization: Bearer {{login.response.body.$.token}}

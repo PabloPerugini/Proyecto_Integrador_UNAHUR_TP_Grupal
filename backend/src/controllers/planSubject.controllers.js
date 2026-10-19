@@ -197,6 +197,34 @@ const deletePlanSubject = async (req, res) => {
   }
 };
 
+// Marcar/desmarcar en lote el flag de título intermedio de las materias.
+const bulkSetIntermediate = async (req, res) => {
+  try {
+    const { studyPlanId } = req.params;
+
+    const result = await planSubjectService.bulkSetIntermediate(
+      studyPlanId,
+      req.body || {}
+    );
+
+    return res.status(200).json({
+      message: "Materias actualizadas",
+      ...result,
+    });
+
+  } catch (error) {
+    if (error instanceof mongoose.Error.CastError) {
+      return res.status(400).json({
+        message: "ID del plan inválido",
+      });
+    }
+
+    return res.status(400).json({
+      message: error.message,
+    });
+  }
+};
+
 // Parsea un PDF de correlativas contra las materias del plan (sin guardar).
 const parseCorrelativasPlan = async (req, res) => {
   try {
@@ -277,6 +305,7 @@ module.exports = {
   getPlanSubjectById,
   createPlanSubject,
   updatePlanSubject,
+  bulkSetIntermediate,
   deletePlanSubject,
   parseCorrelativasPlan,
   saveCorrelativasPlan,

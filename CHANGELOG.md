@@ -6,6 +6,52 @@ El registro histórico de requisitos/alcance por versión se mantiene en [BRD.md
 
 ---
 
+## [1.21] — 2026-10-19
+
+### Parser de planes v7d: anexos CONEAU, TUPAP-2025 y normalización
+- **Nombres más fieles al PDF:** `cleanName` normaliza NFC, elimina caracteres de control/NUL y corrige "ı" por "i" (Diseño, Agroecología, Ecoisiología). Se completan nombres partidos entre líneas (coma/punto y coma como continuación; gap de 14 px cuando la fila inferior arranca en minúscula) y se quitan duraciones pegadas al nombre ("… Cuatrimestral").
+- **Anexos DI/RES:** verificado el parseo de 4 anexos CONEAU (DI-295 45 materias, DI-681 46, DI-752 46, RES-1467 45) con sus límites de geometría documentados; el registro `pdf-sin-referencia.json` describe el estado real y la decisión de no hacer OCR de los 2 escaneados (su plan ya está en la referencia desde el PDF del plan).
+- **TUPAP-2025:** promovido a referencia con golden propio (23 materias; créditos 0 por dialecto agro: el PDF declara "TOTAL 15 créditos" en una mini-tabla que no se suma).
+- **Créditos honestos:** los planes sin columna de créditos (Desarrollo Agrario, Viverismo) reportan 0 en vez de sumar horas; `PARSER_VERSION` v5 invalida las cachés de extracción anteriores.
+- **Gates:** `snapshot:planes --check` sin diferencias (44 planes + TUPAP), `npm test` 32/32, `test:cobertura` 53 PDFs = 44 referencia + 9 excluidos; aceptación de importación en Docker (Biotec: 46 filas, laboratorio con sus 6 números, intermedio años 1–2 cerrado, sin fallback de IA, importación COMPLETADA).
+
+---
+
+## [1.20] — 2026-10-16
+
+### v2.5: panel ADMIN completo (institutos, carreras, articulación) y correlativas regularizadas
+- **Institutos (CRUD real):** se corrigieron dos typos históricos del controlador que rompían `PATCH /academic-units/:id` y `GET /academic-units/:id` (**BUG-020**). Ahora se pueden **editar** (nombre, tipo, universidad, descripción; whitelist anti mass-assignment + revalidación de relaciones) y **eliminar** con guardas: `409` si tiene carreras asignadas o subunidades. La pestaña *Institutos* lista con conteo de carreras, edición en modal y borrado con confirmación.
+- **Color de instituto persistido:** `AcademicUnit.color` (hex `#rrggbb` validado en modelo y API). Swatch con autoguardado (debounce 700 ms) en la tabla; precedencia en toda la app: color de DB → hex oficial por nombre → verde Gradify (Home, Mi progreso, Grafo, tarjetas de carrera).
+- **Carreras:** edición en modal (nombre, tipo, universidad, instituto con dependencia de universidad, descripción), **archivado** (restaurable desde *Carreras archivadas*) y **borrado** (`409` si tiene planes), con menú ⋮ por fila.
+- **Articulación:** selector de carrera y de instituto **buscables**; búsqueda entre continuaciones, marcar/limpiar visibles, contador de seleccionadas y guardado de `continuesIn` + `careerType`.
+- **Cargar plan:** el panel admin quedó en **pestañas** (*Institutos · Universidades · Carreras · Articulación*) para no ensuciar el flujo del PDF; select de carrera **buscable** en la vista previa; la universidad recién creada queda **pre-seleccionada** en "Crear carrera" dentro de la pestaña Carreras.
+- **Dropzone y notificaciones:** resaltado verde punteado al arrastrar y vista previa de archivos elegidos (nombre + KB/MB); **toasts** flotantes arriba a la derecha con autocierre (6 s) para cada alta/edición del panel.
+- **Correlativas (default honesto):** las correlativas importadas (confirm del plan y `saveCorrelativas`) se guardan por defecto como **REGULARIZADA** (criterio UNAHUR: regular habilita la correlativa); en *Editar plan* las nuevas se agregan con ese default, "Alcanza regularizada" queda primero en el select y hay **control masivo por plan** (alcanza regularizada / deben estar aprobadas) para sanear planes importados con el default viejo.
+- Verificación: E2E v2.5 **14/14** (CRUD admin contra Docker: 401, alta con color, color inválido 400, PATCH, `withCounts`, 409, editar/reasignar carrera, borrados en orden) + **5/5** en base scratch (default REGULARIZADA, habilitación con regularizada, bloqueo con APROBADA, habilitación con aprobada); `npm test` 32/32; frontend `tsc -b` + `lint` verdes.
+
+---
+
+## [1.19] — 2026-10-16
+
+### v2.4: tipo de carrera, título intermedio (lote + IA revisable) y caché robusta
+- **Tipo de carrera:** `Career.careerType` (enum Licenciatura/Tecnicatura/Profesorado/Ingenieria/Otro, `null` permitido; 400 fuera del enum) + selects en Admin Carreras y chip 🎓 Tecnicatura en el Home.
+- **Título intermedio:** **avisos** cuando el plan declara tecnicatura y no hay materias marcadas (preview + *Editar plan*); **marcado en lote** `PATCH /study-plans/:id/subjects/intermediate` (`{intermediate, ids?, year?, period?}`) con barra por año o todo el plan; **propuesta de IA revisable** en el preview (columna *Tec*) validada con reglas duras (`pickIntermediateNames`: ACA fuera, mínimo 4, tramo ≤ 3 años; la IA nunca persiste).
+- **Caché y bugs:** `PARSER_VERSION` v3; al reutilizar un extracto con el intermedio pendiente se **reintenta la clasificación y se refresca la caché** (BUG-019, continuación de BUG-018); el `modified` del bulk ahora cuenta **solo las materias que cambian** (antes contaba también el `updatedAt` que toca Mongoose); Swagger alineado.
+- **Corpus/harness:** referencia de `planes-referencia.json` re-apuntada por nombre de archivo (43 entradas); masiva/salud promueven el usuario de prueba a **ADMIN por DB** y usan timeouts de 300 s; informes de masiva con columnas de intermedio; `seed:planes` siembra el catálogo y los planes desde el corpus (propaga el título del intermedio y sus créditos al `confirm`).
+- **Gates (16/10):** `npm test` 32/32 (6 archivos) · golden `--check` 43/43 sin diferencias · masiva OK=27+OK-IA=1+WARN=15+FAIL=0 · salud todo OK (negativos 400/400) · **E2E v2.4 18/18** · `seed:planes` OK=29 local · front `tsc`+`lint`+`build` verdes.
+- **Docs:** BRD 2.4, FRD 2.4, Matriz 1.5, Test-Plan/Test-Cases (corrida 9), `Gradify_Documentacion.md` v2.2, `pruebas.http` 15 pasos.
+
+## [1.18] — 2026-10-14
+
+### v2.3: catálogo por instituto, tecnicatura, articulación y correlativas bloqueantes
+- **Catálogo curado:** 19 carreras canónicas con instituto y colores oficiales; `isArchived` (restaurable); filtros `?unit`/`includeArchived` (solo ADMIN); `withCounts`; Home Institutos→Carreras→Planes con "qué puedo cursar" y avance perezosos.
+- **Tecnicatura intermedia:** flag `intermediate` por materia, sub-plan virtual `GET /study-plans/:id/intermediate` (`closed`/`externalRequires`), pestañas Licenciatura/Tecnicatura y aviso cuando está vacía.
+- **Articulación:** `Career.continuesIn` (valida IDs y rechaza autorreferencia) + UI admin ("Continúa en …").
+- **Correlativas bloqueantes (RN05):** el backend rechaza registrar avance sin correlativas cumplidas (`400`); el frontend pre-chequea en Mi progreso.
+- **Promedio/CSV, seguridad y versionado:** promedio de aprobadas con nota + export CSV; mutaciones de catálogo e importación solo ADMIN; CSRF `checkOrigin`; logout invalida JWT (`tokenVersion`); versionado liviano de planes (`planYear`/`isActive`).
+- **UI:** AppShell único por rol, Mi cuenta, Admin Usuarios, Admin Archivadas y `/403`.
+- **Gates:** `npm test` 26/26 (5 archivos) · golden `--check` sin diferencias (43 JSON) · `tsc`+`lint`+`build` verdes.
+
 ## [1.17] — 2026-10-09
 
 ### Nueva arquitectura operativa + docs v2.2

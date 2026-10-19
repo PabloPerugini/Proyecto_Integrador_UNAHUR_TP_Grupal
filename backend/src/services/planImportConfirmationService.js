@@ -353,7 +353,8 @@ async function confirmPlanImport(userId, data, { isAdmin = false } = {}) {
                   .filter(Boolean)
                   .map((refId) => ({
                     planSubject: refId,
-                    requiredStatus: "APROBADA",
+                    // Alcanza regularizada para avanzar (default UNAHUR).
+                    requiredStatus: "REGULARIZADA",
                   })),
               },
             },

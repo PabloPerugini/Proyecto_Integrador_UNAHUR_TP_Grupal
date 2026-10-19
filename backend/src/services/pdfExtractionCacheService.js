@@ -2,8 +2,11 @@
 const crypto = require("crypto");
 const PdfExtractionCache = require("../models/pdfExtractionCache");
 
-// Cambiar cuando se modifique la lógica de extracción
-const PARSER_VERSION = "v2";
+// Cambiar cuando se modifique la lógica de extracción.
+// v3: clasificación del título intermedio (nombre sin materias marcadas).
+// v4: primera versión con caché por parserVersion.
+// v5: parser v7d (E1/E4/E5, NFC, merge de nombres partidos, duración Bimestral).
+const PARSER_VERSION = "v5";
 
 // Calcular la huella digital del PDF
 const getFileHash = (buffer) => {
@@ -171,9 +174,32 @@ const failPdfExtraction = async (fileHash, errorMessage) => {
   );
 };
 
+// Refrescar el resultado de una extracción COMPLETADA (p. ej. tras reintentar
+// la clasificación del título intermedio sobre un extracto de caché).
+const refreshPdfExtraction = async (fileHash, result) => {
+  if (
+    !result ||
+    !Array.isArray(result.subjects) ||
+    result.subjects.length === 0
+  ) {
+    throw new Error("La extracción no contiene materias válidas");
+  }
+
+  return PdfExtractionCache.findOneAndUpdate(
+    {
+      fileHash,
+      parserVersion: PARSER_VERSION,
+      status: "COMPLETADA",
+    },
+    { $set: { result } },
+    { new: true, runValidators: true }
+  );
+};
+
 module.exports = {
   getFileHash,
   preparePdfExtraction,
   completePdfExtraction,
   failPdfExtraction,
+  refreshPdfExtraction,
 };

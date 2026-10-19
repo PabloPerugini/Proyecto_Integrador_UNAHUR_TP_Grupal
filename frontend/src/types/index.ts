@@ -21,16 +21,22 @@ export interface AcademicUnit {
   _id: string;
   name: string;
   type?: string;
+  description?: string;
+  color?: string | null;
   careerCount?: number;
+  university?: string | { _id: string; name: string } | null;
+  parentUnit?: string | { _id: string; name: string } | null;
 }
 
 export type CareerStatus = 'draft' | 'published';
+export type CareerType = 'Licenciatura' | 'Tecnicatura' | 'Profesorado' | 'Ingenieria' | 'Otro';
 
 export interface Career {
   _id: string;
   name: string;
   institute?: string;
   color?: string;
+  careerType?: CareerType | null;
   planResolution?: string;
   ruleCode?: string;
   durationYears?: number;
@@ -41,7 +47,7 @@ export interface Career {
   subjectCount?: number;
   description?: string;
   university?: string | { _id: string; name: string } | null;
-  academicUnit?: string | null;
+  academicUnit?: string | { _id: string; name: string; color?: string | null } | null;
   isArchived?: boolean;
   continuesIn?: Array<{ _id: string; name: string }>;
   createdAt?: string;

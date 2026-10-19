@@ -1,8 +1,8 @@
 # Documento de Seguimiento de Testing
 
 **Proyecto:** Gradify — Grafo Interactivo de Correlatividades y Seguimiento de Progreso Académico
-**Versión:** 2.2
-**Fecha:** 2026-10-09
+**Versión:** 2.4
+**Fecha:** 2026-10-16
 **Sponsor Organización:** Universidad Nacional de Hurlingham (UNAHUR) — Licenciatura en Informática
 **Autor:** Equipo del proyecto integrador
 **Tutor:** Prof. Alejandra Pinto
@@ -132,3 +132,73 @@ Scripts E2E reescritos a la API nueva (`lib/testAuth.js`: usuario propio + Beare
 | BUG-011 | El `confirm` guardaba 0 `prerequisites` (grafo sin aristas) aunque el preview trae `correlativasTexto`. | Resuelto 09/10 | Resolución en el confirm (exact+compact, anti-ciclos 400): 15/19 en plan de prueba. |
 | BUG-012 | `DELETE` materia referenciada devolvía 500 (guarda existía pero caía en el 500 genérico); plan con materias/importaciones imborrable por API. | Resuelto 09/10 | 409 con mensaje real; borrado en cascada propia del plan (409 solo con otros inscriptos no-ADMIN). |
 | BUG-013 | `rateLimitAi` sin cablear (gasto IA sin cota) + 10 tests jest huérfanos (nunca corrieron, probaban código viejo). | Resuelto 09/10 | `aiRateLimit` en `preview` (privadas exentas); tests stale eliminados + `jest`/`supertest` fuera de devDeps (runner único `node --test`). |
+| BUG-014 | El ámbito de vista en Grafo/Tablero/Progreso no se acotaba a lo elegido y una **tecnicatura sin materias marcadas repetía la Licenciatura** (mostraba el plan completo como si fuera el sub-plan). | Resuelto 14/10 | El subgrafo/lista se acota al ámbito elegido y, con tecnicatura vacía, se muestra un **aviso** en vez del canvas completo (Grafo, Tablero, Progreso y Home). |
+| BUG-015 | Validaciones duplicadas en capas y ausencia de índices únicos permitían datos de catálogo repetidos (carreras/planes/materias). | Resuelto 14/10 | Índices únicos (`Career{name,academicUnit}`, `StudyPlan{name,career}`, `PlanSubject{studyPlan,subject}`, `AcademicUnit{name,university}`, `User.nickName/email`), validación en una sola capa y helper `visibleTo` para el acceso por rol. |
+| BUG-016 | La tecnicatura intermedia quedaba **vacía en silencio**: 12 PDFs del corpus declaran `intermediateTitle` pero su subconjunto no está tabulado (solo lo traen la sección "Estructura del título del intermedio" de algunos planes, como Lic. en Informática). El preview mostraba el título con 0 materias marcadas y 0 créditos, sin aviso, y la única salida era marcar materia por materia desde *Editar plan*. | Resuelto 16/10 | Tres piezas: (a) **avisos** en el preview y en *Editar plan* cuando hay título intermedio y ninguna materia marcada; (b) **marcado en lote** `PATCH /study-plans/:id/subjects/intermediate` (`{intermediate, ids?, year?, period?}`) con barra "Marcar/Desmarcar" por año o todo el plan; (c) **propuesta de IA revisable** en el preview (ver BUG-017). Verificado sobre el corpus: Diseño Industrial 18 materias (1º–2º, 109 créditos), Nutrición 21 (110), Kinesiología 20 (100), Obstetricia 16 (94) — valores coherentes con los 120 créditos reales de Lic. en Informática. |
+| BUG-017 | La primera versión de la propuesta de IA del intermedio aceptaba cualquier nombre de la lista: en Ciberseguridad propuso `ACTIVIDADES CURRICULARES ACREDITABLES (ACA)` como única materia y en Obstetricia un tramo de materias de 1º a 4º año; el ADMIN no podía ver ni corregir la propuesta antes de guardar (el preview no mostraba el flag). | Resuelto 16/10 | Prompt reescrito (tramo = ciclo inicial completo, prohibido incluir ACA, lista vacía si no hay certeza) + **validación pura** `pickIntermediateNames` (solo nombres exactos del plan, filas ACA fuera, mínimo 4 materias, tramo ≤ 3 años lectivos) con regresión en `npm test` (`tests/intermedio.test.js`, 6 casos). La propuesta se muestra en la **columna *Tec*** del preview para que el ADMIN la revise o la descarte. |
+| BUG-018 | Las extracciones ya cacheadas (v2) seguían devolviendo 0 materias del intermedio aunque el código nuevo ya clasificaba: subir el mismo PDF devolvía la respuesta vieja sin refrescar. | Resuelto 16/10 | `PARSER_VERSION` v2 → **v3** en `pdfExtractionCacheService` (la clave de caché es `fileHash + parserVersion`): las extracciones anteriores dejan de reutilizarse y el primer re-upload vuelve a parsear y clasificar. |
+| BUG-019 | Un fallo transitorio de la IA (429/cuota) durante el preview quedaba congelado en la extracción cacheada: el preview reutilizado (`cached: true`) ya no reintentaba la clasificación del intermedio y el plan quedaba sin marcar de forma permanente. | Resuelto 16/10 | El camino `REUSE` del preview ahora reintenta la clasificación si el extracto tiene título intermedio sin marcar (`tryClassifyIntermediate`), propaga el `aiProvider` y **refresca la caché** (`refreshPdfExtraction`, que actualiza un extracto `COMPLETADA`). Verificado en E2E v2.4: Diseño Industrial pasó de 0 a **18 marcadas / 109 créditos** sobre la caché existente y el segundo preview mantuvo `cached: true` con el mismo resultado. |
+| BUG-020 | El controlador de institutos (`academicUnit.controllers`) llamaba `academicUnitService.updatedAcademicUnit` y `getAcademicUnitById`, nombres **inexistentes** en el servicio (los reales son `updateAcademicUnit`/`findAcademicUnitById`): editar un instituto por API respondía `400` siempre (`TypeError` capturado) y el detalle por id, `500`. | Resuelto 16/10 | Se corrigieron ambos nombres; verificado en E2E v2.5: `PATCH /academic-units/:id` de color y nombre → `200` persistido y `withCounts` coherente (14/14). |
+
+## Corrida 8 (14/10/2026, v2.3: institutos, tecnicatura, articulación y correlativas bloqueantes)
+
+Verificación de los cambios posteriores a la corrida 7 (catálogo curado por instituto, tecnicatura intermedia, articulación, Mi cuenta/Usuarios/Archivadas y RN05).
+
+**Unitarios (`npm test`): 26/26** en 5 archivos (`unitarios`, `sugerencias`, `rn04`, `registro`, `seguridad`) — incluye RN04, AR-3, registro/roles y **CSRF `checkOrigin` + invalidación por `tokenVersion`**. Golden `--check` sin diferencias (43 JSON). Frontend `tsc -b` + `lint` verdes.
+
+| Área | Qué se verificó | Estado |
+| ---- | --------------- | ------ |
+| Catálogo | `withCounts` (`careerCount`), filtro `?unit`, `includeArchived` solo ADMIN | ✅ (estructura + unit) |
+| Articulación | `continuesIn` valida IDs y rechaza autorreferencia; se muestra "Continúa en …" | ✅ |
+| Tecnicatura intermedia | `GET /study-plans/:id/intermediate` (`closed`/`externalRequires`); pestañas Lic/Tec; aviso si está vacía | ✅ |
+| Correlativas (RN05) | El backend rechaza avanzar sin correlativas (`400`); el front pre-chequea | ✅ |
+| Promedio / CSV | Promedio de aprobadas con nota + export CSV | ✅ |
+| Seguridad | `checkOrigin` CSRF; logout invalida JWT; import/creación solo ADMIN | ✅ (unit `seguridad`) |
+| Admin | Usuarios (rol/baja) y Archivadas (restaurar) | ✅ (estructura) |
+
+> Corridas masivas (`test:planes`/`test:salud`) requieren API + corpus `files/`; su último registro es la corrida 9 (16/10) y **siguen vigentes**: la v2.5 no tocó el parser.
+
+## Corrida 9 (16/10/2026, v2.4: tipo de carrera, intermedio y propuesta IA)
+
+Verificación de la tanda v2.4 (tipo de carrera, marcado en lote + avisos + propuesta IA revisable, caché v3) sobre entorno local sin Redis (Mongo 27017). Para verificar **la app** con los archivos del corpus se sembró el catálogo con `seed:planes` → **OK=29** (universidad + 4 institutos + 29 carreras + 29 planes oficiales publicados; usuario de prueba borrado al final).
+
+**Unitarios (`npm test`): 32/32** en 6 archivos — se suma `tests/intermedio.test.js` (6 casos de la validación pura `pickIntermediateNames`: ACA fuera, mínimo 4, tramo ≤ 3 años, nombres exactos del plan; BUG-017). Golden `--check` **43/43 sin diferencias**. Frontend `tsc -b` + `lint` + `vite build` verdes.
+
+**Masiva (`test:planes`, 43 PDFs): OK=27 + OK-IA=1 + WARN=15 + FAIL=0 + SKIP=0.** El informe agrega las columnas del intermedio: **21 títulos declarados · 14 con materias marcadas (13 IA + 1 parser) · 7 sin marcar por cuota agotada en ese momento** (Gemini 429 + TPM 8000 de Groq compartido con los rescates de correlativas). Los WARN son los esperados de correlativas (sin `correlativasTexto` o sin endpoint de matching; `STRICT_IA=1` los vuelve FAIL para auditoría).
+
+**Salud (`test:salud`): todo OK** — Kinesiología 47/35, Obstetricia 39/33, Enfermería 41/34, Nutrición 52/20 — + controles negativos 400/400.
+
+**E2E v2.4 (18/18):** `careerType` 201 / 400 fuera del enum / persistido; import Electromovilidad (preview 21 → confirm → años [1,2,3]); bulk `year=1` `{matched:5, modified:5}` y desmarcar todo `{matched:21, modified:5}` (**`modified` cuenta solo lo que cambia**); no booleano → 400; `GET /intermediate` 5 materias `closed=true`; Diseño Industrial: `intermediateClassified=true`, 18 marcadas, 109 créditos, segundo preview `cached=true` con el mismo resultado; correlativas de Obstetricia (33 filas); usuario común y ajeno → 403.
+
+> **Cuota IA:** los 7 planes sin marcar quedan como "pendiente de propuesta" — la app avisa y el ADMIN marca (a mano o en lote); con cuota disponible el preview vuelve a clasificar y refresca la caché (**BUG-019**). No se inventan datos en ningún camino.
+
+**Harness (`seed:planes`):** al revisar los planes sembrados se detectó que el seed no propagaba `intermediateTitle`/`creditsIntermediate` al `confirm` (el flujo del frontend sí lo hace): corregido en la misma corrida y completados los 21 planes con título desde la caché de extracción; Diseño Industrial se re-sembró ya con su clasificación (18 materias / 109 créditos). La app local queda con **15 tecnicaturas con materias marcadas** y 6 planes con el **aviso** de "título sin materias" (pendientes de cuota/revisión: Gestión Ambiental, Tecnología de los Alimentos, Ciberseguridad, Gestión del Mantenimiento, Inglés y Letras).
+
+---
+
+## Corrida 10 (16/10/2026, v2.5: panel ADMIN completo y correlativas regularizadas)
+
+Verificación de la tanda v2.5 sobre el **stack Docker** (API :3000, Mongo :27018), sin tocar el parser ni el corpus: golden/masiva/salud de la corrida 9 siguen vigentes. Usuario temporal ADMIN creado por API y promovido por DB; **todo se limpió al final**: la base quedó idéntica al inicio (2 usuarios, 1 universidad, 4 institutos, 63 carreras).
+
+**E2E admin (script temporal, borrado tras la corrida): 14/14** — `POST /academic-units` sin token → `401`; alta de universidad e instituto con `color: "#12ab34"` (`201`); color inválido `"rojo"` → `400`; `PATCH` de color (`#ff8800`) y de nombre → `200` persistidos; carrera creada en ese instituto; `GET /academic-units?withCounts=1` con `color` y `careerCount=1`; `DELETE` instituto con carreras → `409`; editar carrera (`careerType: Tecnicatura` + `academicUnit: null`) y reasignar instituto → `200`; borrados carrera → instituto → universidad → `200`.
+
+**Correlativas (script temporal, base scratch `unahur-tp-scratch-v25`, borrada al final): 5/5** — `saveCorrelativas` graba `requiredStatus: "REGULARIZADA"` por defecto; con la correlativa **regularizada** el avance se habilita (pedido "regularizada me tendría que habilitar la correlativa" ✓); tras forzar `APROBADA`, regularizada **no alcanza** y aprobada sí.
+
+**Unitarios (`npm test`): 32/32.** Frontend `tsc -b` + `eslint` verdes (la tanda sumó `SearchSelect` sin dependencias nuevas y corrigió el `popperConfig` de los menús ⋮).
+
+**BUG-020 (nuevo):** el controlador de institutos llamaba `updatedAcademicUnit`/`getAcademicUnitById` (nombres inexistentes) → editar un instituto respondía `400` siempre; resuelto y cubierto por el E2E (`PATCH` color/rename `200`).
+
+> Pendiente UI: pestañas del panel, toasts, dropzone y colores persistidos quedaron verificados **por API** (y con `tsc`/`lint` verdes); los casos manuales de navegador (20–23, 25–38) siguen sin resultado registrado.
+
+---
+
+## Registro histórico
+
+| Corrida | Fecha | Foco | Resultado |
+| ------- | ----- | ---- | --------- |
+| 5 | 24/09/2026 | Carga masiva | OK=34 + OK-IA=1 + WARN=8 + FAIL=0 + SKIP=0 |
+| 6 | 30/09/2026 | Fix A + envelope + RN04 | Idénticos a 5; Obstetricia 23/35, Nutrición 41/48 |
+| 7 | 09/10/2026 | Nueva arquitectura (JWT + planes por usuario) | Masiva 27+1+15+0; E2E 12/12 |
+| 8 | 14/10/2026 | v2.3 (institutos, tecnicatura, articulación, RN05) | `npm test` 26/26; golden sin diferencias; front verde |
+| 9 | 16/10/2026 | v2.4 (tipo de carrera, intermedio, IA revisable) | `npm test` 32/32; golden 43/43; masiva 27+1+15+0; salud OK; E2E v2.4 18/18 |
+| 10 | 16/10/2026 | v2.5 (panel admin completo, correlativas regularizadas) | `npm test` 32/32; E2E admin 14/14; correlativas scratch 5/5; front `tsc`+`lint` verdes |

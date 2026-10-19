@@ -7,6 +7,7 @@ const {
   preparePdfExtraction,
   completePdfExtraction,
   failPdfExtraction,
+  refreshPdfExtraction,
 } = require("../services/pdfExtractionCacheService");
 
 const { isPdfBuffer } = require("../middlewares/upload");
@@ -17,6 +18,7 @@ const {
 
 const {
   extractPlanWithAI,
+  classifyIntermediateWithAI,
 } = require("../services/aiExtract.service");
 
 const { isConfigured } = require("../services/ai.service");
@@ -68,6 +70,69 @@ const getPlanImportById = async (req, res) => {
   }
 };
 
+// Clasificar con IA el subconjunto del título intermedio (solo propone: se
+// valida contra la lista real de materias y el admin lo revisa). Devuelve
+// { classified, provider }. Se usa al parsear y al reutilizar un extracto
+// cacheado que no la trae (fallo transitorio de IA: BUG-019).
+const tryClassifyIntermediate = async (parsed, originalname) => {
+  if (
+    !parsed.intermediateTitle ||
+    !Array.isArray(parsed.subjects) ||
+    parsed.subjects.some((s) => s && s.intermediate === true) ||
+    parsed.intermediateClassified ||
+    !isConfigured()
+  ) {
+    return { classified: false, provider: null };
+  }
+
+  try {
+    const careerHint = String(originalname || "")
+      .replace(/\.pdf$/i, "")
+      .replace(/[_-]+/g, " ")
+      .slice(0, 120);
+
+    const { names, provider, rejected } =
+      await classifyIntermediateWithAI(parsed.subjects, {
+        intermediateTitle: parsed.intermediateTitle,
+        careerHint,
+      });
+
+    if (rejected) {
+      console.warn(
+        `Propuesta de intermedio descartada (${rejected} materias): el admin lo marca a mano`
+      );
+    }
+
+    if (!names.length) {
+      return { classified: false, provider: null };
+    }
+
+    const wanted = new Set(names.map((n) => n.trim().toLowerCase()));
+    for (const subject of parsed.subjects) {
+      if (
+        subject &&
+        typeof subject.name === "string" &&
+        wanted.has(subject.name.trim().toLowerCase())
+      ) {
+        subject.intermediate = true;
+      }
+    }
+
+    parsed.creditsIntermediate = parsed.subjects
+      .filter((s) => s && s.intermediate && s.kind !== "ACA")
+      .reduce((acc, s) => acc + (s.credits || 0), 0);
+    parsed.intermediateClassified = true;
+
+    return { classified: true, provider: provider || null };
+  } catch (error) {
+    console.error(
+      "No se pudo clasificar el título intermedio con IA:",
+      error.message
+    );
+    return { classified: false, provider: null };
+  }
+};
+
 // Analizar un PDF de plan oficial
 const previewPlanPdf = async (req, res) => {
   if (!req.file) {
@@ -93,10 +158,23 @@ const previewPlanPdf = async (req, res) => {
 
     fileHash = cache.fileHash;
 
-    // Ya existe una extracción reutilizable
+    // Ya existe una extracción reutilizable. Si quedó sin clasificar el
+    // título intermedio (p. ej. por un 429 transitorio de la IA), se
+    // reintenta acá y se refresca el extracto guardado (BUG-019).
     if (cache.action === "REUSE") {
+      const result = { ...cache.result };
+      const cls = await tryClassifyIntermediate(
+        result,
+        req.file.originalname
+      );
+
+      if (cls.classified) {
+        if (!result.aiProvider) result.aiProvider = cls.provider;
+        await refreshPdfExtraction(fileHash, result);
+      }
+
       return res.status(200).json({
-        ...cache.result,
+        ...result,
         cached: true,
         fileHash,
       });
@@ -189,6 +267,21 @@ const previewPlanPdf = async (req, res) => {
       throw error;
     }
 
+    // 4.b Si el plan declara un título intermedio pero el parser no marcó
+    // ninguna materia (PDFs sin la sección formal del intermedio), se pide la
+    // propuesta a la IA. Solo lee: se valida contra la lista real (BUG-017).
+    let intermediateClassified = false;
+
+    const cls = await tryClassifyIntermediate(
+      parsed,
+      req.file.originalname
+    );
+
+    if (cls.classified) {
+      intermediateClassified = true;
+      if (!aiProvider) aiProvider = cls.provider;
+    }
+
     // 5. Preparar el resultado
     const result = {
       sourceKind: parsed.sourceKind,
@@ -198,6 +291,7 @@ const previewPlanPdf = async (req, res) => {
       creditsFinal: parsed.creditsFinal ?? 0,
       creditsIntermediate:
         parsed.creditsIntermediate ?? 0,
+      intermediateClassified,
       aiFallback,
       aiProvider,
     };
