@@ -182,6 +182,8 @@ export const studyPlansApi = {
     });
     return result.userStudyPlan;
   },
+  remove: (studyPlanId: string) =>
+    request<{ message: string }>(`/user-study-plans/${encodeURIComponent(studyPlanId)}`, { method: 'DELETE' }),
   getProgress: (userStudyPlanId: string) => request<SubjectProgress[]>(`/user-study-plans/${userStudyPlanId}/progress`),
   saveProgress: async (userStudyPlanId: string, subjectId: string, data: ProgressInput) => {
     const result = await request<{ progress: SubjectProgress }>(`/user-study-plans/${userStudyPlanId}/progress/${subjectId}`, {

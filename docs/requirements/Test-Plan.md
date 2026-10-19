@@ -104,7 +104,7 @@ Garantizar que la aplicación web (React) y su API REST (Node/Express + MongoDB 
    - Caso 27: **Bloqueo por correlativas (RN05).** `PUT /user-study-plans/:id/progress/:subjectId` en una materia con correlativa pendiente → `400` con el detalle; volver a `PENDIENTE` → `200`.
    - Caso 28: **Promedio y CSV.** En *Mi progreso*, con notas cargadas se muestra el promedio de aprobadas y "Exportar CSV" descarga el estado por materia.
    - Caso 29: **Mi cuenta / logout.** `PATCH /users/:nickName` actualiza el perfil; `POST /users/logout` invalida el JWT (`tokenVersion++`) y el token previo deja de servir (`401`).
-   - Caso 30: **Admin de usuarios y archivadas.** `GET /users` y `PATCH /users/:nickName` (rol) solo ADMIN; Admin Archivadas lista `isArchived` y permite restaurarlas.
+   - Caso 30: **Admin de usuarios y archivadas.** `GET /users` y `PATCH /users/:nickName` (rol) solo ADMIN; Catálogo → Carreras: el interruptor **“Ver archivadas”** lista `isArchived` y permite restaurarlas.
 
 9. **Tecnicatura en lote, tipo de carrera e IA acotada (v2.4)**
    - Caso 31: **Aviso de tecnicatura incompleta.** Subir un plan que declara título intermedio pero cuyo PDF no tabula el subconjunto (p. ej. Lic. en Nutrición) → el preview devuelve `intermediateTitle` con 0 materias marcadas y muestra el aviso; en *Editar plan* el aviso persiste hasta marcar materias.
@@ -115,7 +115,7 @@ Garantizar que la aplicación web (React) y su API REST (Node/Express + MongoDB 
 
 10. **Panel admin completo y correlativas regularizadas (v2.5)**
    - Caso 36: **Institutos: editar, color y borrar.** `PATCH /academic-units/:id` con `{name}` o `{color: "#ff8800"}` → `200` persistido (visible en `GET /academic-units?withCounts=1`); color no hex (`"rojo"`) → `400`; `DELETE` con carreras asignadas o subunidades → `409` con mensaje; sin dependencias → `200`. En la pestaña *Institutos*, el swatch de color autoguarda (debounce) y Editar/Eliminar operan con confirmación.
-   - Caso 37: **Carreras: editar, archivar y borrar.** `PATCH /careers/:id` actualiza nombre/tipo/universidad/instituto (quitar el instituto → `academicUnit: null`); *Archivar* la oculta del catálogo (restaurable desde *Carreras archivadas*); `DELETE` sin planes → `200` y con planes → `409`.
+   - Caso 37: **Carreras: editar, archivar y borrar.** `PATCH /careers/:id` actualiza nombre/tipo/universidad/instituto (quitar el instituto → `academicUnit: null`); *Archivar* la oculta del catálogo (restaurable con **“Ver archivadas”** en Catálogo → Carreras); `DELETE` sin planes → `200` y con planes → `409`.
    - Caso 38: **Correlativas regularizadas por defecto.** El confirm del plan y `saveCorrelativas` guardan `requiredStatus: "REGULARIZADA"` cuando no se indica otro: una correlativa regularizada **habilita** avanzar; exigir `APROBADA` bloquea hasta aprobar. En *Editar plan*, las correlativas nuevas se agregan con ese default, el select prioriza "Alcanza regularizada" y el control por plan aplica el requisito a todas las correlativas.
 
 ## Plan de Ejecución
@@ -152,7 +152,7 @@ Entorno local sin Redis (Mongo 27017); para verificar **la app** además de la c
 - **Golden:** `snapshot:planes -- --check` sobre 43 JSON (`diff = 0` en los planes sanos).
 - **E2E:** `validar` (masiva + salud + controles negativos) y `pruebas.http` reescrito al flujo real (13 pasos con cookie/Bearer y multipart).
 - **Frontend:** `tsc -b` (strict) + `lint` sin errores; `vite build` OK.
-- **Nuevas prestaciones verificadas por unitarios/estructura:** correlativas que bloquean el avance (RN05 en backend + pre-chequeo en Mi progreso), tecnicatura intermedia (`/study-plans/:id/intermediate`), catálogo por instituto + articulación `continuesIn`, `checkOrigin`/logout, y admin de usuarios/archivadas.
+- **Nuevas prestaciones verificadas por unitarios/estructura:** correlativas que bloquean el avance (RN05 en backend + pre-chequeo en Mi progreso), tecnicatura intermedia (`/study-plans/:id/intermediate`), catálogo por instituto + articulación `continuesIn`, `checkOrigin`/logout, admin de usuarios y restauración de archivadas dentro del catálogo.
 
 ## Resultados de la Ejecución Histórica (09/10/2026, nueva arquitectura)
 

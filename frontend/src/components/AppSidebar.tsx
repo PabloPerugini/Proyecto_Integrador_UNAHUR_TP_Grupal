@@ -48,7 +48,6 @@ export default function AppSidebar() {
     { to: '/cargar', label: 'Cargar plan', icon: <IconUpload /> },
     { to: '/admin', label: 'Editar plan', icon: <IconEdit /> },
     { to: '/admin/users', label: 'Usuarios', icon: <IconUsers /> },
-    { to: '/admin/archivadas', label: 'Archivadas', icon: <IconBoard /> },
   ];
 
   const renderAdminLinks = (onClick?: () => void) =>

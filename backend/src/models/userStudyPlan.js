@@ -12,6 +12,12 @@ const userStudyPlanSchema = new mongoose.Schema(
             ref: "StudyPlan",
             required: [true, "El plan de estudio es obligatorio"],
         },
+        // Baja reversible: el plan deja de mostrarse, pero conserva
+        // el progreso por si la persona vuelve a inscribirse.
+        archivedAt: {
+            type: Date,
+            default: null,
+        },
     },
     {
         timestamps: true,

@@ -454,7 +454,7 @@ paths:
             type: string
       responses:
         "200":
-          description: Inscripción eliminada
+          description: Inscripción eliminada; si tenía progreso se archiva y se conserva el avance
 
   /user-study-plans/{userStudyPlanId}/progress:
     get:

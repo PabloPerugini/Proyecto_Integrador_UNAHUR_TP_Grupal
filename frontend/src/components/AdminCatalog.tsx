@@ -178,6 +178,7 @@ export default function AdminCatalog({
   const [careerType, setCareerType] = useState<CareerType | ''>('');
   const [careerDescription, setCareerDescription] = useState('');
   const [careerSearch, setCareerSearch] = useState('');
+  const [showArchivedCareers, setShowArchivedCareers] = useState(false);
 
   // Edición de carrera
   const [editingCareer, setEditingCareer] = useState<Career | null>(null);
@@ -205,7 +206,7 @@ export default function AdminCatalog({
   };
 
   const loadCareers = async () => {
-    const list = await careersApi.getAll();
+    const list = await careersApi.getAll(undefined, true);
     setCareers(
       (Array.isArray(list) ? list : []).sort((a, b) =>
         a.name.localeCompare(b.name, 'es'),
@@ -218,7 +219,7 @@ export default function AdminCatalog({
     Promise.all([
       request<University[]>('/universities'),
       academicUnitsApi.getAll(true),
-      careersApi.getAll(),
+      careersApi.getAll(undefined, true),
     ])
       .then(([universityList, unitList, careerList]) => {
         if (!active) return;
@@ -475,7 +476,7 @@ export default function AdminCatalog({
     if (working) return;
     if (
       !window.confirm(
-        `¿Archivar "${career.name}"? Deja de listarse para los usuarios (se puede restaurar desde "Carreras archivadas").`,
+        `¿Archivar "${career.name}"? Deja de listarse para los usuarios. La vas a poder restaurar desde "Ver archivadas".`,
       )
     )
       return;
@@ -486,12 +487,30 @@ export default function AdminCatalog({
       await onCareerCreated();
       notify(
         'success',
-        'Carrera archivada. Podés restaurarla desde "Carreras archivadas".',
+        'Carrera archivada. La encontrás en "Ver archivadas".',
       );
     } catch (err) {
       notify(
         'danger',
         err instanceof Error ? err.message : 'No se pudo archivar la carrera',
+      );
+    } finally {
+      setWorking(false);
+    }
+  };
+
+  const restoreCareer = async (career: Career) => {
+    if (working) return;
+    setWorking(true);
+    try {
+      await careersApi.update(career._id, { isArchived: false });
+      await loadCareers();
+      await onCareerCreated();
+      notify('success', `Carrera "${career.name}" restaurada.`);
+    } catch (err) {
+      notify(
+        'danger',
+        err instanceof Error ? err.message : 'No se pudo restaurar la carrera',
       );
     } finally {
       setWorking(false);
@@ -524,20 +543,27 @@ export default function AdminCatalog({
     }
   };
 
+  const activeCareers = useMemo(
+    () => careers.filter((career) => !career.isArchived),
+    [careers],
+  );
+  const archivedCareerCount = careers.length - activeCareers.length;
+
   const visibleCareers = useMemo(() => {
     const q = normalize(careerSearch);
-    if (!q) return careers;
-    return careers.filter((career) =>
-      normalize(
+    return careers.filter((career) => {
+      if (!showArchivedCareers && career.isArchived) return false;
+      if (!q) return true;
+      return normalize(
         [
           career.name,
           universityLabelOf(career.university),
           unitNameOf(career.academicUnit),
           career.careerType ?? '',
         ].join(' '),
-      ).includes(q),
-    );
-  }, [careers, careerSearch]);
+      ).includes(q);
+    });
+  }, [careers, careerSearch, showArchivedCareers]);
 
   // ── Articulación ───────────────────────────────────────────────
   useEffect(() => {
@@ -554,6 +580,7 @@ export default function AdminCatalog({
     const q = normalize(articSearch);
     return careers.filter(
       (career) =>
+        !career.isArchived &&
         career._id !== articCareerId &&
         (!q || normalize(career.name).includes(q)),
     );
@@ -851,8 +878,9 @@ export default function AdminCatalog({
                           {
                             careers.filter(
                               (career) =>
+                                !career.isArchived &&
                                 universityIdOf(career.university) ===
-                                university._id,
+                                  university._id,
                             ).length
                           }
                         </td>
@@ -867,7 +895,8 @@ export default function AdminCatalog({
             <Tab eventKey="carreras" title="Carreras">
               <p className="text-muted small mb-3">
                 Creá carreras, editalas, asignales instituto o archivalas /
-                eliminalas.
+                eliminalas. Las archivadas se muestran con “Ver archivadas” y
+                se restauran desde la misma tabla.
               </p>
 
               <Form onSubmit={createCareer} className="mb-4">
@@ -948,24 +977,47 @@ export default function AdminCatalog({
               <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
                 <strong>
                   Carreras ({visibleCareers.length}
-                  {careerSearch ? ` de ${careers.length}` : ''})
+                  {careerSearch
+                    ? ` de ${
+                        showArchivedCareers
+                          ? careers.length
+                          : activeCareers.length
+                      }`
+                    : ''}
+                  )
                 </strong>
-                <Form.Control
-                  size="sm"
-                  type="search"
-                  style={{ maxWidth: 320 }}
-                  placeholder="Buscar carrera, universidad o instituto…"
-                  aria-label="Buscar carreras"
-                  value={careerSearch}
-                  onChange={(event) => setCareerSearch(event.target.value)}
-                />
+                <div className="d-flex flex-wrap align-items-center gap-3">
+                  {archivedCareerCount > 0 && (
+                    <Form.Check
+                      type="switch"
+                      id="show-archived-careers"
+                      className="small mb-0"
+                      label={`Ver archivadas (${archivedCareerCount})`}
+                      checked={showArchivedCareers}
+                      onChange={(event) =>
+                        setShowArchivedCareers(event.target.checked)
+                      }
+                    />
+                  )}
+                  <Form.Control
+                    size="sm"
+                    type="search"
+                    style={{ maxWidth: 320 }}
+                    placeholder="Buscar carrera, universidad o instituto…"
+                    aria-label="Buscar carreras"
+                    value={careerSearch}
+                    onChange={(event) => setCareerSearch(event.target.value)}
+                  />
+                </div>
               </div>
 
-              {careers.length === 0 ? (
+              {activeCareers.length === 0 && archivedCareerCount === 0 ? (
                 <p className="text-muted mb-0">Todavía no hay carreras.</p>
               ) : visibleCareers.length === 0 ? (
                 <p className="text-muted mb-0">
-                  Sin resultados para esa búsqueda.
+                  {careerSearch || showArchivedCareers
+                    ? 'Sin resultados para esa búsqueda.'
+                    : 'No hay carreras activas. Activá "Ver archivadas" para ver las archivadas.'}
                 </p>
               ) : (
                 <div className="table-responsive">
@@ -981,54 +1033,79 @@ export default function AdminCatalog({
                     </thead>
                     <tbody>
                       {visibleCareers.map((career) => (
-                        <tr key={career._id}>
+                        <tr
+                          key={career._id}
+                          style={career.isArchived ? { opacity: 0.78 } : undefined}
+                        >
                           <td>
                             <strong>{career.name}</strong>
+                            {career.isArchived && (
+                              <span className="badge bg-secondary ms-2">
+                                Archivada
+                              </span>
+                            )}
                           </td>
                           <td>{career.careerType ?? '—'}</td>
                           <td>{universityLabelOf(career.university)}</td>
                           <td>{unitNameOf(career.academicUnit)}</td>
                           <td className="text-end">
-                            <Button
-                              size="sm"
-                              variant="outline-primary"
-                              disabled={working}
-                              onClick={() => openCareerEdit(career)}
-                            >
-                              Editar
-                            </Button>{' '}
-                            <Dropdown
-                              align="end"
-                              className="d-inline-block"
-                            >
-                              <Dropdown.Toggle
+                            {career.isArchived ? (
+                              <Button
                                 size="sm"
-                                variant="outline-secondary"
-                                id={`career-more-${career._id}`}
-                                aria-label={`Más acciones para ${career.name}`}
+                                variant="outline-success"
+                                disabled={working}
+                                onClick={() => {
+                                  void restoreCareer(career);
+                                }}
                               >
-                                ⋮
-                              </Dropdown.Toggle>
-                              <Dropdown.Menu popperConfig={{ strategy: 'fixed' }}>
-                                <Dropdown.Item
+                                Restaurar
+                              </Button>
+                            ) : (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="outline-primary"
                                   disabled={working}
-                                  onClick={() => {
-                                    void archiveCareer(career);
-                                  }}
+                                  onClick={() => openCareerEdit(career)}
                                 >
-                                  Archivar
-                                </Dropdown.Item>
-                                <Dropdown.Item
-                                  className="text-danger"
-                                  disabled={working}
-                                  onClick={() => {
-                                    void removeCareer(career);
-                                  }}
+                                  Editar
+                                </Button>{' '}
+                                <Dropdown
+                                  align="end"
+                                  className="d-inline-block"
                                 >
-                                  Eliminar
-                                </Dropdown.Item>
-                              </Dropdown.Menu>
-                            </Dropdown>
+                                  <Dropdown.Toggle
+                                    size="sm"
+                                    variant="outline-secondary"
+                                    id={`career-more-${career._id}`}
+                                    aria-label={`Más acciones para ${career.name}`}
+                                  >
+                                    ⋮
+                                  </Dropdown.Toggle>
+                                  <Dropdown.Menu
+                                    popperConfig={{ strategy: 'fixed' }}
+                                  >
+                                    <Dropdown.Item
+                                      disabled={working}
+                                      onClick={() => {
+                                        void archiveCareer(career);
+                                      }}
+                                    >
+                                      Archivar
+                                    </Dropdown.Item>
+                                    <Dropdown.Item
+                                      className="text-danger"
+                                      disabled={working}
+                                      onClick={() => {
+                                        void removeCareer(career);
+                                      }}
+                                    >
+                                      Eliminar
+                                    </Dropdown.Item>
+                                  </Dropdown.Menu>
+                                </Dropdown>
+                              </>
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -1051,7 +1128,7 @@ export default function AdminCatalog({
                   <Form.Group>
                     <Form.Label>Carrera</Form.Label>
                     <SearchSelect
-                      options={careers.map((career) => ({
+                      options={activeCareers.map((career) => ({
                         value: career._id,
                         label: career.name,
                         hint: universityLabelOf(career.university),

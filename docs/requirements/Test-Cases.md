@@ -154,7 +154,7 @@ Verificación de los cambios posteriores a la corrida 7 (catálogo curado por in
 | Correlativas (RN05) | El backend rechaza avanzar sin correlativas (`400`); el front pre-chequea | ✅ |
 | Promedio / CSV | Promedio de aprobadas con nota + export CSV | ✅ |
 | Seguridad | `checkOrigin` CSRF; logout invalida JWT; import/creación solo ADMIN | ✅ (unit `seguridad`) |
-| Admin | Usuarios (rol/baja) y Archivadas (restaurar) | ✅ (estructura) |
+| Admin | Usuarios (rol/baja) y Archivadas en Catálogo → Carreras (restaurar) | ✅ (estructura) |
 
 > Corridas masivas (`test:planes`/`test:salud`) requieren API + corpus `files/`; su último registro es la corrida 9 (16/10) y **siguen vigentes**: la v2.5 no tocó el parser.
 

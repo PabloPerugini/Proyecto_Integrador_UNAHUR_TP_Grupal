@@ -8,7 +8,6 @@ import {
   type StudyPlan,
   type PlanSubject,
   type IntermediateView,
-  type SugerenciaDisponible,
   type UserStudyPlan,
 } from '../api/studyPlans';
 import { careersApi } from '../api/careers';
@@ -69,19 +68,6 @@ interface PlanEntry {
 
 type Step = 'mine' | 'units' | 'careers' | 'plans';
 
-// Nombre de la materia, considerando
-// que Subject puede venir populado o como ID.
-function subjectName(item: PlanSubject): string {
-  if (
-    item.subject &&
-    typeof item.subject === 'object'
-  ) {
-    return item.subject.name || item.code || 'Materia sin nombre';
-  }
-
-  return item.code || 'Materia sin nombre';
-}
-
 // =========================================
 // TARJETA DE PLAN (carga perezosa de avance)
 // =========================================
@@ -93,6 +79,7 @@ function PlanCard({
   enrollmentId,
   onEnroll,
   onOpen,
+  onRemove,
 }: {
   entry: PlanEntry;
   careerName: string;
@@ -100,14 +87,12 @@ function PlanCard({
   enrollmentId: string | null;
   onEnroll: (planId: string) => void;
   onOpen: (planId: string, path: string) => void;
+  onRemove?: (planId: string) => void;
 }) {
   const { plan, subjects } = entry;
   const published = plan.status === 'published';
 
   const [inter, setInter] = useState<IntermediateView | null | undefined>(undefined);
-  const [tips, setTips] = useState<SugerenciaDisponible[] | null | undefined>(undefined);
-  const [tipsTotal, setTipsTotal] = useState(0);
-  const [progress, setProgress] = useState<{ pct: number; done: number; total: number } | null | undefined>(undefined);
   const [working, setWorking] = useState(false);
 
   const loadIntermediate = async () => {
@@ -116,37 +101,6 @@ function PlanCard({
       setInter(await studyPlansApi.getIntermediate(plan._id));
     } catch {
       setInter(null);
-    }
-  };
-
-  const loadTips = async () => {
-    if (tips !== undefined) return;
-    try {
-      const s = await studyPlansApi.getSugerencias(plan._id);
-      const list = [...(s.disponibles ?? [])].sort(
-        (a, b) => (b.desbloquea ?? 0) - (a.desbloquea ?? 0),
-      );
-      setTipsTotal(list.length);
-      setTips(list.slice(0, 5));
-    } catch {
-      setTips(null);
-    }
-  };
-
-  const loadProgress = async () => {
-    if (progress !== undefined || !enrollmentId || subjects === null) return;
-    try {
-      const items = await studyPlansApi.getProgress(enrollmentId);
-      const done = new Set(
-        items
-          .filter((p) => p.status === 'APROBADA')
-          .map((p) => (typeof p.planSubject === 'string' ? p.planSubject : p.planSubject?._id)),
-      );
-      const total = subjects.length;
-      const approved = subjects.filter((s) => done.has(s._id)).length;
-      setProgress({ pct: total ? Math.round((approved / total) * 100) : 0, done: approved, total });
-    } catch {
-      setProgress(null);
     }
   };
 
@@ -217,12 +171,6 @@ function PlanCard({
           )}
         </div>
 
-        {progress !== undefined && progress !== null && (
-          <div className="mt-2 small fw-bold">
-            Mi avance: {progress.pct}% ({progress.done}/{progress.total} aprobadas)
-          </div>
-        )}
-
         {/* TECNICATURA INTERMEDIA */}
 
         {plan.intermediateTitle && (
@@ -286,107 +234,8 @@ function PlanCard({
           </details>
         )}
 
-        {/* QUÉ PUEDO CURSAR */}
-
-        <details className="mt-3" onToggle={(e) => { if ((e.target as HTMLDetailsElement).open) void loadTips(); }}>
-          <summary style={{ cursor: 'pointer', fontWeight: 600 }}>
-            Qué puedo cursar{tipsTotal > 0 ? ` (${tipsTotal})` : ''}
-          </summary>
-
-          {tips === undefined && (
-            <p className="text-muted small mt-2">Calculando…</p>
-          )}
-
-          {tips === null && (
-            <p className="text-warning small mt-2">
-              Incribite al plan para ver qué podés cursar.
-            </p>
-          )}
-
-          {tips && tips.length === 0 && (
-            <p className="text-muted small mt-2">
-              No hay materias disponibles por ahora.
-            </p>
-          )}
-
-          {tips && tips.length > 0 && (
-            <ul className="list-group list-group-flush mt-2">
-              {tips.map((t) => (
-                <li key={t.code} className="list-group-item px-0">
-                  <div><strong>{t.name}</strong></div>
-                  <small className="text-muted">
-                    {t.code}
-                    {(t.desbloquea ?? 0) > 0 && ` · 🔓 desbloquea ${t.desbloquea}`}
-                  </small>
-                </li>
-              ))}
-            </ul>
-          )}
-        </details>
-
-        {/* MI AVANCE */}
-
-        {enrollmentId && subjects !== null && (
-          <details className="mt-3" onToggle={(e) => { if ((e.target as HTMLDetailsElement).open) void loadProgress(); }}>
-            <summary style={{ cursor: 'pointer', fontWeight: 600 }}>
-              Mi avance
-            </summary>
-
-            {progress === undefined && (
-              <p className="text-muted small mt-2">Calculando…</p>
-            )}
-
-            {progress === null && (
-              <p className="text-warning small mt-2">
-                No se pudo calcular el avance.
-              </p>
-            )}
-
-            {progress && (
-              <p className="small mt-2 mb-0">
-                {progress.pct}% del plan ({progress.done}/{progress.total} aprobadas).
-                Actualizá cada materia en Mi progreso.
-              </p>
-            )}
-          </details>
-        )}
-
-        {/* MATERIAS DEL PLAN */}
-
-        {subjects !== null && (
-          <details className="mt-3">
-            <summary style={{ cursor: 'pointer', fontWeight: 600 }}>
-              Ver materias ({subjects.length})
-            </summary>
-
-            {subjects.length === 0 ? (
-              <p className="text-muted small mt-2">
-                Este plan todavía no tiene materias cargadas.
-              </p>
-            ) : (
-              <div className="mt-2" style={{ maxHeight: 280, overflowY: 'auto' }}>
-                <ul className="list-group list-group-flush">
-                  {subjects.map((item) => (
-                    <li key={item._id} className="list-group-item px-0">
-                      <div>
-                        {item.intermediate && (
-                          <span className="badge bg-secondary me-1" title="Pertenece a la tecnicatura">T</span>
-                        )}
-                        <strong>{subjectName(item)}</strong>
-                      </div>
-
-                      <small className="text-muted">
-                        {item.code && <>{item.code}{' · '}</>}
-                        {item.year ? `Año ${item.year}` : 'Año sin definir'}
-                        {item.period ? ` · Período ${item.period}` : ''}
-                      </small>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </details>
-        )}
+        {/* El detalle de materias, el avance y qué se puede cursar
+            viven en Mi progreso y en el grafo. */}
 
         {subjects === null && (
           <p className="text-warning small mt-3">
@@ -399,7 +248,14 @@ function PlanCard({
         <Button size="sm" variant="primary" onClick={() => onOpen(plan._id, 'grafo')}>Grafo</Button>
         <Button size="sm" variant="outline-primary" onClick={() => onOpen(plan._id, 'tablero')}>Tablero</Button>
         {enrollmentId ? (
-          <Button size="sm" variant="outline-secondary" onClick={() => onOpen(plan._id, 'progreso')}>Mi progreso</Button>
+          <>
+            <Button size="sm" variant="outline-secondary" onClick={() => onOpen(plan._id, 'progreso')}>Mi progreso</Button>
+            {onRemove && (
+              <Button size="sm" variant="outline-danger" onClick={() => onRemove(plan._id)}>
+                Quitar plan
+              </Button>
+            )}
+          </>
         ) : (
           <Button
             size="sm"
@@ -408,6 +264,79 @@ function PlanCard({
             onClick={async () => { setWorking(true); try { await onEnroll(plan._id); } finally { setWorking(false); } }}
           >
             {working ? 'Inscribiendo…' : 'Inscribirme'}
+          </Button>
+        )}
+      </div>
+    </article>
+  );
+}
+
+function EnrolledPlanCard({
+  entry,
+  careerName,
+  careerColor,
+  onOpen,
+  onRemove,
+}: {
+  entry: PlanEntry;
+  careerName: string;
+  careerColor: string;
+  onOpen: (planId: string, path: string) => void;
+  onRemove?: (planId: string) => void;
+}) {
+  const { plan, subjects } = entry;
+  const subjectCount = subjects === null ? null : subjects.length;
+  const showCareer = Boolean(
+    careerName && careerName !== 'Carrera asociada' && careerName !== plan.name,
+  );
+
+  return (
+    <article className="plan-row" style={{ borderLeftColor: careerColor }}>
+      <div
+        className="plan-row__icon"
+        style={{
+          color: careerColor,
+          background: `color-mix(in srgb, ${careerColor} 13%, transparent)`,
+        }}
+        aria-hidden="true"
+      >
+        <IconCap />
+      </div>
+
+      <div className="plan-row__main">
+        <div className="plan-row__heading">
+          <h3>{plan.name}</h3>
+          <span className="plan-row__badge">
+            <span className="plan-row__dot" /> Inscripto
+          </span>
+        </div>
+
+        <div className="plan-row__meta">
+          {showCareer && <span>{careerName}</span>}
+          {subjectCount !== null && <span>{subjectCount} materias</span>}
+          {(plan.durationYears ?? 0) > 0 && <span>{plan.durationYears} años</span>}
+          {(plan.creditsFinal ?? 0) > 0 && <span>{plan.creditsFinal} créditos</span>}
+        </div>
+
+        {plan.intermediateTitle && (
+          <span className="chip chip--success plan-row__tec" title={`Incluye ${plan.intermediateTitle}`}>
+            🎓 Tecnicatura intermedia
+          </span>
+        )}
+      </div>
+
+      <div className="plan-row__actions">
+        <Button size="sm" variant="primary" onClick={() => onOpen(plan._id, 'grafo')}>Grafo</Button>
+        <Button size="sm" variant="outline-primary" onClick={() => onOpen(plan._id, 'tablero')}>Tablero</Button>
+        <Button size="sm" variant="outline-secondary" onClick={() => onOpen(plan._id, 'progreso')}>Mi progreso</Button>
+        {onRemove && (
+          <Button
+            size="sm"
+            variant="outline-danger"
+            title="Quitar este plan de mi cuenta"
+            onClick={() => onRemove(plan._id)}
+          >
+            Quitar plan
           </Button>
         )}
       </div>
@@ -452,6 +381,7 @@ export default function Home() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const openMine = async (enrolls: UserStudyPlan[]) => {
     setLoading(true);
@@ -605,6 +535,36 @@ export default function Home() {
     setEnrollments(Array.isArray(mine) ? mine : []);
   };
 
+  const handleRemove = async (planId: string) => {
+    const entry = entries.find((e) => e.plan._id === planId);
+    const name = entry?.plan.name ?? 'este plan';
+    if (!window.confirm(
+      `¿Quitar "${name}" de tus planes?\n\n` +
+      'Si ya tiene materias registradas, tu avance queda guardado y podés volver a inscribirte cuando quieras.',
+    )) return;
+
+    setActionError(null);
+    try {
+      await studyPlansApi.remove(planId);
+      const mine = await studyPlansApi.getMine();
+      const enrolls = Array.isArray(mine) ? mine : [];
+      setEnrollments(enrolls);
+
+      if (step === 'mine') {
+        if (enrolls.length === 0) {
+          setEntries([]);
+          setSelectedUnit(null);
+          setSelectedCareer(null);
+          setStep('units');
+        } else {
+          await openMine(enrolls);
+        }
+      }
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'No se pudo quitar el plan');
+    }
+  };
+
   const handleOpen = (planId: string, path: string) => {
     setCareerId(planId);
     navigate(path === 'progreso' ? '/progreso' : `/${path}/${planId}`);
@@ -623,14 +583,14 @@ export default function Home() {
 
       {/* MIGAS */}
 
-      <div className="d-flex flex-wrap align-items-center gap-2 mb-4">
+      <div className="home-tabs">
         {enrollments.length > 0 && (
           <Button
             size="sm"
             variant={step === 'mine' ? 'primary' : 'outline-primary'}
             onClick={() => { void openMine(enrollments); }}
           >
-            Mis inscripciones
+            Mis inscripciones ({enrollments.length})
           </Button>
         )}
 
@@ -671,6 +631,18 @@ export default function Home() {
 
       {!loading && error && (
         <div className="alert alert-danger">{error}</div>
+      )}
+
+      {!loading && actionError && (
+        <div className="alert alert-warning alert-dismissible d-flex align-items-start gap-2" role="alert">
+          <span className="flex-grow-1">{actionError}</span>
+          <button
+            type="button"
+            className="btn-close"
+            aria-label="Cerrar"
+            onClick={() => setActionError(null)}
+          />
+        </div>
       )}
 
       {/* PASO 1: INSTITUTOS */}
@@ -783,22 +755,35 @@ export default function Home() {
         entries.length === 0 ? (
           <EmptyState
             icon={<IconCap size={46} />}
-            title="Todavía no hay planes disponibles"
-            text="Todavía no hay planes publicados. Volvé pronto."
+            title="Todavía no tenés un plan inscripto"
+            text="Explorá los institutos y anotate en una carrera para empezar."
+            action={
+              <Button className="btn-gradify" onClick={() => setStep('units')}>
+                Explorar institutos
+              </Button>
+            }
           />
         ) : (
-          <div className="career-grid">
+          <div className="plan-list">
             {entries.map((entry) => (
-              <PlanCard
+              <EnrolledPlanCard
                 key={entry.plan._id}
                 entry={entry}
                 careerName={planCareerName(entry.plan)}
                 careerColor={planCareerColor(entry.plan)}
-                enrollmentId={enrollmentIdFor(entry.plan._id)}
-                onEnroll={handleEnroll}
                 onOpen={handleOpen}
+                onRemove={handleRemove}
               />
             ))}
+
+            <button type="button" className="plan-add" onClick={() => setStep('units')}>
+              <span className="plan-add__plus" aria-hidden="true">+</span>
+              <span className="plan-add__copy">
+                <strong>Sumar otra carrera</strong>
+                <span>Explorá los institutos y anotate en otro plan.</span>
+              </span>
+              <span className="plan-add__cta">Explorar institutos →</span>
+            </button>
           </div>
         )
       )}
@@ -830,6 +815,7 @@ export default function Home() {
                 enrollmentId={enrollmentIdFor(entry.plan._id)}
                 onEnroll={handleEnroll}
                 onOpen={handleOpen}
+                onRemove={handleRemove}
               />
             ))}
           </div>

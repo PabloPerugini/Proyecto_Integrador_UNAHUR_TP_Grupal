@@ -16,6 +16,7 @@ const createError = (statusCode, message) => {
 const getUserStudyPlans = async (userId) => {
   const plans = await UserStudyPlan.find({
     user: userId,
+    archivedAt: null,
   })
     .populate({
       path: "studyPlan",
@@ -64,6 +65,13 @@ const addUserStudyPlan = async (userId, studyPlanId) => {
   });
 
   if (alreadyExists) {
+    // Si estaba archivado, se reactiva conservando el progreso.
+    if (alreadyExists.archivedAt) {
+      alreadyExists.archivedAt = null;
+      await alreadyExists.save();
+      return alreadyExists;
+    }
+
     throw createError(
       409,
       "Ya agregaste este plan de estudio"
@@ -91,16 +99,16 @@ const removeUserStudyPlan = async (userId, studyPlanId) => {
     return null;
   }
 
-  // Evitar dejar progreso académico sin su plan
+  // Si hay progreso, la baja es reversible: se archiva y se conserva
+  // el avance por si la persona vuelve a inscribirse al mismo plan.
   const hasProgress = await SubjectProgress.exists({
     userStudyPlan: userStudyPlan._id,
   });
 
   if (hasProgress) {
-    throw createError(
-      409,
-      "No podés quitar este plan porque tiene progreso académico registrado"
-    );
+    userStudyPlan.archivedAt = new Date();
+    await userStudyPlan.save();
+    return userStudyPlan;
   }
 
   return UserStudyPlan.findOneAndDelete({

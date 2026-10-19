@@ -124,7 +124,7 @@ existe** en el repositorio, respondiendo tres preguntas:
 | US-05 | Tecnicatura intermedia con pestañas Lic/Tec y aviso si está vacía | `GET /study-plans/:id/intermediate` (`closed`/`externalRequires`); **E2E v2.4**: sub-plan devuelve las materias marcadas y `closed`; avisos en Cargar plan/Editar plan cuando hay título sin materias (BUG-016); Caso 26 | E2E ✅ API · Caso 26 🟡 | ⚠️ |
 | US-06 | Admin marca tecnicatura y articulación | **E2E v2.4**: `PATCH /study-plans/:id/subjects/intermediate` por año/todo (`matched`/`modified`), `400` con valor no booleano, `403/404` para ajenos; `PATCH /careers/:id` valida `continuesIn` (autorreferencia 400); UI `AdminCatalog`; Caso 25 | E2E ✅ API · Caso 25 🟡 | ⚠️ |
 | US-07 | Promedio con notas y exportar CSV | Cálculo en `MyProgress` (`average`, `exportCsv`); Caso 28 | navegador | 🟡 |
-| US-08 | Admin gestiona usuarios y carreras archivadas | `GET/PATCH/DELETE /users` (ADMIN) + `includeArchived`; Caso 30; unit `seguridad` (roles) | `npm test` ✅ parcial · Caso 30 🟡 | ⚠️ |
+| US-08 | Admin gestiona usuarios y carreras archivadas | `GET/PATCH/DELETE /users` (ADMIN) + `includeArchived`; Catálogo → Carreras “Ver archivadas”; Caso 30; unit `seguridad` (roles) | `npm test` ✅ parcial · Caso 30 🟡 | ⚠️ |
 | US-09 | Editar mi cuenta y cerrar sesión | `PATCH /users/:nickName` + `POST /users/logout` (invalida JWT); Caso 29; unit `seguridad` (`tokenVersion`) | `npm test` ✅ · Caso 29 🟡 | ⚠️ |
 | US-10 | Identificar el tipo de carrera (licenciatura/tecnicatura/profesorado/ingeniería) | **E2E v2.4**: `POST /careers` con `careerType` (`201` + persistido en `GET /careers`), valor fuera del enum `400`, `careerType: null` lo limpia; chip 🎓 Tecnicatura en el Home (Caso 31) | E2E ✅ API · Caso 31 🟡 | ⚠️ |
 | US-11 | Admin administra el catálogo completo (institutos con color, carreras, articulación) | **E2E v2.5 (14/14)**: `401` sin token; alta con `color` (hex validado; `400` inválido); `PATCH` nombre/color persistido; `withCounts` con `careerCount`; `409` al borrar instituto con carreras; editar/reasignar carrera (`academicUnit: null` y reasignar); borrados en orden carrera → instituto → universidad; UI en pestañas (Casos 25/30/36/37) | E2E ✅ API · UI 🟡 | ⚠️ |
@@ -178,7 +178,7 @@ existe** en el repositorio, respondiendo tres preguntas:
 | SC006 Admin | `/admin/:id` | Casos 14 (alta/duplicados), 15 (publicar), 16 (editar/borrar), 25 (continuesIn), 26 (tecnicatura) | 🟡 |
 | SC007 Mi cuenta | `/cuenta` | Caso 29 (perfil/contraseña/logout) | 🟡 |
 | SC008 Usuarios | `/admin/users` | Caso 30 (ADMIN: roles/baja) | 🟡 |
-| SC009 Archivadas | `/admin/archivadas` | Caso 30 (ADMIN: restaurar) | 🟡 |
+| SC009 Archivadas | Catálogo → Carreras (“Ver archivadas”) | Caso 30 (ADMIN: restaurar) | 🟡 |
 | SC010 403/404 | `/403`, `*` | Caso 20 (wildcard 404, acceso denegado) | 🟡 |
 
 **Total de pantallas verificadas end-to-end: 0 de 10.** La verificación automatizada llega

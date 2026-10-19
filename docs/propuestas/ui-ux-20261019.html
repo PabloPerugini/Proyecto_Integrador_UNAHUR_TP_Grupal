@@ -1,0 +1,1067 @@
+<!doctype html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gradify UNAHUR — Propuestas de UI/UX</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="ui.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9.5 21v-6h5v6"/></symbol>
+  <symbol id="i-graph" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="12" cy="18" r="2.4"/><path d="M8.2 6h7.6M7.2 8.1l3.7 7.8M16.8 8.1l-3.7 7.8"/></symbol>
+  <symbol id="i-board" viewBox="0 0 24 24"><rect x="3.5" y="4" width="17" height="16" rx="2.5"/><path d="M9 4v16M15 4v16"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol>
+  <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4M7.5 8.5 12 4l4.5 4.5"/><path d="M4 16v3.5A1.5 1.5 0 0 0 5.5 21h13a1.5 1.5 0 0 0 1.5-1.5V16"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="m4 20 1-4.2L16.7 4.1a2 2 0 0 1 2.8 0l.4.4a2 2 0 0 1 0 2.8L8.2 19 4 20Z"/><path d="m14.8 6 3.2 3.2"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><path d="M16 5.5a3 3 0 0 1 0 5.6M17.5 15.2c1.8.5 3 2.2 3.4 4.8"/></symbol>
+  <symbol id="i-archive" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="5" rx="1.4"/><path d="M5 9.5V20h14V9.5M10 13.5h4"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m4.5 12.5 5 5 10-11"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3 2.8 20h18.4L12 3Z"/><path d="M12 9v5M12 17.2v.3"/></symbol>
+  <symbol id="i-sparkles" viewBox="0 0 24 24"><path d="M12 3.5 13.6 9l5.4 1.6-5.4 1.6L12 17.7l-1.6-5.5L5 10.6 10.4 9 12 3.5Z"/><path d="M19 16.5l.7 2.2 2.3.8-2.3.8-.7 2.2-.8-2.2-2.2-.8 2.2-.8.8-2.2Z"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M6 3.5h7l5 5V21H6V3.5Z"/><path d="M13 3.5V9h5"/><path d="M9 13h6M9 16.5h6"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-.6 4"/><path d="M20 4.5V11h-6.2"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5"/><path d="M4 19.5h16"/></symbol>
+  <symbol id="i-credit" viewBox="0 0 24 24"><rect x="3" y="5.5" width="18" height="13" rx="2.4"/><path d="M3 10h18M7 14.5h4"/></symbol>
+  <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2.2"/><path d="M8 3v4M16 3v4M3.5 10h17"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15.5H6.5A2.5 2.5 0 0 0 4 21V5.5Z"/><path d="M4 18.5A2.5 2.5 0 0 1 6.5 16H20"/></symbol>
+  <symbol id="i-filter" viewBox="0 0 24 24"><path d="M3.5 5h17L14 13v6l-4 2v-8L3.5 5Z"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.8 12S6 5.8 12 5.8 21.2 12 21.2 12 18 18.2 12 18.2 2.8 12 2.8 12Z"/><circle cx="12" cy="12" r="2.7"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 4.5 6v6c0 4.4 3.2 7.6 7.5 9 4.3-1.4 7.5-4.6 7.5-9V6L12 3Z"/><path d="m8.7 12 2.2 2.2 4.4-4.6"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 10a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6Z"/><path d="M9.5 19.5a2.6 2.6 0 0 0 5 0"/></symbol>
+</svg>
+
+<header class="doc-header doc">
+  <span class="kicker"><svg class="icon" style="width:13px;height:13px"><use href="#i-sparkles"/></svg> Propuesta de diseño · 2026-10-19</span>
+  <h1>Gradify UNAHUR: leer mejor, decidir mejor.</h1>
+  <p class="lead">Propuestas visuales para el <b>panel de administración</b> y la <b>experiencia del estudiante</b>, con foco en el flujo de carga de planes: lectura, validación, revisión y control. La prioridad es que la app lea bien los PDFs y que la persona vea qué revisar antes de publicar.</p>
+  <div class="meta">
+    <span>Identidad Gradify + colores UNAHUR</span>
+    <span>Light / dark</span>
+    <span>Responsive ≥ 360 px</span>
+    <span>Basado en la app actual (React + Bootstrap + tokens CSS)</span>
+  </div>
+</header>
+
+<nav class="doc-nav doc">
+  <a href="#principios">Principios</a>
+  <a href="#sistema">Sistema de diseño</a>
+  <a href="#admin">Admin</a>
+  <a href="#usuario">Estudiante</a>
+  <a href="#roadmap">Roadmap</a>
+  <button class="theme-btn" id="themeBtn" type="button">◐ Modo oscuro</button>
+</nav>
+
+<main class="doc">
+
+  <section class="section" id="principios">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">Punto de partida</div>
+        <h2>Seis principios para las dos interfaces</h2>
+        <p>La app ya tiene una identidad sólida y flujos reales. La propuesta no la reemplaza: la ordena, la hace explícita y pone el estado del sistema en primer plano.</p>
+      </div>
+    </div>
+    <div class="grid g3">
+      <div class="card"><div class="card__body">
+        <span class="chip chip--ok">01 · Leer primero</span>
+        <h3 style="font-size:15px;margin:10px 0 5px">Parser → IA → persona</h3>
+        <p class="small muted">El parser determinístico hace el trabajo pesado; la IA solo interviene donde aporta (intermedio, filas dudosas); la persona confirma con evidencia.</p>
+      </div></div>
+      <div class="card"><div class="card__body">
+        <span class="chip chip--info">02 · Confianza visible</span>
+        <h3 style="font-size:15px;margin:10px 0 5px">Cada fila sabe si está validada</h3>
+        <p class="small muted">Estados explícitos: OK, revisar, fusión, no es materia. Nunca una tabla “perfecta” que en realidad tiene errores silenciosos.</p>
+      </div></div>
+      <div class="card"><div class="card__body">
+        <span class="chip chip--violet">03 · Una acción primaria</span>
+        <h3 style="font-size:15px;margin:10px 0 5px">Siguiente paso siempre claro</h3>
+        <p class="small muted">Cada pantalla tiene un botón principal (Revisar, Confirmar, Guardar) y el resto son acciones secundarias.</p>
+      </div></div>
+      <div class="card"><div class="card__body">
+        <span class="chip chip--warn">04 · Densidad con aire</span>
+        <h3 style="font-size:15px;margin:10px 0 5px">Tablas legibles, no muros</h3>
+        <p class="small muted">44 px por fila, jerarquía nombre/subtítulo, columnas numéricas tabulares y filtros a mano.</p>
+      </div></div>
+      <div class="card"><div class="card__body">
+        <span class="chip chip--ok">05 · Estado del sistema visible</span>
+        <h3 style="font-size:15px;margin:10px 0 5px">Carga, cola e IA sin adivinar</h3>
+        <p class="small muted">Progreso, reintentos, tiempos, proveedor de IA y tasa de fallback siempre a un clic.</p>
+      </div></div>
+      <div class="card"><div class="card__body">
+        <span class="chip chip--info">06 · Accesible por defecto</span>
+        <h3 style="font-size:15px;margin:10px 0 5px">Contraste, foco y teclado</h3>
+        <p class="small muted">Foco visible, labels asociados, estados no solo por color (chip + texto) y dark mode real.</p>
+      </div></div>
+    </div>
+  </section>
+
+  <section class="section" id="sistema">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">Design system</div>
+        <h2>Tokens, componentes y estados</h2>
+        <p>Se mantienen los tokens actuales (verde Gradify, superficies, radios y sombras) y se agrega una capa explícita de estados para carga y validación.</p>
+      </div>
+    </div>
+    <div class="grid g2">
+      <div class="card">
+        <div class="card__head">Paleta</div>
+        <div class="card__body">
+          <div class="swatches">
+            <div class="swatch"><i style="background:#238a42"></i><div><b>Brand</b>#238a42</div></div>
+            <div class="swatch"><i style="background:#0a6b4e"></i><div><b>Brand 2</b>#0a6b4e</div></div>
+            <div class="swatch"><i style="background:#ffb020"></i><div><b>Accent</b>#ffb020</div></div>
+            <div class="swatch"><i style="background:#219ecf"></i><div><b>Biotecnología</b>#219ecf</div></div>
+            <div class="swatch"><i style="background:#f08100"></i><div><b>Tec. e Ingeniería</b>#f08100</div></div>
+            <div class="swatch"><i style="background:#00a79f"></i><div><b>Salud</b>#00a79f</div></div>
+            <div class="swatch"><i style="background:#ea4f51"></i><div><b>Educación</b>#ea4f51</div></div>
+            <div class="swatch"><i style="background:#f3f4f9"></i><div><b>App bg</b>#f3f4f9</div></div>
+          </div>
+          <p class="small muted" style="margin-top:12px">Estados: <span class="chip chip--ok">OK</span> <span class="chip chip--warn">Revisar</span> <span class="chip chip--err">Error</span> <span class="chip chip--info">IA</span> <span class="chip chip--violet">Intermedio</span> <span class="chip chip--neutral">Neutral</span></p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card__head">Tipografía y radios</div>
+        <div class="card__body">
+          <div class="type-scale">
+            <div class="type-row"><b style="font-size:24px;font-weight:800">Título de página · 24/800</b><span>--text-xl</span></div>
+            <div class="type-row"><b style="font-size:16px;font-weight:700">Título de tarjeta · 16/700</b><span>--text-lg</span></div>
+            <div class="type-row"><span style="font-size:13px;color:var(--text)">Cuerpo · 13/400 · Inter</span><span>--text-md</span></div>
+            <div class="type-row"><span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:800">Label de tabla · 11/800</span><span>--text-xs</span></div>
+          </div>
+          <div class="comp-row" style="margin-top:12px">
+            <span class="mono tiny muted">radius</span>
+            <span class="chip chip--neutral">16 · tarjetas</span>
+            <span class="chip chip--neutral">12 · paneles</span>
+            <span class="chip chip--neutral">9 · controles</span>
+            <span class="chip chip--neutral">999 · chips</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="grid g2" style="margin-top:16px">
+      <div class="card">
+        <div class="card__head">Botones, campos y stepper</div>
+        <div class="card__body">
+          <div class="comp-row">
+            <button class="btn btn--primary"><svg class="icon"><use href="#i-upload"/></svg> Acción principal</button>
+            <button class="btn btn--outline">Secundaria</button>
+            <button class="btn btn--ghost">Ghost</button>
+            <button class="btn btn--danger btn--sm">Eliminar</button>
+          </div>
+          <div class="comp-row">
+            <div class="search" style="width:240px"><svg class="icon"><use href="#i-search"/></svg><input class="input" placeholder="Buscar materia…"></div>
+            <div class="field" style="width:170px"><label>Carrera</label><select class="select"><option>Biotecnología</option></select></div>
+            <span class="switch on"></span><span class="small muted">Plan oficial</span>
+          </div>
+          <div class="comp-row" style="padding-top:14px">
+            <div class="stepper" style="margin:0;width:100%">
+              <div class="step done"><b>✓</b> Archivo</div><div class="step-sep"></div>
+              <div class="step active"><b>2</b> Lectura</div><div class="step-sep"></div>
+              <div class="step"><b>3</b> Revisión</div><div class="step-sep"></div>
+              <div class="step"><b>4</b> Confirmar</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card__head">Estados de validación (la pieza nueva)</div>
+        <div class="card__body">
+          <div class="list">
+            <div class="list-row"><div class="ico-box" style="background:var(--ok-bg);color:var(--ok)"><svg class="icon"><use href="#i-check"/></svg></div><div class="grow"><b>Fila validada <span class="chip chip--ok">OK</span></b><span>Nombre, año, cuatrimestre y 6 cargas consistentes.</span></div></div>
+            <div class="list-row"><div class="ico-box" style="background:var(--warn-bg);color:var(--warn)"><svg class="icon"><use href="#i-alert"/></svg></div><div class="grow"><b>Revisar <span class="chip chip--warn">Nombre partido</span></b><span>La celda se partió en dos líneas o hay una fusión posible.</span></div></div>
+            <div class="list-row"><div class="ico-box" style="background:var(--violet-bg);color:var(--violet)"><svg class="icon"><use href="#i-sparkles"/></svg></div><div class="grow"><b>Propuesta de IA <span class="chip chip--violet">Validada</span></b><span>Se acepta solo si los nombres existen en el plan.</span></div></div>
+            <div class="list-row"><div class="ico-box" style="background:var(--err-bg);color:var(--err)"><svg class="icon"><use href="#i-alert"/></svg></div><div class="grow"><b>No es materia <span class="chip chip--err">Excluir</span></b><span>Prosa, encabezados o filas de totales detectadas.</span></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="section" id="admin">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">Interfaz de administración</div>
+        <h2>Cargar, validar y controlar sin perder el hilo</h2>
+        <p>El flujo actual concentra archivo, preview y confirmación. La propuesta lo convierte en un asistente de 4 pasos con validación visible, revisión editable y un tablero de importaciones con salud de IA.</p>
+      </div>
+      <span class="chip chip--neutral">5 pantallas</span>
+    </div>
+
+    <div class="screen-caption">
+      <div><h3>1 · Cargar plan — Archivo</h3><p>Empezar por lo único que la persona tiene seguro: el PDF y la carrera.</p></div>
+      <span class="chip chip--info">Paso 1 / 4</span>
+    </div>
+    <div class="browser">
+      <div class="browser-bar"><i></i><i></i><i></i><span>gradify.unahur.edu.ar/cargar</span></div>
+      <div class="app">
+        <aside class="sidebar">
+          <div class="brand"><span class="brand-mark">G</span> Gradify</div>
+          <div class="nav-label">Explorar</div>
+          <a class="nav-item"><svg class="icon"><use href="#i-home"/></svg> Inicio</a>
+          <a class="nav-item"><svg class="icon"><use href="#i-graph"/></svg> Correlatividades</a>
+          <a class="nav-item"><svg class="icon"><use href="#i-board"/></svg> Tablero</a>
+          <a class="nav-item"><svg class="icon"><use href="#i-chart"/></svg> Mi progreso</a>
+          <div class="nav-label">Administración</div>
+          <a class="nav-item active"><svg class="icon"><use href="#i-upload"/></svg> Cargar plan <span class="anno">1</span></a>
+          <a class="nav-item"><svg class="icon"><use href="#i-edit"/></svg> Editar plan</a>
+          <a class="nav-item"><svg class="icon"><use href="#i-users"/></svg> Usuarios</a>
+          <div class="side-user"><span class="avatar">PP</span><div><b>Pablo Perugini</b><span>ADMIN</span></div></div>
+        </aside>
+        <div class="main">
+          <div class="page-head">
+            <div><h2>Cargar plan de estudios</h2><p>Subí el PDF oficial. Lo leemos, lo validamos y te mostramos qué revisar antes de publicarlo.</p></div>
+            <div class="page-actions"><button class="btn btn--outline btn--sm"><svg class="icon"><use href="#i-clock"/></svg> Historial</button></div>
+          </div>
+          <div class="stepper">
+            <div class="step active"><b>1</b> Archivo</div><div class="step-sep"></div>
+            <div class="step"><b>2</b> Lectura y validación</div><div class="step-sep"></div>
+            <div class="step"><b>3</b> Revisión <span class="anno">2</span></div><div class="step-sep"></div>
+            <div class="step"><b>4</b> Confirmar</div>
+          </div>
+          <div class="grid" style="grid-template-columns:1.35fr .9fr">
+            <div class="card">
+              <div class="card__head">Archivo PDF <span class="chip chip--neutral">hasta 20 MB</span></div>
+              <div class="card__body">
+                <div class="dropzone">
+                  <div class="big"><svg class="icon" style="width:22px;height:22px"><use href="#i-file"/></svg></div>
+                  <b>Arrastrá el PDF acá</b>
+                  <span>o <a href="#">elegí un archivo</a> desde tu equipo</span>
+                  <span class="tiny muted">Solo PDF con capa de texto. Si es un escaneo, te lo avisamos antes de procesar.</span>
+                </div>
+                <div class="file-pill">
+                  <div class="ico-box" style="background:var(--ok-bg);color:var(--ok)"><svg class="icon"><use href="#i-file"/></svg></div>
+                  <div class="grow"><b>Licenciatura-en-Biotecnologia.pdf</b><span>2,4 MB · 34 páginas · listo para leer</span></div>
+                  <span class="chip chip--ok">PDF válido</span>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card__head">Destino del plan <span class="anno">3</span></div>
+              <div class="card__body" style="display:grid;gap:12px">
+                <div class="field"><label>Carrera</label><div class="search"><svg class="icon"><use href="#i-search"/></svg><input class="input" value="Licenciatura en Biotecnología"></div></div>
+                <div class="field"><label>Nombre del plan</label><input class="input" value="Plan 2026"></div>
+                <div class="comp-row" style="border:0;padding:0;justify-content:space-between"><div><b class="small">Plan oficial</b><div class="tiny muted">Visible para todos los estudiantes</div></div><span class="switch on"></span></div>
+                <div class="comp-row" style="border:0;padding:0;justify-content:space-between"><div><b class="small">Notificar al confirmar</b><div class="tiny muted">Aviso en el panel de novedades</div></div><span class="switch"></span></div>
+                <button class="btn btn--primary" style="width:100%;margin-top:2px">Leer PDF <svg class="icon"><use href="#i-arrow"/></svg></button>
+              </div>
+            </div>
+          </div>
+          <div class="card" style="margin-top:14px">
+            <div class="card__head">Últimas importaciones <a class="small" href="#">Ver todas</a></div>
+            <div class="card__body" style="padding:6px 16px">
+              <div class="list-row"><div class="ico-box" style="background:var(--ok-bg);color:var(--ok)"><svg class="icon"><use href="#i-check"/></svg></div><div class="grow"><b>Licenciatura en Biotecnología · Plan 2026</b><span>46 materias · 393 créditos · hoy 09:12</span></div><span class="chip chip--ok">Completada</span><button class="btn btn--ghost btn--sm">Ver</button></div>
+              <div class="list-row"><div class="ico-box" style="background:var(--warn-bg);color:var(--warn)"><svg class="icon"><use href="#i-alert"/></svg></div><div class="grow"><b>Licenciatura en Enfermería · Plan 2025</b><span>45 materias · 2 filas para revisar · ayer 18:40</span></div><span class="chip chip--warn">Con observaciones</span><button class="btn btn--ghost btn--sm">Revisar</button></div>
+              <div class="list-row"><div class="ico-box" style="background:var(--info-bg);color:var(--info)"><svg class="icon"><use href="#i-clock"/></svg></div><div class="grow"><b>Ingeniería en Energía Eléctrica</b><span>Leyendo tabla · 62%</span></div><span class="chip chip--info">En curso</span><button class="btn btn--ghost btn--sm">Ver</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="notes">
+      <h4>Qué cambia</h4>
+      <ol>
+        <li><b>Stepper persistente:</b> la persona siempre sabe en qué paso está y qué falta.</li>
+        <li><b>Revisión como paso propio:</b> hoy el preview y la confirmación están mezclados; separarlos permite corregir sin presión.</li>
+        <li><b>Destino explícito:</b> carrera, nombre y visibilidad del plan antes de leer, no después.</li>
+      </ol>
+    </div>
+
+    <div class="screen-caption">
+      <div><h3>2 · Lectura y validación</h3><p>El sistema muestra qué entendió, con qué confianza y qué necesita una persona.</p></div>
+      <span class="chip chip--info">Paso 2 / 4</span>
+    </div>
+    <div class="browser">
+      <div class="browser-bar"><i></i><i></i><i></i><span>gradify.unahur.edu.ar/cargar/lectura</span></div>
+      <div class="app">
+        <aside class="sidebar">
+          <div class="brand"><span class="brand-mark">G</span> Gradify</div>
+          <div class="nav-label">Explorar</div>
+          <a class="nav-item"><svg class="icon"><use href="#i-home"/></svg> Inicio</a>
+          <a class="nav-item"><svg class="icon"><use href="#i-graph"/></svg> Correlatividades</a>
+          <a class="nav-item"><svg class="icon"><use href="#i-board"/></svg> Tablero</a>
+          <a class="nav-item"><svg class="icon"><use href="#i-chart"/></svg> Mi progreso</a>
+          <div class="nav-label">Administración</div>
+          <a class="nav-item active"><svg class="icon"><use href="#i-upload"/></svg> Cargar plan</a>
+          <a class="nav-item"><svg class="icon"><use href="#i-edit"/></svg> Editar plan</a>
+          <a class="nav-item"><svg class="icon"><use href="#i-users"/></svg> Usuarios</a>
+          <div class="side-user"><span class="avatar">PP</span><div><b>Pablo Perugini</b><span>ADMIN</span></div></div>
+        </aside>
+        <div class="main">
+          <div class="page-head">
+            <div><h2>Lectura completada</h2><p>Licenciatura-en-Biotecnologia.pdf · Plan 2026 · Licenciatura en Biotecnología</p></div>
+            <div class="page-actions"><button class="btn btn--outline btn--sm">Volver</button><button class="btn btn--primary btn--sm">Revisar 3 filas <svg class="icon"><use href="#i-arrow"/></svg></button></div>
+          </div>
+          <div class="stepper">
+            <div class="step done"><b>✓</b> Archivo</div><div class="step-sep"></div>
+            <div class="step active"><b>2</b> Lectura y validación</div><div class="step-sep"></div>
+            <div class="step"><b>3</b> Revisión</div><div class="step-sep"></div>
+            <div class="step"><b>4</b> Confirmar</div>
+          </div>
+          <div class="alert alert--ok" style="margin-bottom:12px"><svg class="icon"><use href="#i-check"/></svg><div><b>El parser reconoció la tabla del plan.</b><p>46 materias · 393 créditos · 19 materias del título intermedio · 6,2 s · sin fallback de IA en la extracción. <span class="anno">1</span></p></div></div>
+          <div class="grid g4" style="margin-bottom:12px">
+            <div class="stat"><div class="stat__label">Materias</div><div class="stat__value">46</div><div class="stat__foot">detectadas en la tabla</div></div>
+            <div class="stat" style="border-color:rgba(255,176,32,.45)"><div class="stat__label">Para revisar</div><div class="stat__value" style="color:var(--warn)">3</div><div class="stat__foot">2 prosa + 1 nombre partido <span class="anno">2</span></div></div>
+            <div class="stat"><div class="stat__label">Título intermedio</div><div class="stat__value">19 <small>/ 46</small></div><div class="stat__foot"><span class="chip chip--violet" style="font-size:10px">IA validada</span> años 1–2</div></div>
+            <div class="stat"><div class="stat__label">Créditos</div><div class="stat__value">393</div><div class="stat__foot">suma de las materias</div></div>
+          </div>
+          <div class="grid" style="grid-template-columns:1.25fr .85fr">
+            <div class="card">
+              <div class="card__head">Qué encontró la lectura <span class="chip chip--ok">7 chequeos</span></div>
+              <div class="card__body" style="display:grid;gap:8px">
+                <div class="alert alert--ok"><svg class="icon"><use href="#i-check"/></svg><div><b>Tabla y columnas reconocidas.</b><p>Código · Materia · Año · Cuatrimestre · 6 cargas · Créditos.</p></div></div>
+                <div class="alert alert--warn"><svg class="icon"><use href="#i-alert"/></svg><div><b>2 filas no son materias.</b><p>Prosa del PDF (una menciona “ACA”): se proponen excluir. <a href="#">Revisar ahora</a></p></div></div>
+                <div class="alert alert--warn"><svg class="icon"><use href="#i-alert"/></svg><div><b>1 nombre partido entre líneas.</b><p>“Introducción a la Biotecnología Nuevos entornos y” — la celda continúa en la fila siguiente. <a href="#">Revisar ahora</a></p></div></div>
+                <div class="alert alert--info"><svg class="icon"><use href="#i-sparkles"/></svg><div><b>Intermedio propuesto por IA y validado.</b><p>19 materias de años 1–2, nombres exactos del plan, sin ACA. <a href="#">Ver detalle</a></p></div></div>
+                <div class="alert alert--ok"><svg class="icon"><use href="#i-check"/></svg><div><b>Sin duplicados de materias.</b><p>46 nombres únicos; 2 filas de prosa excluidas.</p></div></div>
+                <div class="alert alert--warn"><svg class="icon"><use href="#i-alert"/></svg><div><b>Correlativas: no incluidas en esta carga.</b><p>El PDF las menciona; hoy se cargan aparte. Propuesta: importarlas y validar ciclos antes de confirmar. <a href="#">Ver detalle</a></p></div></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card__head">Salud de IA <a class="small" href="#">Panel</a></div>
+              <div class="card__body">
+                <div class="list">
+                  <div class="list-row"><div class="ico-box" style="background:var(--violet-bg);color:var(--violet)"><svg class="icon"><use href="#i-sparkles"/></svg></div><div class="grow"><b>Intermedio clasificado por IA</b><span>Proveedor: groq · 19 s sin caché · validado contra el plan</span></div><span class="chip chip--violet">Revisable</span></div>
+                  <div class="list-row"><div class="ico-box" style="background:var(--ok-bg);color:var(--ok)"><svg class="icon"><use href="#i-shield"/></svg></div><div class="grow"><b>Extracción: parser determinístico</b><span>Sin fallback · 0 tokens de IA</span></div><span class="chip chip--ok">0 costo</span></div>
+                </div>
+                <div style="margin-top:12px">
+                  <div class="ai-bar"><span>Tasa de fallback</span><div class="bar"><i style="width:2.3%"></i></div><b>2,3%</b></div>
+                  <div class="ai-bar" style="margin-top:6px"><span>Cache hit</span><div class="bar"><i style="width:64%"></i></div><b>64%</b></div>
+                  <div class="ai-bar" style="margin-top:6px"><span>Errores 429/5xx</span><div class="bar"><i style="width:0.8%"></i></div><b>0,8%</b></div>
+                </div>
+                <p class="tiny muted" style="margin-top:10px">La IA nunca persiste sola: sus propuestas se validan contra la lista real de materias.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="notes">
+      <h4>Qué cambia</h4>
+      <ol>
+        <li><b>Resumen de lectura en una línea:</b> materias, créditos, intermedio, tiempo y si usó IA.</li>
+        <li><b>“Para revisar” como métrica principal:</b> no es un error, es trabajo humano acotado.</li>
+        <li><b>Salud de IA contextual:</b> proveedor, latencia y validación, sin tecnicismos.</li>
+      </ol>
+    </div>
+    <div class="screen-caption">
+      <div><h3>3 · Revisión editable</h3><p>La tabla con evidencia: qué fila está bien, cuál revisar y por qué.</p></div>
+      <span class="chip chip--info">Paso 3 / 4</span>
+    </div>
+    <div class="browser">
+      <div class="browser-bar"><i></i><i></i><i></i><span>gradify.unahur.edu.ar/cargar/revision</span></div>
+      <div class="app">
+        <aside class="sidebar">
+          <div class="brand"><span class="brand-mark">G</span> Gradify</div>
+          <div class="nav-label">Explorar</div>
+          <a class="nav-item"><svg class="icon"><use href="#i-home"/></svg> Inicio</a>
+          <a class="nav-item"><svg class="icon"><use href="#i-graph"/></svg> Correlatividades</a>
+          <a class="nav-item"><svg class="icon"><use href="#i-board"/></svg> Tablero</a>
+          <a class="nav-item"><svg class="icon"><use href="#i-chart"/></svg> Mi progreso</a>
+          <div class="nav-label">Administración</div>
+          <a class="nav-item active"><svg class="icon"><use href="#i-upload"/></svg> Cargar plan</a>
+          <a class="nav-item"><svg class="icon"><use href="#i-edit"/></svg> Editar plan</a>
+          <a class="nav-item"><svg class="icon"><use href="#i-users"/></svg> Usuarios</a>
+          <div class="side-user"><span class="avatar">PP</span><div><b>Pablo Perugini</b><span>ADMIN</span></div></div>
+        </aside>
+        <div class="main">
+          <div class="page-head">
+            <div><h2>Revisión del plan</h2><p>46 materias · 3 pendientes · los cambios se aplican al confirmar.</p></div>
+            <div class="page-actions"><button class="btn btn--outline btn--sm">Volver</button><button class="btn btn--primary btn--sm">Confirmar plan <svg class="icon"><use href="#i-arrow"/></svg></button></div>
+          </div>
+          <div class="stepper">
+            <div class="step done"><b>✓</b> Archivo</div><div class="step-sep"></div>
+            <div class="step done"><b>✓</b> Lectura</div><div class="step-sep"></div>
+            <div class="step active"><b>3</b> Revisión</div><div class="step-sep"></div>
+            <div class="step"><b>4</b> Confirmar</div>
+          </div>
+          <div class="toolbar">
+            <div class="search grow"><svg class="icon"><use href="#i-search"/></svg><input class="input" placeholder="Buscar materia o código…"></div>
+            <span class="chip chip--neutral">Todas · 46</span>
+            <span class="chip chip--warn">Para revisar · 3</span>
+            <span class="chip chip--violet">Intermedio · 19</span>
+            <span class="chip chip--err">No es materia · 2</span>
+            <button class="btn btn--outline btn--sm"><svg class="icon"><use href="#i-filter"/></svg> Filtros</button>
+          </div>
+          <div class="card table-scroll" style="overflow:auto">
+              <table class="tbl">
+                <thead><tr><th>#</th><th>Materia</th><th>Año</th><th>Cuat.</th><th>Cargas (6)</th><th>Créd.</th><th>Estado</th><th></th></tr></thead>
+                <tbody>
+                  <tr><td class="num">1</td><td class="name">Introducción a la Biotecnología<span class="sub">OF001 · CFE</span></td><td>1</td><td>1</td><td><div class="hours"><b>5</b><b>80</b><b>40</b><b>0</b><b>61</b><b>125</b></div></td><td class="num">5</td><td><span class="chip chip--ok">OK</span></td><td><button class="btn btn--ghost btn--sm">···</button></td></tr>
+                  <tr><td class="num">2</td><td class="name">Laboratorio de Análisis de Alimentos, Medicamentos y Cosméticos<span class="sub">OF017 · CFE · 6 cargas completas</span></td><td>2</td><td>2</td><td><div class="hours"><b>4</b><b>64</b><b>40</b><b>0</b><b>61</b><b>125</b></div></td><td class="num">5</td><td><span class="chip chip--ok">OK</span></td><td><button class="btn btn--ghost btn--sm">···</button></td></tr>
+                  <tr style="background:var(--warn-bg)"><td class="num">3</td><td class="name">Las ACA suman un total de 30 créditos, que se distribuyen de la siguiente manera:<span class="sub">fila 12 · no es una materia de la tabla</span></td><td>—</td><td>—</td><td><span class="tiny muted">sin cargas</span></td><td class="num">—</td><td><span class="chip chip--err">No es materia</span></td><td><button class="btn btn--ghost btn--sm">···</button></td></tr>
+                  <tr style="background:var(--warn-bg)"><td class="num">4</td><td class="name">Introducción a la Biotecnología Nuevos entornos y<span class="sub">OF004 · posible fusión de dos líneas</span></td><td>1</td><td>1</td><td><div class="hours"><b>4</b><b>64</b><b>0</b><b>0</b><b>32</b><b>64</b></div></td><td class="num">4</td><td><span class="chip chip--warn">Nombre partido</span></td><td><button class="btn btn--ghost btn--sm">···</button></td></tr>
+                  <tr><td class="num">5</td><td class="name">Matemática I<span class="sub">OF002 · CFE</span></td><td>1</td><td>1</td><td><div class="hours"><b>6</b><b>96</b><b>48</b><b>0</b><b>79</b><b>175</b></div></td><td class="num">6</td><td><span class="chip chip--ok">OK</span></td><td><button class="btn btn--ghost btn--sm">···</button></td></tr>
+                  <tr><td class="num">6</td><td class="name">Biología General<span class="sub">OF003 · CFE</span></td><td>1</td><td>2</td><td><div class="hours"><b>6</b><b>96</b><b>48</b><b>0</b><b>79</b><b>175</b></div></td><td class="num">7</td><td><span class="chip chip--ok">OK</span></td><td><button class="btn btn--ghost btn--sm">···</button></td></tr>
+                  <tr><td class="num">7</td><td class="name">conjunto de posibilidades que brinda y/o reconoce el Instituto de Biotecnología. Las ACA<span class="sub">fila 13 · prosa del PDF</span></td><td>—</td><td>—</td><td><span class="tiny muted">sin cargas</span></td><td class="num">—</td><td><span class="chip chip--err">No es materia</span></td><td><button class="btn btn--ghost btn--sm">···</button></td></tr>
+                </tbody>
+              </table>
+              <div class="comp-row" style="margin:0;padding:10px 16px;justify-content:space-between">
+                <span class="tiny muted">Mostrando 7 de 46 · 3 pendientes de revisión</span>
+                <span class="chips"><span class="chip chip--neutral">1</span><span class="chip chip--ok">2</span><span class="chip chip--neutral">3</span><span class="chip chip--neutral">…</span></span>
+              </div>
+          </div>
+          <div class="card" style="margin-top:12px">
+              <div class="card__head">Detalle de la fila <span class="chip chip--err">No es materia</span></div>
+              <div class="card__body" style="display:grid;grid-template-columns:1.25fr .75fr;gap:16px;align-items:start">
+                <div style="display:grid;gap:10px">
+                  <div><b class="small">Las ACA suman un total de 30 créditos…</b><div class="tiny muted" style="margin-top:2px">Fila 12 · página 10 · sin año ni cargas</div></div>
+                  <div class="alert alert--warn"><svg class="icon"><use href="#i-alert"/></svg><div><b>Por qué se marca</b><p>El texto es un párrafo que menciona “ACA”; no tiene la forma de una materia (sin código, año, cuatrimestre ni cargas).</p></div></div>
+                  <div>
+                    <div class="tiny muted" style="margin-bottom:4px">Texto en el PDF</div>
+                    <div class="mono tiny" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px;line-height:1.5">Las ACA suman un total de 30 créditos, que se distribuyen de la siguiente manera:</div>
+                  </div>
+                </div>
+                <div style="display:grid;gap:8px;align-content:start">
+                  <div class="alert alert--info"><svg class="icon"><use href="#i-sparkles"/></svg><div><b>Sugerencia</b><p>Excluir la fila. No se pierde información: las ACA reales se cargan aparte.</p></div></div>
+                  <div style="display:grid;gap:6px">
+                    <button class="btn btn--danger" style="width:100%">Excluir fila</button>
+                    <button class="btn btn--outline" style="width:100%">Marcar como materia</button>
+                    <button class="btn btn--ghost" style="width:100%">Dejar como está</button>
+                  </div>
+                </div>
+              </div>
+          </div>
+          <div class="card" style="margin-top:12px;display:flex;align-items:center;justify-content:space-between;padding:11px 14px">
+            <div class="small"><b>46 de 46 revisadas</b> <span class="muted">· 3 pendientes · los cambios se aplican al confirmar</span></div>
+            <div class="chips"><span class="chip chip--ok">✓ Sin duplicados</span><span class="chip chip--violet">Intermedio validado</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="notes">
+      <h4>Qué cambia</h4>
+      <ol>
+        <li><b>La fila dudosa se explica:</b> motivo, texto fuente y acción sugerida, en un panel de detalle debajo de la tabla.</li>
+        <li><b>Estados con texto, no solo color:</b> OK, Nombre partido, No es materia.</li>
+        <li><b>Confirmación explícita:</b> los cambios se aplican recién al confirmar; se puede volver sin perder nada.</li>
+      </ol>
+    </div>
+
+    <div class="screen-caption">
+      <div><h3>4 · Importaciones y control de carga</h3><p>Cola, reintentos, diff contra el plan anterior y salud de IA en un solo tablero.</p></div>
+      <span class="chip chip--info">Control</span>
+    </div>
+    <div class="browser">
+      <div class="browser-bar"><i></i><i></i><i></i><span>gradify.unahur.edu.ar/admin/importaciones</span></div>
+      <div class="app">
+        <aside class="sidebar">
+          <div class="brand"><span class="brand-mark">G</span> Gradify</div>
+          <div class="nav-label">Explorar</div>
+          <a class="nav-item"><svg class="icon"><use href="#i-home"/></svg> Inicio</a>
+          <a class="nav-item"><svg class="icon"><use href="#i-graph"/></svg> Correlatividades</a>
+          <a class="nav-item"><svg class="icon"><use href="#i-board"/></svg> Tablero</a>
+          <a class="nav-item"><svg class="icon"><use href="#i-chart"/></svg> Mi progreso</a>
+          <div class="nav-label">Administración</div>
+          <a class="nav-item active"><svg class="icon"><use href="#i-upload"/></svg> Cargar plan</a>
+          <a class="nav-item"><svg class="icon"><use href="#i-edit"/></svg> Editar plan</a>
+          <a class="nav-item"><svg class="icon"><use href="#i-users"/></svg> Usuarios</a>
+          <div class="side-user"><span class="avatar">PP</span><div><b>Pablo Perugini</b><span>ADMIN</span></div></div>
+        </aside>
+        <div class="main">
+          <div class="page-head">
+            <div><h2>Importaciones</h2><p>Estado de cada carga, reintentos y diferencias antes de publicar.</p></div>
+            <div class="page-actions"><button class="btn btn--outline btn--sm"><svg class="icon"><use href="#i-download"/></svg> Reporte de lote</button><button class="btn btn--primary btn--sm"><svg class="icon"><use href="#i-upload"/></svg> Nueva carga</button></div>
+          </div>
+          <div class="kpi-strip">
+            <div class="stat"><div class="stat__label">En curso</div><div class="stat__value">1</div><div class="stat__foot">leyendo tabla</div></div>
+            <div class="stat"><div class="stat__label">Completadas hoy</div><div class="stat__value">5</div><div class="stat__foot">de 6 intentos</div></div>
+            <div class="stat"><div class="stat__label">Con observaciones</div><div class="stat__value" style="color:var(--warn)">2</div><div class="stat__foot">esperan revisión</div></div>
+            <div class="stat"><div class="stat__label">Tiempo medio</div><div class="stat__value">7,4 <small>s</small></div><div class="stat__foot">p50 · p95 18 s</div></div>
+            <div class="stat"><div class="stat__label">Éxito</div><div class="stat__value" style="color:var(--ok)">96%</div><div class="stat__foot">últimos 30 días</div></div>
+          </div>
+          <div class="grid" style="grid-template-columns:1.3fr .7fr">
+            <div class="card">
+              <div class="card__head">Cola de importaciones <span class="chip chip--neutral">6</span></div>
+              <div class="card__body" style="display:grid;gap:9px">
+                <div class="card" style="padding:10px 12px;box-shadow:none">
+                  <div style="display:flex;align-items:center;gap:10px"><div class="ico-box" style="background:var(--ok-bg);color:var(--ok)"><svg class="icon"><use href="#i-check"/></svg></div><div class="grow" style="flex:1"><b class="small">Licenciatura en Biotecnología · Plan 2026</b><div class="tiny muted">46 materias · 393 créditos · 3 revisadas · hace 12 min</div></div><span class="chip chip--ok">Completada</span></div>
+                  <div class="comp-row" style="border:0;padding:8px 0 0;justify-content:space-between"><span class="tiny muted">Diff vs plan anterior: <b style="color:var(--ok)">+3 nuevas</b> · <b style="color:var(--err)">−1 baja</b> · <b style="color:var(--warn)">~2 cambios</b></span><span class="chips"><button class="btn btn--ghost btn--sm">Ver diff</button><button class="btn btn--ghost btn--sm">Abrir plan</button></span></div>
+                </div>
+                <div class="card" style="padding:10px 12px;box-shadow:none;border-color:rgba(255,176,32,.4)">
+                  <div style="display:flex;align-items:center;gap:10px"><div class="ico-box" style="background:var(--warn-bg);color:var(--warn)"><svg class="icon"><use href="#i-alert"/></svg></div><div class="grow" style="flex:1"><b class="small">Licenciatura en Enfermería · Plan 2025</b><div class="tiny muted">45 materias · 2 fusiones · ayer 18:40</div></div><span class="chip chip--warn">Con observaciones</span></div>
+                  <div class="comp-row" style="border:0;padding:8px 0 0;justify-content:space-between"><span class="tiny muted">Requiere revisión humana antes de publicar</span><span class="chips"><button class="btn btn--primary btn--sm">Revisar ahora</button></span></div>
+                </div>
+                <div class="card" style="padding:10px 12px;box-shadow:none">
+                  <div style="display:flex;align-items:center;gap:10px"><div class="ico-box" style="background:var(--info-bg);color:var(--info)"><svg class="icon"><use href="#i-clock"/></svg></div><div class="grow" style="flex:1"><b class="small">Ingeniería en Energía Eléctrica</b><div class="tiny muted">Leyendo tabla · 62% · estimado 4 s</div></div><span class="chip chip--info">En curso</span></div>
+                  <div class="progress" style="margin-top:8px"><i style="width:62%"></i></div>
+                </div>
+                <div class="card" style="padding:10px 12px;box-shadow:none">
+                  <div style="display:flex;align-items:center;gap:10px"><div class="ico-box" style="background:var(--err-bg);color:var(--err)"><svg class="icon"><use href="#i-refresh"/></svg></div><div class="grow" style="flex:1"><b class="small">Tec. en Tecnología de los Alimentos</b><div class="tiny muted">Error de lectura · reintento 1 de 3 · hace 25 min</div></div><span class="chip chip--err">Reintentando</span></div>
+                  <div class="comp-row" style="border:0;padding:8px 0 0;justify-content:space-between"><span class="tiny muted">El PDF no tiene capa de texto en 2 páginas</span><span class="chips"><button class="btn btn--outline btn--sm">Reintentar</button><button class="btn btn--ghost btn--sm">Ver log</button></span></div>
+                </div>
+              </div>
+            </div>
+            <div style="display:grid;gap:12px;align-content:start">
+              <div class="card">
+                <div class="card__head">Salud de IA <span class="chip chip--ok">Estable</span></div>
+                <div class="card__body">
+                  <div class="ai-bars">
+                    <div class="ai-bar"><span>Fallback</span><div class="bar"><i style="width:2.3%"></i></div><b>2,3%</b></div>
+                    <div class="ai-bar"><span>Gemini / Groq</span><div class="bar"><i style="width:82%;background:linear-gradient(90deg,#6b4fd8,#9b7bff)"></i></div><b>82/18</b></div>
+                    <div class="ai-bar"><span>Cache hit</span><div class="bar"><i style="width:64%"></i></div><b>64%</b></div>
+                    <div class="ai-bar"><span>Errores 429/5xx</span><div class="bar"><i style="width:0.8%;background:#e07b6f"></i></div><b>0,8%</b></div>
+                  </div>
+                  <svg class="spark" viewBox="0 0 240 46" preserveAspectRatio="none" aria-hidden="true">
+                    <path d="M0 34 C20 30 28 36 44 28 S70 18 88 24 112 30 130 20 154 12 172 18 200 26 220 14 236 10 240 12" fill="none" stroke="#238a42" stroke-width="2"/>
+                    <path d="M0 34 C20 30 28 36 44 28 S70 18 88 24 112 30 130 20 154 12 172 18 200 26 220 14 236 10 240 12 L240 46 0 46Z" fill="rgba(35,138,66,.08)"/>
+                  </svg>
+                  <p class="tiny muted" style="margin-top:4px">Últimos 30 días · 43 planes · 1 con fallback · 0 alucinaciones persistidas.</p>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card__head">Próximo paso</div>
+                <div class="card__body">
+                  <p class="small"><b>2 importaciones esperan revisión.</b></p>
+                  <p class="tiny muted" style="margin-top:4px">Enfermería (2 fusiones) y Alimentos (2 páginas escaneadas).</p>
+                  <button class="btn btn--outline btn--sm" style="width:100%;margin-top:10px">Ir a revisión</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="card" style="margin-top:14px">
+            <div class="card__head">Diff vs plan anterior <span class="chip chip--info">Biotecnología · 2024 → 2026</span></div>
+            <div class="card__body" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+              <div class="alert alert--ok" style="display:block"><b>+3 materias nuevas</b><p>Bioinformática, Biotecnología Animal, Sociología de la Ciencia.</p></div>
+              <div class="alert alert--err" style="display:block"><b>−1 materia dada de baja</b><p>“Biología Molecular” se reorganiza en dos materias.</p></div>
+              <div class="alert alert--warn" style="display:block"><b>~2 cambios de carga</b><p>Genética Molecular 6 → 7 créditos; Bioética 4 → 3.</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="notes">
+      <h4>Qué cambia</h4>
+      <ol>
+        <li><b>Control de carga real:</b> cada importación tiene estado, progreso, reintento y trazabilidad.</li>
+        <li><b>Salud de IA visible:</b> fallback, proveedores, caché y errores, sin abrir la consola.</li>
+        <li><b>Diff antes de publicar:</b> qué cambia respecto del plan anterior, con acción directa.</li>
+      </ol>
+    </div>
+    <div class="screen-caption">
+      <div><h3>5 · Catálogo y carreras</h3><p>La estructura académica con el mismo lenguaje visual: tabla clara, edición en panel lateral.</p></div>
+      <span class="chip chip--info">Administración</span>
+    </div>
+    <div class="browser">
+      <div class="browser-bar"><i></i><i></i><i></i><span>gradify.unahur.edu.ar/admin/catalogo</span></div>
+      <div class="app">
+        <aside class="sidebar">
+          <div class="brand"><span class="brand-mark">G</span> Gradify</div>
+          <div class="nav-label">Explorar</div>
+          <a class="nav-item"><svg class="icon"><use href="#i-home"/></svg> Inicio</a>
+          <a class="nav-item"><svg class="icon"><use href="#i-graph"/></svg> Correlatividades</a>
+          <a class="nav-item"><svg class="icon"><use href="#i-board"/></svg> Tablero</a>
+          <a class="nav-item"><svg class="icon"><use href="#i-chart"/></svg> Mi progreso</a>
+          <div class="nav-label">Administración</div>
+          <a class="nav-item"><svg class="icon"><use href="#i-upload"/></svg> Cargar plan</a>
+          <a class="nav-item"><svg class="icon"><use href="#i-edit"/></svg> Editar plan</a>
+          <a class="nav-item"><svg class="icon"><use href="#i-users"/></svg> Usuarios</a>
+          <div class="side-user"><span class="avatar">PP</span><div><b>Pablo Perugini</b><span>ADMIN</span></div></div>
+        </aside>
+        <div class="main">
+          <div class="page-head">
+            <div><h2>Catálogo académico</h2><p>Institutos, carreras y articulación en un solo lugar.</p></div>
+            <div class="page-actions"><button class="btn btn--outline btn--sm">Exportar</button><button class="btn btn--primary btn--sm"><svg class="icon"><use href="#i-plus"/></svg> Nueva carrera</button></div>
+          </div>
+          <div class="tabs"><span class="tab">Institutos</span><span class="tab active">Carreras</span><span class="tab">Articulación</span><span class="tab">Usuarios</span></div>
+          <div class="toolbar"><div class="search grow"><svg class="icon"><use href="#i-search"/></svg><input class="input" placeholder="Buscar carrera, instituto o tipo…"></div><span class="chip chip--neutral">29 carreras</span><span class="chip chip--ok">28 publicadas</span><span class="chip chip--warn">1 archivada</span></div>
+          <div class="grid" style="grid-template-columns:minmax(0,1fr) 300px">
+            <div class="card table-scroll" style="overflow:auto">
+              <table class="tbl">
+                <thead><tr><th>Carrera</th><th>Instituto</th><th>Tipo</th><th>Planes</th><th>Estado</th><th></th></tr></thead>
+                <tbody>
+                  <tr><td class="name"><span style="display:inline-block;width:8px;height:8px;border-radius:3px;background:#219ecf;margin-right:7px"></span>Licenciatura en Biotecnología<span class="sub">Tecnicatura intermedia · articulación</span></td><td>Biotecnología</td><td><span class="chip chip--neutral">Grado</span></td><td class="num">2</td><td><span class="chip chip--ok">Publicada</span></td><td><button class="btn btn--ghost btn--sm">Editar</button></td></tr>
+                  <tr><td class="name"><span style="display:inline-block;width:8px;height:8px;border-radius:3px;background:#f08100;margin-right:7px"></span>Ingeniería en Energía Eléctrica<span class="sub">Plan 2026 · 48 materias</span></td><td>Tecnología e Ingeniería</td><td><span class="chip chip--neutral">Grado</span></td><td class="num">3</td><td><span class="chip chip--ok">Publicada</span></td><td><button class="btn btn--ghost btn--sm">Editar</button></td></tr>
+                  <tr><td class="name"><span style="display:inline-block;width:8px;height:8px;border-radius:3px;background:#00a79f;margin-right:7px"></span>Licenciatura en Enfermería<span class="sub">2 observaciones en el último plan</span></td><td>Salud Comunitaria</td><td><span class="chip chip--neutral">Grado</span></td><td class="num">2</td><td><span class="chip chip--warn">Revisar</span></td><td><button class="btn btn--ghost btn--sm">Editar</button></td></tr>
+                  <tr><td class="name"><span style="display:inline-block;width:8px;height:8px;border-radius:3px;background:#ea4f51;margin-right:7px"></span>Profesorado de Educación Física<span class="sub">Plan 2025 · 39 materias</span></td><td>Educación</td><td><span class="chip chip--neutral">Grado</span></td><td class="num">1</td><td><span class="chip chip--ok">Publicada</span></td><td><button class="btn btn--ghost btn--sm">Editar</button></td></tr>
+                  <tr><td class="name"><span style="display:inline-block;width:8px;height:8px;border-radius:3px;background:#219ecf;margin-right:7px"></span>Tecnicatura Universitaria en Laboratorios<span class="sub">Título intermedio de Biotecnología</span></td><td>Biotecnología</td><td><span class="chip chip--neutral">Pregrado</span></td><td class="num">1</td><td><span class="chip chip--ok">Publicada</span></td><td><button class="btn btn--ghost btn--sm">Editar</button></td></tr>
+                  <tr><td class="name"><span style="display:inline-block;width:8px;height:8px;border-radius:3px;background:#9aa3b5;margin-right:7px"></span>Licenciatura en Genética<span class="sub">Sin plan publicado</span></td><td>Biotecnología</td><td><span class="chip chip--neutral">Grado</span></td><td class="num">0</td><td><span class="chip chip--neutral">Archivada</span></td><td><button class="btn btn--ghost btn--sm">Editar</button></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="card" style="align-self:start">
+              <div class="card__head">Editar carrera</div>
+              <div class="card__body" style="display:grid;gap:10px">
+                <div class="field"><label>Nombre</label><input class="input" value="Licenciatura en Biotecnología"></div>
+                <div class="field"><label>Instituto</label><select class="select"><option>Instituto de Biotecnología</option></select></div>
+                <div class="field"><label>Tipo</label><select class="select"><option>Grado</option><option>Pregrado</option></select></div>
+                <div class="field"><label>Color</label><div class="chips"><span style="width:26px;height:26px;border-radius:8px;background:#219ecf;border:2px solid var(--surface);box-shadow:0 0 0 1px var(--border)"></span><span style="width:26px;height:26px;border-radius:8px;background:#f08100"></span><span style="width:26px;height:26px;border-radius:8px;background:#00a79f"></span><span style="width:26px;height:26px;border-radius:8px;background:#ea4f51"></span><span style="width:26px;height:26px;border-radius:8px;background:#238a42"></span></div></div>
+                <div class="field"><label>Descripción</label><textarea class="input" rows="2">Formación en biotecnología con trayecto de tecnicatura intermedia.</textarea></div>
+                <div class="comp-row" style="border:0;padding:2px 0;justify-content:space-between"><div><b class="small">Publicada</b><div class="tiny muted">Visible en el catálogo</div></div><span class="switch on"></span></div>
+                <button class="btn btn--primary" style="width:100%">Guardar cambios</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="notes">
+      <h4>Qué cambia</h4>
+      <ol>
+        <li><b>Una tabla, un panel:</b> editar no navega a otra pantalla ni pierde el contexto.</li>
+        <li><b>Estado del catálogo a la vista:</b> activas y archivadas, con el interruptor “Ver archivadas” en la tabla.</li>
+        <li><b>Color por instituto:</b> el mismo lenguaje visual que ve el estudiante.</li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="section" id="usuario">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">Experiencia del estudiante</div>
+        <h2>Menos buscar, más saber qué hacer</h2>
+        <p>La home deja de ser un catálogo y pasa a mostrar tus planes y los accesos a Mi progreso y al grafo. Qué puedo cursar y el avance no se duplican en Inicio; las altas y bajas de planes también se resuelven acá.</p>
+      </div>
+      <span class="chip chip--neutral">4 pantallas + baja</span>
+    </div>
+
+    <div class="screen-caption">
+      <div><h3>1 · Inicio</h3><p>El punto de partida: mis planes y los accesos a progreso y grafo.</p></div>
+      <span class="chip chip--info">Estudiante</span>
+    </div>
+    <div class="browser">
+      <div class="browser-bar"><i></i><i></i><i></i><span>gradify.unahur.edu.ar</span></div>
+      <div class="app">
+        <aside class="sidebar">
+          <div class="brand"><span class="brand-mark">G</span> Gradify</div>
+          <div class="nav-label">Explorar</div>
+          <a class="nav-item active"><svg class="icon"><use href="#i-home"/></svg> Inicio</a>
+          <a class="nav-item"><svg class="icon"><use href="#i-graph"/></svg> Correlatividades</a>
+          <a class="nav-item"><svg class="icon"><use href="#i-board"/></svg> Tablero</a>
+          <a class="nav-item"><svg class="icon"><use href="#i-chart"/></svg> Mi progreso</a>
+          <div class="side-user"><span class="avatar">PP</span><div><b>Pablo Perugini</b><span>Estudiante</span></div></div>
+        </aside>
+        <div class="main">
+          <div class="page-head">
+            <div><h2>Hola, Pablo</h2><p>Elegí tu plan y seguí desde donde lo dejaste.</p></div>
+            <div class="page-actions"><button class="btn btn--outline btn--sm"><svg class="icon"><use href="#i-bell"/></svg> Novedades</button></div>
+          </div>
+          <div class="hero">
+            <h3>¿Qué querés estudiar?</h3>
+            <p>Buscá por carrera, instituto o plan. Si ya tenés un plan, seguí desde donde lo dejaste.</p>
+            <div class="search"><svg class="icon"><use href="#i-search"/></svg><input class="input" placeholder="Ej.: Biotecnología, Enfermería…"></div>
+          </div>
+          <div class="inst-grid">
+            <div class="inst-card" style="--ic:#219ecf"><div class="inst-dot"><svg class="icon"><use href="#i-book"/></svg></div><b>Biotecnología</b><span>8 carreras · 12 planes</span><div class="go">Ver carreras <svg class="icon" style="width:12px;height:12px"><use href="#i-arrow"/></svg></div></div>
+            <div class="inst-card" style="--ic:#f08100"><div class="inst-dot"><svg class="icon"><use href="#i-book"/></svg></div><b>Tecnología e Ingeniería</b><span>12 carreras · 21 planes</span><div class="go">Ver carreras <svg class="icon" style="width:12px;height:12px"><use href="#i-arrow"/></svg></div></div>
+            <div class="inst-card" style="--ic:#00a79f"><div class="inst-dot"><svg class="icon"><use href="#i-book"/></svg></div><b>Salud Comunitaria</b><span>6 carreras · 9 planes</span><div class="go">Ver carreras <svg class="icon" style="width:12px;height:12px"><use href="#i-arrow"/></svg></div></div>
+            <div class="inst-card" style="--ic:#ea4f51"><div class="inst-dot"><svg class="icon"><use href="#i-book"/></svg></div><b>Educación</b><span>7 carreras · 11 planes</span><div class="go">Ver carreras <svg class="icon" style="width:12px;height:12px"><use href="#i-arrow"/></svg></div></div>
+          </div>
+          <div class="card" style="margin-top:14px">
+            <div class="card__head">Mis planes <a class="small" href="#">Ver todos</a></div>
+            <div class="card__body">
+              <div class="plan-card" style="box-shadow:none;padding:0;border:0">
+                <div class="grow">
+                  <div class="career">Licenciatura en Biotecnología</div>
+                  <div class="planline">Plan 2026 · Instituto de Biotecnología · 46 materias · 5 años</div>
+                  <div class="meta-row"><span class="chip chip--violet">Tecnicatura intermedia</span></div>
+                </div>
+                <div class="actions"><button class="btn btn--primary btn--sm">Mi progreso</button><button class="btn btn--outline btn--sm">Grafo</button><button class="btn btn--ghost btn--sm" style="color:var(--muted)" title="Quitar este plan de mi cuenta"><svg class="icon" style="width:13px;height:13px"><use href="#i-archive"/></svg> Quitar</button></div>
+              </div>
+            </div>
+          </div>
+          <div class="card" style="margin-top:14px">
+            <div class="card__head">Instituto de Biotecnología <span class="chip chip--neutral">3 carreras con plan</span></div>
+            <div class="card__body" style="display:grid;gap:10px">
+              <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+                <div class="ico-box" style="background:rgba(33,158,207,.12);color:#219ecf"><svg class="icon"><use href="#i-book"/></svg></div>
+                <div class="grow"><b class="small">Licenciatura en Biotecnología</b><div class="tiny muted">Grado · Tecnicatura intermedia · 2 planes</div></div>
+                <span class="chips"><span class="chip chip--ok">Plan 2026</span><span class="chip chip--neutral">Plan 2024</span></span>
+                <button class="btn btn--outline btn--sm">Abrir plan</button>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;padding:10px 0">
+                <div class="ico-box" style="background:rgba(33,158,207,.12);color:#219ecf"><svg class="icon"><use href="#i-book"/></svg></div>
+                <div class="grow"><b class="small">Tecnicatura Universitaria en Laboratorios</b><div class="tiny muted">Pregrado · 1 plan</div></div>
+                <span class="chip chip--ok">Plan 2026</span>
+                <button class="btn btn--outline btn--sm">Abrir plan</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="notes">
+      <h4>Qué cambia</h4>
+      <ol>
+        <li><b>Inicio sin duplicar el detalle:</b> “Qué puedo cursar”, “Mi avance” y “Ver materias” quedan en el grafo y en Mi progreso; Inicio no los repite.</li>
+        <li><b>Mis planes, claro:</b> cada tarjeta resume el plan (materias, duración y tecnicatura) y ofrece los accesos a Mi progreso y al grafo.</li>
+        <li><b>Quitar plan con confirmación:</b> el avance se archiva y se puede retomar volviendo a inscribirse desde el catálogo; no se borra por accidente.</li>
+        <li><b>Institutos con color propio:</b> misma identidad que el catálogo y el panel admin.</li>
+      </ol>
+    </div>
+
+    <div class="screen-caption">
+      <div><h3>1b · Quitar plan</h3><p>Salir de una carrera sin perder el avance por accidente.</p></div>
+      <span class="chip chip--info">Estudiante</span>
+    </div>
+    <div class="browser">
+      <div class="browser-bar"><i></i><i></i><i></i><span>gradify.unahur.edu.ar/inicio</span></div>
+      <div class="app" style="position:relative;min-height:560px">
+        <aside class="sidebar">
+          <div class="brand"><span class="brand-mark">G</span> Gradify</div>
+          <div class="nav-label">Explorar</div>
+          <a class="nav-item active"><svg class="icon"><use href="#i-home"/></svg> Inicio</a>
+          <a class="nav-item"><svg class="icon"><use href="#i-graph"/></svg> Correlatividades</a>
+          <a class="nav-item"><svg class="icon"><use href="#i-board"/></svg> Tablero</a>
+          <a class="nav-item"><svg class="icon"><use href="#i-chart"/></svg> Mi progreso</a>
+          <div class="side-user"><span class="avatar">PP</span><div><b>Pablo Perugini</b><span>Estudiante</span></div></div>
+        </aside>
+        <div class="main" style="filter:blur(1.5px);opacity:.5" aria-hidden="true">
+          <div class="page-head"><div><h2>Hola, Pablo</h2><p>Elegí tu plan y seguí desde donde lo dejaste.</p></div></div>
+          <div class="card"><div class="card__head">Mis planes</div><div class="card__body"><div class="plan-card" style="box-shadow:none;padding:0;border:0"><div class="grow"><div class="career">Licenciatura en Biotecnología</div><div class="planline">Plan 2026 · Instituto de Biotecnología · 46 materias · 5 años</div><div class="meta-row"><span class="chip chip--violet">Tecnicatura intermedia</span></div></div></div></div></div>
+        </div>
+        <div class="modal-backdrop">
+          <div class="card modal-card">
+            <div class="card__body" style="padding:22px">
+              <div style="display:flex;gap:12px;align-items:flex-start">
+                <div class="ico-box" style="background:var(--warn-bg);color:var(--warn);flex:none"><svg class="icon"><use href="#i-archive"/></svg></div>
+                <div class="grow"><h3 style="margin:0;font-size:19px">Quitar plan de mi cuenta</h3><div class="tiny muted">Licenciatura en Biotecnología · Plan 2026</div></div>
+                <button class="btn btn--ghost btn--sm" aria-label="Cerrar">✕</button>
+              </div>
+              <p class="small" style="margin:14px 0 10px">El plan desaparece de <b>Mis planes</b> y de tu inicio. <b>Tu avance se conserva archivado</b>; podés volver a inscribirte desde el catálogo cuando quieras.</p>
+              <div class="alert alert--warn"><svg class="icon"><use href="#i-archive"/></svg><div><b>19 materias y 168 créditos quedan guardados.</b><p>Después podés anotarte en otra carrera desde el buscador de Inicio.</p></div></div>
+              <p class="tiny muted" style="margin:10px 0 0">No se borra ninguna materia. Si más adelante querés eliminar el avance, se hace con una confirmación aparte.</p>
+              <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap">
+                <button class="btn btn--outline">Cancelar</button>
+                <button class="btn btn--danger"><svg class="icon" style="width:14px;height:14px"><use href="#i-archive"/></svg> Quitar y archivar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="notes">
+      <h4>Qué cambia</h4>
+      <ol>
+        <li><b>Baja reversible:</b> quitar el plan pide confirmación y archiva el avance; no se borra por accidente.</li>
+        <li><b>Cambio de carrera:</b> después de quitarlo, el buscador de Inicio permite anotarse en otra.</li>
+        <li><b>Recuperación:</b> el plan archivado se reactiva al volver a inscribirse desde el catálogo, con el avance intacto.</li>
+      </ol>
+    </div>
+
+    <div class="screen-caption">
+      <div><h3>2 · Mi progreso</h3><p>Estado, créditos y próximos pasos en una sola pantalla; guardar siempre visible.</p></div>
+      <span class="chip chip--info">Estudiante</span>
+    </div>
+    <div class="browser">
+      <div class="browser-bar"><i></i><i></i><i></i><span>gradify.unahur.edu.ar/mi-progreso</span></div>
+      <div class="app">
+        <aside class="sidebar">
+          <div class="brand"><span class="brand-mark">G</span> Gradify</div>
+          <div class="nav-label">Explorar</div>
+          <a class="nav-item"><svg class="icon"><use href="#i-home"/></svg> Inicio</a>
+          <a class="nav-item"><svg class="icon"><use href="#i-graph"/></svg> Correlatividades</a>
+          <a class="nav-item"><svg class="icon"><use href="#i-board"/></svg> Tablero</a>
+          <a class="nav-item active"><svg class="icon"><use href="#i-chart"/></svg> Mi progreso</a>
+          <div class="side-user"><span class="avatar">PP</span><div><b>Pablo Perugini</b><span>Estudiante</span></div></div>
+        </aside>
+        <div class="main">
+          <div class="page-head">
+            <div><h2>Mi progreso</h2><p>Licenciatura en Biotecnología · Plan 2026</p></div>
+            <div class="page-actions"><button class="btn btn--outline btn--sm"><svg class="icon"><use href="#i-download"/></svg> Exportar CSV</button><button class="btn btn--primary btn--sm">Guardar cambios</button></div>
+          </div>
+          <div class="grid" style="grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:12px">
+            <div class="stat"><div class="stat__label">Aprobadas</div><div class="stat__value">19 <small>/ 46</small></div><div class="stat__foot">41% del plan</div><div class="bar"><i style="width:41%"></i></div></div>
+            <div class="stat"><div class="stat__label">Créditos</div><div class="stat__value">168 <small>/ 393</small></div><div class="stat__foot">faltan 225</div><div class="bar"><i style="width:43%"></i></div></div>
+            <div class="stat"><div class="stat__label">Promedio</div><div class="stat__value">7,84</div><div class="stat__foot">sin aplazos · 12 notas</div></div>
+            <div class="stat" style="display:flex;align-items:center;gap:12px"><div class="ring" style="--p:41"><b>41%</b></div><div><div class="stat__label">Avance</div><div class="stat__foot" style="margin-top:4px">19 de 46 materias</div></div></div>
+          </div>
+          <div class="tabs"><span class="tab active">Licenciatura</span><span class="tab">Tecnicatura intermedia</span><span class="tab">Todas</span></div>
+          <div class="toolbar">
+            <div class="search grow"><svg class="icon"><use href="#i-search"/></svg><input class="input" placeholder="Buscar materia…"></div>
+            <span class="chip chip--neutral">Todas · 46</span><span class="chip chip--ok">Aprobadas · 19</span><span class="chip chip--info">Cursando · 1</span><span class="chip chip--warn">Regulares · 1</span>
+          </div>
+          <div class="grid" style="grid-template-columns:minmax(0,1fr) 290px">
+            <div class="card table-scroll" style="overflow:auto">
+              <table class="tbl">
+                <thead><tr><th>Materia</th><th>Año</th><th>Estado</th><th>Nota</th><th>Créd.</th><th>Correlativas</th></tr></thead>
+                <tbody>
+                  <tr><td class="name">Introducción a la Biotecnología<span class="sub">OF001</span></td><td>1</td><td><span class="chip chip--ok">Aprobada</span></td><td class="num">8</td><td class="num">5</td><td><span class="tiny muted">—</span></td></tr>
+                  <tr><td class="name">Matemática I<span class="sub">OF002</span></td><td>1</td><td><span class="chip chip--ok">Aprobada</span></td><td class="num">7</td><td class="num">6</td><td><span class="tiny muted">—</span></td></tr>
+                  <tr><td class="name">Química General<span class="sub">OF003</span></td><td>1</td><td><span class="chip chip--ok">Aprobada</span></td><td class="num">9</td><td class="num">7</td><td><span class="tiny muted">—</span></td></tr>
+                  <tr><td class="name">Biología General<span class="sub">OF004</span></td><td>1</td><td><span class="chip chip--info">Cursando</span></td><td class="num muted">—</td><td class="num">7</td><td><span class="tiny muted">—</span></td></tr>
+                  <tr><td class="name">Matemática II<span class="sub">OF005</span></td><td>2</td><td><span class="chip chip--warn">Regular</span></td><td class="num muted">—</td><td class="num">6</td><td><span class="chip chip--ok">Cumple</span></td></tr>
+                  <tr><td class="name">Genética<span class="sub">OF006</span></td><td>2</td><td><span class="chip chip--ok">Aprobada</span></td><td class="num">8</td><td class="num">6</td><td><span class="chip chip--ok">Cumple</span></td></tr>
+                  <tr><td class="name">Genética Molecular<span class="sub">OF009</span></td><td>3</td><td><span class="chip chip--neutral">Pendiente</span></td><td class="num muted">—</td><td class="num">6</td><td><span class="chip chip--ok">Habilitada</span></td></tr>
+                </tbody>
+              </table>
+              <div class="comp-row" style="margin:0;padding:10px 16px;justify-content:space-between">
+                <span class="tiny muted">Mostrando 7 de 46</span>
+                <span class="tiny muted">Los cambios se guardan al final</span>
+              </div>
+            </div>
+            <div style="display:grid;gap:12px;align-content:start">
+              <div class="card">
+                <div class="card__head">Próximos pasos</div>
+                <div class="card__body">
+                  <div class="alert alert--info" style="margin-bottom:8px"><svg class="icon"><use href="#i-sparkles"/></svg><div><b>Podés cursar 3 materias</b><p>Con las correlativas que ya tenés aprobadas.</p></div></div>
+                  <div class="next-sub"><div class="check"><svg class="icon"><use href="#i-check"/></svg></div><div><b>Genética Molecular</b><span>3.º año · 6 créditos</span></div></div>
+                  <div class="next-sub"><div class="check"><svg class="icon"><use href="#i-check"/></svg></div><div><b>Microbiología</b><span>3.º año · 5 créditos</span></div></div>
+                  <div class="next-sub"><div class="check"><svg class="icon"><use href="#i-check"/></svg></div><div><b>Bioquímica</b><span>3.º año · 6 créditos</span></div></div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card__head">Camino crítico</div>
+                <div class="card__body">
+                  <p class="tiny muted">Materias que más desbloquean si las aprobás este año.</p>
+                  <div class="list" style="margin-top:6px">
+                    <div class="list-row"><b class="small" style="flex:1">Genética Molecular</b><span class="chip chip--ok">+4</span></div>
+                    <div class="list-row"><b class="small" style="flex:1">Bioquímica</b><span class="chip chip--ok">+3</span></div>
+                    <div class="list-row"><b class="small" style="flex:1">Microbiología</b><span class="chip chip--ok">+2</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="savebar">
+            <div class="small"><b>3 cambios sin guardar</b> <span class="muted">· Biología General, Matemática II, Genética</span></div>
+            <div class="chips"><button class="btn btn--ghost btn--sm">Descartar</button><button class="btn btn--primary btn--sm">Guardar cambios</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="notes">
+      <h4>Qué cambia</h4>
+      <ol>
+        <li><b>Resumen antes de la tabla:</b> avance, créditos y promedio se leen en 2 segundos.</li>
+        <li><b>Próximos pasos accionables:</b> no solo “qué falta”, también “qué puedo hacer ya”.</li>
+        <li><b>Guardado explícito:</b> barra fija con los cambios pendientes, sin pérdidas silenciosas.</li>
+      </ol>
+    </div>
+
+    <div class="screen-caption">
+      <div><h3>3 · Correlatividades</h3><p>El grafo como herramienta de decisión: estado, camino crítico y detalle al hacer clic.</p></div>
+      <span class="chip chip--info">Estudiante</span>
+    </div>
+    <div class="browser">
+      <div class="browser-bar"><i></i><i></i><i></i><span>gradify.unahur.edu.ar/grafo/biotecnologia</span></div>
+      <div class="app">
+        <aside class="sidebar">
+          <div class="brand"><span class="brand-mark">G</span> Gradify</div>
+          <div class="nav-label">Explorar</div>
+          <a class="nav-item"><svg class="icon"><use href="#i-home"/></svg> Inicio</a>
+          <a class="nav-item active"><svg class="icon"><use href="#i-graph"/></svg> Correlatividades</a>
+          <a class="nav-item"><svg class="icon"><use href="#i-board"/></svg> Tablero</a>
+          <a class="nav-item"><svg class="icon"><use href="#i-chart"/></svg> Mi progreso</a>
+          <div class="side-user"><span class="avatar">PP</span><div><b>Pablo Perugini</b><span>Estudiante</span></div></div>
+        </aside>
+        <div class="main">
+          <div class="page-head">
+            <div><h2>Correlatividades · Biotecnología</h2><p>Plan 2026 · 46 materias · clic en una materia para ver el detalle.</p></div>
+            <div class="page-actions"><button class="btn btn--outline btn--sm">Camino crítico</button><button class="btn btn--outline btn--sm"><svg class="icon"><use href="#i-filter"/></svg> Filtros</button></div>
+          </div>
+          <div class="toolbar">
+            <span class="chip chip--neutral">Todas · 46</span><span class="chip chip--ok">Aprobadas · 19</span><span class="chip chip--info">Habilitadas · 3</span><span class="chip chip--warn">Cursando · 1</span><span class="chip chip--neutral">Bloqueadas · 22</span>
+            <div class="legend" style="margin-left:auto"><span><i style="background:#33a06b"></i>Aprobada</span><span><i style="background:#4a80d8"></i>Habilitada</span><span><i style="background:#d99a2b"></i>Cursando</span><span><i style="background:#cfd5e2"></i>Bloqueada</span></div>
+          </div>
+          <div class="card" style="overflow:hidden">
+            <div class="graph-hint">Deslizá para explorar el grafo <span>→</span></div>
+            <div class="graph-wrap">
+              <div class="graph-canvas">
+                <svg viewBox="0 0 760 390" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Grafo de correlatividades">
+                  <g class="g-edge ok">
+                    <path d="M140 55 C155 55 160 55 175 55"/><path d="M140 55 C155 55 160 105 175 105"/><path d="M140 105 C155 105 160 55 175 55"/><path d="M140 105 C155 105 160 155 175 155"/>
+                    <path d="M140 155 C155 155 160 205 175 205"/>
+                  </g>
+                  <g class="g-edge">
+                    <path d="M290 55 C305 55 310 55 325 55"/><path d="M290 105 C305 105 310 55 325 55"/><path d="M290 105 C305 105 310 105 325 105"/>
+                    <path d="M290 155 C305 155 310 55 325 55"/><path d="M290 155 C305 155 310 105 325 105"/><path d="M290 205 C305 205 310 155 325 155"/>
+                    <path d="M440 55 C455 55 460 55 475 55"/><path d="M440 55 C455 55 460 105 475 105"/><path d="M440 105 C455 105 460 55 475 55"/>
+                    <path d="M440 105 C455 105 460 105 475 105"/><path d="M440 155 C455 155 460 55 475 55"/><path d="M440 155 C455 155 460 105 475 105"/>
+                    <path d="M590 55 C605 55 610 55 625 55"/><path d="M590 105 C605 105 610 55 625 55"/><path d="M590 105 C605 105 610 105 625 105"/>
+                    <path d="M140 240 C155 240 160 240 175 240"/><path d="M140 290 C155 290 160 290 175 290"/><path d="M140 340 C155 340 160 340 175 340"/>
+                    <path d="M290 240 C305 240 310 240 325 240"/><path d="M290 290 C305 290 310 290 325 290"/><path d="M290 340 C305 340 310 340 325 340"/>
+                    <path d="M440 190 C455 190 460 190 475 190"/><path d="M440 240 C455 240 460 240 475 240"/><path d="M440 290 C455 290 460 290 475 290"/>
+                    <path d="M590 140 C605 140 610 140 625 140"/><path d="M590 190 C605 190 610 190 625 190"/><path d="M590 240 C605 240 610 240 625 240"/><path d="M590 290 C605 290 610 290 625 290"/>
+                  </g>
+                  <text x="25" y="22" font-size="10" font-weight="700" fill="var(--muted)">1.º año</text>
+                  <text x="175" y="22" font-size="10" font-weight="700" fill="var(--muted)">2.º año</text>
+                  <text x="325" y="22" font-size="10" font-weight="700" fill="var(--muted)">3.º año</text>
+                  <text x="475" y="22" font-size="10" font-weight="700" fill="var(--muted)">4.º año</text>
+                  <text x="625" y="22" font-size="10" font-weight="700" fill="var(--muted)">5.º año</text>
+                  <g class="g-node ok"><rect x="25" y="40" width="115" height="30" rx="7"/><text x="35" y="59">Introducción a la Biotec.</text></g>
+                  <g class="g-node ok"><rect x="25" y="90" width="115" height="30" rx="7"/><text x="35" y="109">Matemática I</text></g>
+                  <g class="g-node ok"><rect x="25" y="140" width="115" height="30" rx="7"/><text x="35" y="159">Química General</text></g>
+                  <g class="g-node cur"><rect x="25" y="190" width="115" height="30" rx="7"/><text x="35" y="209">Biología General</text></g>
+                  <g class="g-node avail"><rect x="175" y="40" width="115" height="30" rx="7"/><text x="185" y="59">Matemática II</text></g>
+                  <g class="g-node ok"><rect x="175" y="90" width="115" height="30" rx="7"/><text x="185" y="109">Biología Celular</text></g>
+                  <g class="g-node ok"><rect x="175" y="140" width="115" height="30" rx="7"/><text x="185" y="159">Genética</text></g>
+                  <g class="g-node ok"><rect x="175" y="190" width="115" height="30" rx="7"/><text x="185" y="209">Química Orgánica</text></g>
+                  <g class="g-node avail sel"><rect x="325" y="40" width="115" height="30" rx="7"/><text x="335" y="59">Genética Molecular</text></g>
+                  <g class="g-node avail"><rect x="325" y="90" width="115" height="30" rx="7"/><text x="335" y="109">Microbiología</text></g>
+                  <g class="g-node avail"><rect x="325" y="140" width="115" height="30" rx="7"/><text x="335" y="159">Bioquímica</text></g>
+                  <g class="g-node lock"><rect x="325" y="190" width="115" height="30" rx="7"/><text x="335" y="209">Biotec. de Microorg.</text></g>
+                  <g class="g-node lock"><rect x="475" y="40" width="115" height="30" rx="7"/><text x="485" y="59">Biotec. Vegetal</text></g>
+                  <g class="g-node lock"><rect x="475" y="90" width="115" height="30" rx="7"/><text x="485" y="109">Bioprocesos</text></g>
+                  <g class="g-node lock"><rect x="625" y="40" width="115" height="30" rx="7"/><text x="635" y="59">Proyecto Final</text></g>
+                  <g class="g-node lock"><rect x="625" y="90" width="115" height="30" rx="7"/><text x="635" y="109">Biotec. Animal</text></g>
+                  <g class="g-node ok"><rect x="25" y="240" width="115" height="30" rx="7"/><text x="35" y="259">Comunicación Oral</text></g>
+                  <g class="g-node ok"><rect x="25" y="290" width="115" height="30" rx="7"/><text x="35" y="309">Física I</text></g>
+                  <g class="g-node cur"><rect x="25" y="340" width="115" height="30" rx="7"/><text x="35" y="359">Inglés I</text></g>
+                  <g class="g-node lock"><rect x="175" y="240" width="115" height="30" rx="7"/><text x="185" y="259">Física II</text></g>
+                  <g class="g-node avail"><rect x="175" y="290" width="115" height="30" rx="7"/><text x="185" y="309">Estadística</text></g>
+                  <g class="g-node lock"><rect x="175" y="340" width="115" height="30" rx="7"/><text x="185" y="359">Inglés II</text></g>
+                  <g class="g-node lock"><rect x="325" y="240" width="115" height="30" rx="7"/><text x="335" y="259">Inmunología</text></g>
+                  <g class="g-node lock"><rect x="325" y="290" width="115" height="30" rx="7"/><text x="335" y="309">Biotec. Animal</text></g>
+                  <g class="g-node lock"><rect x="325" y="340" width="115" height="30" rx="7"/><text x="335" y="359">Bioinformática</text></g>
+                  <g class="g-node lock"><rect x="475" y="140" width="115" height="30" rx="7"/><text x="485" y="159">Bioinformática</text></g>
+                  <g class="g-node lock"><rect x="475" y="190" width="115" height="30" rx="7"/><text x="485" y="209">Inmunología</text></g>
+                  <g class="g-node lock"><rect x="475" y="240" width="115" height="30" rx="7"/><text x="485" y="259">Biotec. de Plantas</text></g>
+                  <g class="g-node lock"><rect x="475" y="290" width="115" height="30" rx="7"/><text x="485" y="309">Gestión de Proyectos</text></g>
+                  <g class="g-node lock"><rect x="625" y="140" width="115" height="30" rx="7"/><text x="635" y="159">Práctica Prof.</text></g>
+                  <g class="g-node lock"><rect x="625" y="190" width="115" height="30" rx="7"/><text x="635" y="209">Seminario</text></g>
+                  <g class="g-node lock"><rect x="625" y="240" width="115" height="30" rx="7"/><text x="635" y="259">Tesis</text></g>
+                  <g class="g-node lock"><rect x="625" y="290" width="115" height="30" rx="7"/><text x="635" y="309">Biotec. Industrial</text></g>
+                </svg>
+              </div>
+              <aside class="graph-panel">
+                <div class="card" style="box-shadow:none">
+                  <div class="card__head">Genética Molecular <span class="chip chip--info">Habilitada</span></div>
+                  <div class="card__body">
+                    <div class="tiny muted">3.º año · 2.º cuatrimestre · 6 créditos</div>
+                    <div class="alert alert--ok" style="margin-top:10px"><svg class="icon"><use href="#i-check"/></svg><div><b>Tenés las correlativas</b><p>Genética y Biología Celular aprobadas.</p></div></div>
+                    <div style="margin-top:10px"><div class="tiny muted" style="margin-bottom:4px">Habilita a</div><div class="chips"><span class="chip chip--neutral">Biotec. Vegetal</span><span class="chip chip--neutral">Bioprocesos</span><span class="chip chip--neutral">Proyecto Final</span></div></div>
+                    <button class="btn btn--primary btn--sm" style="width:100%;margin-top:12px">Marcar como cursando</button>
+                    <button class="btn btn--ghost btn--sm" style="width:100%;margin-top:6px">Ver en Mi progreso</button>
+                  </div>
+                </div>
+              </aside>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="notes">
+      <h4>Qué cambia</h4>
+      <ol>
+        <li><b>El estado se ve en el nodo:</b> aprobada, habilitada, cursando o bloqueada, con leyenda permanente.</li>
+        <li><b>Panel de detalle:</b> correlativas, créditos y qué desbloquea, sin salir del grafo.</li>
+        <li><b>Camino crítico:</b> prioriza las materias que más abren el plan.</li>
+      </ol>
+    </div>
+    <div class="screen-caption">
+      <div><h3>4 · Tablero de cursada</h3><p>El cuatrimestre como un tablero: qué estoy cursando, qué regularicé y qué aprobé.</p></div>
+      <span class="chip chip--info">Estudiante</span>
+    </div>
+    <div class="browser">
+      <div class="browser-bar"><i></i><i></i><i></i><span>gradify.unahur.edu.ar/tablero</span></div>
+      <div class="app">
+        <aside class="sidebar">
+          <div class="brand"><span class="brand-mark">G</span> Gradify</div>
+          <div class="nav-label">Explorar</div>
+          <a class="nav-item"><svg class="icon"><use href="#i-home"/></svg> Inicio</a>
+          <a class="nav-item"><svg class="icon"><use href="#i-graph"/></svg> Correlatividades</a>
+          <a class="nav-item active"><svg class="icon"><use href="#i-board"/></svg> Tablero</a>
+          <a class="nav-item"><svg class="icon"><use href="#i-chart"/></svg> Mi progreso</a>
+          <div class="side-user"><span class="avatar">PP</span><div><b>Pablo Perugini</b><span>Estudiante</span></div></div>
+        </aside>
+        <div class="main">
+          <div class="page-head">
+            <div><h2>Tablero · 2026 C1</h2><p>10 materias · 58 créditos · 1 final pendiente</p></div>
+            <div class="page-actions"><button class="btn btn--outline btn--sm">Cuatrimestre</button><button class="btn btn--outline btn--sm">Año</button></div>
+          </div>
+          <div class="toolbar"><div class="search grow"><svg class="icon"><use href="#i-search"/></svg><input class="input" placeholder="Buscar materia del tablero…"></div><span class="chip chip--neutral">Todas · 10</span><span class="chip chip--neutral">Por cursar · 3</span><span class="chip chip--info">Cursando · 1</span><span class="chip chip--warn">Regulares · 1</span><span class="chip chip--ok">Aprobadas · 5</span></div>
+          <div class="board">
+            <div class="col">
+              <h5>Por cursar <b>3</b></h5>
+              <div class="task"><b>Genética Molecular</b><span>3.º año · 6 créditos</span><span class="chip chip--info">Habilitada</span></div>
+              <div class="task"><b>Microbiología</b><span>3.º año · 5 créditos</span><span class="chip chip--info">Habilitada</span></div>
+              <div class="task"><b>Bioquímica</b><span>3.º año · 6 créditos</span><span class="chip chip--info">Habilitada</span></div>
+            </div>
+            <div class="col">
+              <h5>Cursando <b>1</b></h5>
+              <div class="task" style="border-left:3px solid #d99a2b"><b>Biología General</b><span>1.º año · 7 créditos · 75% asistencia</span><span class="chip chip--info">En curso</span></div>
+            </div>
+            <div class="col">
+              <h5>Regulares <b>1</b></h5>
+              <div class="task" style="border-left:3px solid #b26a00"><b>Matemática II</b><span>2.º año · 6 créditos · final pendiente</span><span class="chip chip--warn">Regular</span></div>
+            </div>
+            <div class="col">
+              <h5>Aprobadas <b>5</b></h5>
+              <div class="task" style="border-left:3px solid #33a06b"><b>Introducción a la Biotecnología</b><span>8 · 5 créditos</span><span class="chip chip--ok">Aprobada</span></div>
+              <div class="task" style="border-left:3px solid #33a06b"><b>Matemática I</b><span>7 · 6 créditos</span><span class="chip chip--ok">Aprobada</span></div>
+              <div class="task" style="border-left:3px solid #33a06b"><b>Genética</b><span>8 · 6 créditos</span><span class="chip chip--ok">Aprobada</span></div>
+              <div class="task" style="border-left:3px solid #33a06b"><b>Química General</b><span>9 · 7 créditos</span><span class="chip chip--ok">Aprobada</span></div>
+              <div class="task" style="border-left:3px solid #33a06b"><b>Comunicación Oral</b><span>8 · 4 créditos</span><span class="chip chip--ok">Aprobada</span></div>
+            </div>
+          </div>
+          <div class="grid g3" style="margin-top:14px">
+            <div class="stat"><div class="stat__label">Carga del cuatrimestre</div><div class="stat__value">30 <small>créditos</small></div><div class="stat__foot">de 42 recomendados</div></div>
+            <div class="stat"><div class="stat__label">Finales pendientes</div><div class="stat__value">1</div><div class="stat__foot">Matemática II</div></div>
+            <div class="stat"><div class="stat__label">Asistencia</div><div class="stat__value">75%</div><div class="stat__foot">Biología General</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="notes">
+      <h4>Qué cambia</h4>
+      <ol>
+        <li><b>El tablero responde “cómo voy este cuatrimestre”:</b> por cursar, cursando, regular y aprobada.</li>
+        <li><b>Datos útiles en la tarjeta:</b> créditos, asistencia y finales pendientes, sin abrir cada materia.</li>
+        <li><b>Mismo patrón visual que el panel admin:</b> estados consistentes en toda la app.</li>
+      </ol>
+    </div>
+  </section>
+  <section class="section" id="roadmap">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">Implementación</div>
+        <h2>Roadmap por valor, no por pantalla</h2>
+        <p>Primero lo que mejora la lectura y la confianza; después el control de carga y el pulido visual. Cada fase deja la app usable y medible.</p>
+      </div>
+      <span class="chip chip--ok">4 fases</span>
+    </div>
+    <div class="grid g2">
+      <div class="card"><div class="card__body">
+        <div class="phase"><h4>Fase 0 · Diseño y validación</h4><p>1 semana</p><ul><li>Tokens de estado (OK, revisar, no es materia, IA).</li><li>Componentes: chip de confianza, panel de detalle, stepper.</li><li>Validar los mockups con 2–3 personas y ajustar antes de codificar.</li></ul></div>
+        <div class="phase"><h4>Fase 1 · Carga y revisión (admin)</h4><p>2–3 semanas</p><ul><li>Asistente de 4 pasos con estado persistente.</li><li>Resumen de lectura + “para revisar” + panel de evidencia.</li><li>Edición inline y confirmación explícita.</li></ul></div>
+        <div class="phase"><h4>Fase 2 · Control de carga</h4><p>2 semanas</p><ul><li>Cola de importaciones, reintentos y logs visibles.</li><li>Diff contra el plan anterior y reporte de lote.</li><li>Instrumentar y mostrar salud de IA (fallback, proveedores, caché, latencia).</li></ul></div>
+      </div></div>
+      <div class="card"><div class="card__body">
+        <div class="phase"><h4>Fase 3 · Experiencia del estudiante</h4><p>2–3 semanas</p><ul><li>Home con tus planes, altas/bajas y accesos a Mi progreso y al grafo.</li><li>Mi progreso con resumen, próximos pasos y guardado explícito.</li><li>Grafo con estados, panel de detalle y camino crítico.</li></ul></div>
+        <div class="phase"><h4>Fase 4 · Pulido y accesibilidad</h4><p>1 semana</p><ul><li>Foco, teclado, contraste y lectores de pantalla.</li><li>Responsive real (360 px) y dark mode completo.</li><li>Pruebas E2E de los flujos críticos y performance de tablas grandes.</li></ul></div>
+        <div class="phase"><h4>Medición</h4><p>Desde la Fase 1</p><ul><li>% de importaciones con 0 filas “revisar”.</li><li>Tiempo medio de carga y tasa de reintento.</li><li>% de intermedios clasificados sin IA.</li><li>Uso de altas/bajas y de Mi progreso.</li></ul></div>
+      </div></div>
+    </div>
+    <div class="grid g2" style="margin-top:16px">
+      <div class="card">
+        <div class="card__head">Qué incluye esta propuesta</div>
+        <div class="card__body">
+          <table class="kpi-table">
+            <tr><td>Admin · carga de planes</td><td>Asistente + validación + revisión</td></tr>
+            <tr><td>Admin · control</td><td>Cola, diff, salud de IA, lote</td></tr>
+            <tr><td>Observabilidad</td><td>Métricas de IA y carga (Fase 2)</td></tr>
+            <tr><td>Estudiante</td><td>Inicio, altas/bajas, progreso, grafo, tablero</td></tr>
+            <tr><td>Diseño</td><td>Tokens, estados, componentes, light/dark</td></tr>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card__head">Qué no incluye (por ahora)</div>
+        <div class="card__body">
+          <table class="kpi-table">
+            <tr><td>Rediseño de marca</td><td>Se mantiene Gradify + UNAHUR</td></tr>
+            <tr><td>OCR de escaneados</td><td>Decisión vigente: sin OCR</td></tr>
+            <tr><td>Nuevas fuentes</td><td>Inter (ya cargada)</td></tr>
+            <tr><td>Backend de IA</td><td>Sin cambios de proveedores ni modelo</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>Gradify UNAHUR · Propuesta de UI/UX · 2026-10-19</span>
+    <span>Mockups estáticos · abrir en el navegador · imprimir a PDF si se necesita</span>
+  </footer>
+</main>
+<script src="ui.js"></script>
+</body>
+</html>

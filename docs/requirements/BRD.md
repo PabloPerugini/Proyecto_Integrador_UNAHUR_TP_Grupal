@@ -124,7 +124,7 @@ El alcance incluye:
 - **Articulación** entre carreras (`continuesIn`): el trayecto continúa en otra carrera (p. ej. tecnicatura → licenciatura).
 - Motor de sugerencias de inscripción basado en reglas de negocio (C1–C6, R0–R6): `GET /study-plans/:id/sugerencias` + sección en Mi progreso (ver FRD §3.1.2).
 - Panel de estadísticas del progreso del estudiante (porcentaje de avance, créditos, **promedio** y exportación a **CSV**).
-- Administración de usuarios (roles USUARIO/ADMIN y baja) y de carreras archivadas (restaurar), más **Mi cuenta** (perfil y contraseña).
+- Administración de usuarios (roles USUARIO/ADMIN y baja) y restauración de carreras archivadas desde el catálogo, más **Mi cuenta** (perfil y contraseña).
 
 ---
 
@@ -214,7 +214,7 @@ Vista de alto nivel. El detalle por pantalla se encuentra en el **FRD, Sección 
 | SC006      | Admin del plan: edición de materias y correlatividades, **marcado en lote de tecnicatura**, tipo de carrera y publicación.           |
 | SC007      | Mi cuenta: perfil (nombre, apellido, email) y cambio de contraseña.              |
 | SC008      | Usuarios (ADMIN): listado, cambio de rol USUARIO/ADMIN y baja.                   |
-| SC009      | Carreras archivadas (ADMIN): listado de archivadas y restauración.              |
+| SC009      | Carreras archivadas (ADMIN, dentro de Catálogo → Carreras): listado con “Ver archivadas” y restauración. |
 | SC010      | Acceso denegado (403) y página 404 para rutas inexistentes.                      |
 
 ---

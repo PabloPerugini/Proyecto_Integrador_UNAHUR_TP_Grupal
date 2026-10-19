@@ -112,7 +112,7 @@ El alcance incluye:
 - **Articulación** entre carreras (`continuesIn`).
 - Motor de sugerencias de inscripción basado en reglas de negocio (C1–C6, R0–R6): `GET /study-plans/:id/sugerencias` + sección en Mi progreso.
 - Panel de estadísticas del progreso (avance, créditos, **promedio**, exportación a **CSV**).
-- Administración de usuarios y de carreras archivadas, más **Mi cuenta** (perfil y contraseña).
+- Administración de usuarios y restauración de carreras archivadas desde el catálogo, más **Mi cuenta** (perfil y contraseña).
 - Manejo centralizado de errores en la API y en la interfaz.
 
 ---
@@ -293,10 +293,10 @@ flowchart LR
 | US-05 | Estudiante    | Ver la **tecnicatura intermedia** de mi plan.                                                                     | Saber qué materias la componen y si sus correlativas cierran.                            | Pestañas Licenciatura/Tecnicatura en Grafo/Tablero/Progreso + detalle en Home (`/study-plans/:id/intermediate` con `closed`/`externalRequires`); aviso si no hay materias marcadas. | US-02       |
 | US-06 | Administrador | Marcar la tecnicatura y la **articulación** entre carreras.                                                       | Publicar el trayecto completo.                                                           | Se marca `intermediate` por materia (una por una o **en lote**: todo el plan, un año o un período) y se editan `intermediateTitle`/`creditsIntermediate`; si el PDF declara el título sin tabular sus materias, la app **avisa** y la **IA puede proponer** el subconjunto (revisable en la columna *Tec* del preview); `continuesIn` se edita desde el catálogo (sin autorreferencia ni IDs inexistentes). | AR-2        |
 | US-07 | Estudiante    | Ver mi **promedio** y **exportar** mi progreso.                                                                   | Compartir o respaldar mi avance.                                                         | Mi progreso calcula el promedio de las aprobadas con nota y ofrece "Exportar CSV" (código, materia, año, estado, nota, créditos). | AR-1        |
-| US-08 | Administrador | Gestionar **usuarios** y **carreras archivadas**.                                                                 | Mantener el catálogo y los roles.                                                        | Admin Usuarios: cambiar rol USUARIO/ADMIN y eliminar; Admin Archivadas: restaurar carreras `isArchived`. | —           |
+| US-08 | Administrador | Gestionar **usuarios** y **carreras archivadas**.                                                                 | Mantener el catálogo y los roles.                                                        | Admin Usuarios: cambiar rol USUARIO/ADMIN y eliminar; Catálogo → Carreras: interruptor “Ver archivadas” y restaurar carreras `isArchived`. | —           |
 | US-09 | Usuario       | Editar **mi cuenta** y **cerrar sesión**.                                                                         | Mantener mis datos y mi seguridad.                                                       | Mi cuenta edita nombre/apellido/email y contraseña; cerrar sesión invalida el JWT vigente. | SC000       |
 | US-10 | Administrador | Identificar el **tipo de carrera** (licenciatura, tecnicatura, profesorado, ingeniería).                          | Distinguir el pregrado del grado y ordenar el catálogo.                                  | `Career.careerType` (default `null`) se edita en el catálogo; las carreras `Tecnicatura` muestran el chip **🎓 Tecnicatura** en el Home. | US-06       |
-| US-11 | Administrador | Administrar el **catálogo completo**: institutos (con color), carreras (editar/archivar/borrar) y articulación. | Mantener el catálogo al día sin romper dependencias ni planes. | Pestañas *Institutos · Universidades · Carreras · Articulación*: edición con whitelist, color con autoguardado, `409` con mensaje si hay carreras/planes/subunidades; carreras archivables (restaurables en *Carreras archivadas*) y borrables; articulación buscable. | SC005/SC006 |
+| US-11 | Administrador | Administrar el **catálogo completo**: institutos (con color), carreras (editar/archivar/borrar) y articulación. | Mantener el catálogo al día sin romper dependencias ni planes. | Pestañas *Institutos · Universidades · Carreras · Articulación*: edición con whitelist, color con autoguardado, `409` con mensaje si hay carreras/planes/subunidades; carreras archivables (restaurables con “Ver archivadas” en la misma pestaña) y borrables; articulación buscable. | SC005/SC006 |
 
 ### 4.2 Criterios de Bondad
 
@@ -385,9 +385,9 @@ flowchart LR
 
 - Tabla de usuarios con nickName, email y rol; permite **hacer/quitar ADMIN** y **eliminar** usuarios.
 
-### SC009 · Carreras archivadas (`/admin/archivadas`, solo ADMIN)
+### SC009 · Carreras archivadas (Catálogo → Carreras, solo ADMIN)
 
-- Lista las carreras con `isArchived` y permite **restaurarlas**.
+- El interruptor **“Ver archivadas (N)”** en la pestaña *Carreras* lista las carreras con `isArchived` (atenuadas y con badge) y permite **restaurarlas**. Ya no existe una pantalla ni ruta separada `/admin/archivadas`.
 
 ### SC010 · Acceso denegado y 404 (`/403`, `*`)
 

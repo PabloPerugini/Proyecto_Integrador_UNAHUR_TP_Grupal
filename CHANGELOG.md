@@ -6,6 +6,25 @@ El registro histórico de requisitos/alcance por versión se mantiene en [BRD.md
 
 ---
 
+## [1.23] — 2026-10-19
+
+### Admin: restauración de carreras archivadas integrada al catálogo
+- **Sin pantalla aparte:** se quitó *Archivadas* del menú admin y la ruta `/admin/archivadas`. La restauración vive en **Cargar plan → Catálogo → pestaña Carreras** con el interruptor **“Ver archivadas (N)”**; las filas archivadas se muestran atenuadas con badge y acción **Restaurar**.
+- **Datos protegidos:** las carreras archivadas siguen ocultas para los estudiantes (`includeArchived` solo ADMIN) y se conserva la forma de recuperar las carreras archivadas existentes.
+- **Verificación:** frontend `tsc -b`, `lint` y `build` verdes · E2E Docker con admin temporal (interruptor con contador, fila archivada visible, Restaurar → API `isArchived:false`, vuelta a fila normal).
+
+---
+
+## [1.22] — 2026-10-19
+
+### Home del estudiante: sin listado de materias y baja reversible de planes
+- **Inicio más limpio:** se quitaron **“Ver materias”**, **“Qué puedo cursar”** y **“Mi avance”** de la tarjeta del plan; el detalle completo sigue en Mi progreso y en el grafo. Inicio solo muestra los planes y los accesos.
+- **Inicio visual:** los planes inscriptos se muestran como **filas amplias** con acento de color, estado “Inscripto”, materias, duración y acciones alineadas (Grafo, Tablero, Mi progreso, Quitar plan). Se sumaron tabs segmentadas, una acción **“Sumar otra carrera”** y se corrigió el shell mobile para que la barra superior quede sobre el contenido. La tecnicatura intermedia queda como chip en la ficha de inscripción, sin repetir el detalle.
+- **Quitar plan:** botón con confirmación en las tarjetas de planes inscriptos. `DELETE /user-study-plans/:studyPlanId` pasó a ser **baja reversible**: sin progreso borra la inscripción; con `SubjectProgress` archiva (`archivedAt`) y conserva el avance. Al reinscribirse al mismo plan, la inscripción se **reactiva con el progreso intacto**.
+- **Verificación:** `npm test` 32/32 · frontend `tsc -b`, `lint` y `build` verdes · E2E Docker (alta → progreso → baja → reinscripción → 1 aprobada conservada) y UI (botón visible, sin “Ver materias”, baja sin alertas, filas y mobile revisados).
+
+---
+
 ## [1.21] — 2026-10-19
 
 ### Parser de planes v7d: anexos CONEAU, TUPAP-2025 y normalización
