@@ -11,9 +11,9 @@
 | Institución           | Universidad Nacional de Hurlingham (UNAHUR)                          |
 | Unidad Académica      | Facultad de Informática — Proyecto Integrador Programación           |
 | Tipo de documento     | Matriz de trazabilidad — cruce BRD / FRD ↔ verificación existente    |
-| Versión               | 1.6                                                                  |
-| Fecha                 | 16 de octubre de 2026                                              |
-| Documentos de origen  | `BRD.md` v2.4 · `FRD.md` v2.5 · `Test-Plan.md` v2.5 · `Test-Cases.md` v2.5 |
+| Versión               | 1.7                                                                  |
+| Fecha                 | 20 de octubre de 2026                                              |
+| Documentos de origen  | `BRD.md` v2.5 · `FRD.md` v2.6 · `Test-Plan.md` v2.6 · `Test-Cases.md` v2.5 |
 | Sponsor Operación     | Secretaría Académica / Dirección de Carrera                          |
 | Sponsor Organización  | UNAHUR                                                               |
 | Integrantes           | Perugini, Pablo; Acuña, Marcos; Masgo Sandoval, Joaquín; Renaud, Román; Remonda, Eliel; Cotera, Dylan |
@@ -98,7 +98,7 @@ existe** en el repositorio, respondiendo tres preguntas:
 
 | ID | Regla | Estado de implementación | Estado de verificación |
 | -- | ----- | ------------------------ | ---------------------- |
-| R0–R6 / Msj0–Msj6 | Mensajes de encabezado, correlativas, límite, comunes, finales, orientación, cierre | ✅ Implementado (`GET /study-plans/:id/sugerencias` + `buildSugerencias` + sección en Mi progreso y "Qué puedo cursar") | ✅ |
+| R0–R6 / Msj0–Msj6 | Mensajes de encabezado, correlativas, límite, comunes, finales, orientación, cierre | ✅ Implementado (`GET /study-plans/:id/sugerencias` + `buildSugerencias` + sección en Mi progreso) | ✅ |
 | C1–C4 (MATERIAS A) · C1–C6 (MATERIAS B) | Cómputo de conjuntos y fusión de condiciones | ✅ `tests/sugerencias.test.js` (4 tests: clases, fusión C5, orden B, ritmo x+1, comunes) | ✅ |
 | ORDEN DE ESTADÍSTICAS | Mostrar MATERIAS B en orden decreciente | ✅ `materiasB` ordenado + test | ✅ |
 
@@ -125,9 +125,11 @@ existe** en el repositorio, respondiendo tres preguntas:
 | US-06 | Admin marca tecnicatura y articulación | **E2E v2.4**: `PATCH /study-plans/:id/subjects/intermediate` por año/todo (`matched`/`modified`), `400` con valor no booleano, `403/404` para ajenos; `PATCH /careers/:id` valida `continuesIn` (autorreferencia 400); UI `AdminCatalog`; Caso 25 | E2E ✅ API · Caso 25 🟡 | ⚠️ |
 | US-07 | Promedio con notas y exportar CSV | Cálculo en `MyProgress` (`average`, `exportCsv`); Caso 28 | navegador | 🟡 |
 | US-08 | Admin gestiona usuarios y carreras archivadas | `GET/PATCH/DELETE /users` (ADMIN) + `includeArchived`; Catálogo → Carreras “Ver archivadas”; Caso 30; unit `seguridad` (roles) | `npm test` ✅ parcial · Caso 30 🟡 | ⚠️ |
-| US-09 | Editar mi cuenta y cerrar sesión | `PATCH /users/:nickName` + `POST /users/logout` (invalida JWT); Caso 29; unit `seguridad` (`tokenVersion`) | `npm test` ✅ · Caso 29 🟡 | ⚠️ |
+| US-09 | Editar mi cuenta y cerrar sesión | `PATCH /users/:nickName` + `POST /users/logout` (invalida JWT); validaciones reutilizables compartidas con Registro (`userValidation.ts` + Joi); Caso 29; unit `seguridad` (`tokenVersion`) | `npm test` ✅ · Caso 29 🟡 | ⚠️ |
 | US-10 | Identificar el tipo de carrera (licenciatura/tecnicatura/profesorado/ingeniería) | **E2E v2.4**: `POST /careers` con `careerType` (`201` + persistido en `GET /careers`), valor fuera del enum `400`, `careerType: null` lo limpia; chip 🎓 Tecnicatura en el Home (Caso 31) | E2E ✅ API · Caso 31 🟡 | ⚠️ |
 | US-11 | Admin administra el catálogo completo (institutos con color, carreras, articulación) | **E2E v2.5 (14/14)**: `401` sin token; alta con `color` (hex validado; `400` inválido); `PATCH` nombre/color persistido; `withCounts` con `careerCount`; `409` al borrar instituto con carreras; editar/reasignar carrera (`academicUnit: null` y reasignar); borrados en orden carrera → instituto → universidad; UI en pestañas (Casos 25/30/36/37) | E2E ✅ API · UI 🟡 | ⚠️ |
+| US-12 | Baja reversible: quitar plan sin perder progreso y reactivar al reinscribirse | `DELETE /user-study-plans/:id` archiva con `SubjectProgress` (`archivedAt`) y sin progreso borra; reinscripción reactiva (`addUserStudyPlan`); UI muestra *Quitar plan* solo en planes inscriptos (E2E de la corriente: pendiente) | Caso 39 | 🟡 |
+| US-13 | Editar materias del plan: nombre visible por plan (`nameOverride`) y guardado en lote | `nameOverride` en modelo/servicio/front (`subjectName` prioriza el override); `saveSubjects` en lote (solo filas modificadas resaltadas, código obligatorio y sin duplicados); Caso 40 | Caso 40 | 🟡 |
 
 ## 5. Matriz — Criterios de bondad (FRD §4.2)
 
@@ -170,12 +172,12 @@ existe** en el repositorio, respondiendo tres preguntas:
 
 | Pantalla | Ruta | Verificación | Estado |
 | -------- | ---- | ------------ | ------ |
-| SC001 Inicio | `/` | Caso 20 (navegación) + Caso 24 (catálogo) | 🟡 |
+| SC001 Inicio | `/` | Caso 20 (navegación) + Caso 24 (catálogo) + Caso 39 (quitar plan / reactivación) | 🟡 |
 | SC002 Grafo | `/grafo/:id` | Casos 12 (sub-plan intermedio), 21 (estados), 23 (accesibilidad), 26 (pestañas Lic/Tec) | 🟡 |
 | SC003 Tablero | `/tablero/:id` | Caso 20 + Caso 26 (pestañas Lic/Tec) | 🟡 |
 | SC004 Mi progreso | `/progreso` | Casos 9, 10 (progreso), 23 (`aria-label`), 27 (RN05), 28 (promedio/CSV) | 🟡 |
 | SC005 Cargar plan | `/cargar` | Casos 3–7 (carga) + **`test:planes`** en backend ✅; flujo de UI: Caso 20 | ⚠️ |
-| SC006 Admin | `/admin/:id` | Casos 14 (alta/duplicados), 15 (publicar), 16 (editar/borrar), 25 (continuesIn), 26 (tecnicatura) | 🟡 |
+| SC006 Admin | `/admin/:id` | Casos 14 (alta/duplicados), 15 (publicar), 16 (editar/borrar), 25 (continuesIn), 26 (tecnicatura), 40 (edición de materias en lote) | 🟡 |
 | SC007 Mi cuenta | `/cuenta` | Caso 29 (perfil/contraseña/logout) | 🟡 |
 | SC008 Usuarios | `/admin/users` | Caso 30 (ADMIN: roles/baja) | 🟡 |
 | SC009 Archivadas | Catálogo → Carreras (“Ver archivadas”) | Caso 30 (ADMIN: restaurar) | 🟡 |
@@ -235,14 +237,14 @@ hasta la API; la capa de interfaz (Casos 20–23, 25–30) no tiene resultado re
 | --------- | ----- | -- | -- | -- | -- | -- |
 | Reglas de negocio (RN01–RN05) | 5 | 2 | 1 | 2 | 0 | 0 |
 | Reglas de sugerencia (R0–R6, C1–C6, orden) | 3 | 3 | 0 | 0 | 0 | 0 |
-| Historias de usuario (AR/US) | 13 | 2 | 4 | 7 | 0 | 0 |
+| Historias de usuario (AR/US) | 15 | 2 | 6 | 7 | 0 | 0 |
 | Criterios de bondad | 16 | 5 | 5 | 6 | 0 | 0 |
 | Requisitos de seguridad | 6 | 3 | 3 | 0 | 0 | 0 |
 | Pantallas (SC) | 10 | 0 | 9 | 1 | 0 | 0 |
 | Casos de estudio (CS) | 7 | 0 | 3 | 4 | 0 | 0 |
-| **TOTAL** | **60** | **15** | **25** | **20** | **0** | **0** |
+| **TOTAL** | **62** | **15** | **27** | **20** | **0** | **0** |
 
-> De 60 puntos: **15 verificados**, **25 definidos pero sin ejecutar** (casi todos, casos
+> De 62 puntos: **15 verificados**, **27 definidos pero sin ejecutar** (casi todos, casos
 > manuales HTTP/UI), **20 parciales** y **0 pendientes**: no quedan requisitos sin
 > implementar ni sin caso. **Ninguna pantalla está verificada end-to-end** (Casos 20–38).
 
@@ -344,4 +346,6 @@ Repegada a la tabla (sin líneas en blanco intermedias).
 | 1.2 | 09/10/2026 | Equipo + agente | Nueva arquitectura: JWT con roles; `graph`/`sugerencias` por plan; correlativas resueltas en confirm; borrado en cascada; E2E 12/12; `validar` todo OK (masiva 27+1+15+0); Swagger v2.0; BUG-010–013 cerrados. |
 | 1.3 | 14/10/2026 | Equipo + agente | **v2.3**: catálogo por instituto (colores oficiales, `isArchived`, `withCounts`, filtros); Home Institutos→Carreras→Planes; **tecnicatura intermedia** (sub-plan virtual, pestañas Lic/Tec, avisos); **articulación** `continuesIn`; **RN05** correlativas bloqueantes (back + pre-chequeo); promedio/CSV en Mi progreso; **seguridad** (ADMIN en import/creación, `checkOrigin`, logout invalida JWT) + versionado liviano; pantallas Mi cuenta/Usuarios/Archivadas/403; **26 unitarios**. Cobertura 16✅/25🟡/12⚠️/0❌/0⛔ (53 puntos). |
 | 1.4 | 16/10/2026 | Equipo + agente | **v2.4**: **tipo de carrera** (`careerType`, US-10); **marcado en lote** del intermedio + **avisos** + **propuesta IA revisable** con validación pura (BUG-016/017/018); caché v3; **E2E de las prestaciones nuevas por API** (13 chequeos); rutas del corpus re-apuntadas (§11.9); **32 unitarios**. Cobertura 14✅/25🟡/19⚠️/0❌/0⛔ (58 puntos). |
-| 1.5 | 16/10/2026 | Equipo + agente | Verificación completa 16/10 (corrida 9): **masiva 27+1+15+0** (informe con títulos intermedios: 21 declarados / 14 marcados / 13 IA), **salud OK** (negativos 400/400), **E2E v2.4 18/18**, `seed:planes` OK=29 local (app verificada con el corpus; el harness ahora propaga título/créditos del intermedio); **BUG-019** (fallo IA transitorio congelado en caché → reintento + refresco) y `modified` honesto en el bulk; §13 fila 8 cerrada. Cobertura 14✅/25🟡/19⚠️/0❌/0⛔ (58 puntos). |
+| 1.5 | 16/10/2026 | Equipo + agente | Verificación completa 16/10 (corrida 9): masiva 27+1+15+0, salud OK (negativos 400/400), E2E v2.4 18/18, `seed:planes` OK=29 local; BUG-019 y `modified` honesto en el bulk; §13 fila 8 cerrada. Cobertura 14✅/25🟡/19⚠️/0❌/0⛔ (58 puntos). |
+| 1.6 | 19/10/2026 | Equipo + agente | Inicio limpio (sin *Ver materias/Qué puedo cursar/Mi avance*), filas de inscripciones con *Quitar plan* y **baja reversible** (`archivedAt` + reactivación); archivadas integradas a **Catálogo → Carreras** (SC009 deja de ser ruta `/admin/archivadas`). Docs referenciados en US-08/US-11/SC009 y Caso 30/37. |
+| 1.7 | 20/10/2026 | Equipo + agente | **v2.6**: stories **US-12** (baja reversible) y **US-13** (`nameOverride` + guardado en lote con códigos únicos); Casos 39–40 definidos en Test-Plan (pendientes de corrida); validaciones reutilizables de cuenta/registro documentadas (US-09/SC000/SC007). Documentación: BRD 2.5 / FRD 2.6 / Test-Plan 2.6 / Test-Cases 2.5. Cobertura 15✅/27🟡/20⚠️/0❌/0⛔ (62 puntos). |

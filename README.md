@@ -8,8 +8,9 @@ Proyecto integrador de la materia **Programación - Informática (UNAHUR)**. El 
 
 - Carga de planes de estudios a partir de un PDF.
 - Visualización del plan en tablero y en grafo de correlatividades.
-- Seguimiento del progreso por materia y por carrera.
-- Panel de administración de planes y materias.
+- Catálogo por instituto (Instituto → Carrera → Plan), con tecnicatura intermedia y articulación entre carreras.
+- Seguimiento del progreso por materia con baja reversible de planes (quitar un plan conserva el avance).
+- Panel de administración del catálogo, planes y materias (nombre por plan editable), con validaciones compartidas entre Registro y Mi cuenta.
 
 ## Estructura del repositorio
 
@@ -25,7 +26,7 @@ Cada carpeta tiene su propio `README.md` con instrucciones de instalación y eje
 
 | Capa     | Stack                                                       |
 | -------- | ----------------------------------------------------------- |
-| Backend  | Node.js 20+, Express, MongoDB (Mongoose), Redis           |
+| Backend  | Node.js 22+, Express, MongoDB (Mongoose), Redis           |
 | Frontend | React 19, TypeScript, Vite, React Router 7, Bootstrap 5     |
 
 ## Arranque rápido

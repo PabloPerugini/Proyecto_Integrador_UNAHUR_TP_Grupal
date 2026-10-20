@@ -1,8 +1,8 @@
 # Plan de Pruebas
 
 **Proyecto:** Gradify — Grafo Interactivo de Correlatividades y Seguimiento de Progreso Académico
-**Versión:** 2.4
-**Fecha:** 16/10/2026
+**Versión:** 2.6
+**Fecha:** 20/10/2026
 **Sponsor Organización:** Universidad Nacional de Hurlingham (UNAHUR) — Licenciatura en Informática
 **Autor:** Equipo del proyecto integrador
 **Tutor:** Prof. Alejandra Pinto
@@ -118,6 +118,12 @@ Garantizar que la aplicación web (React) y su API REST (Node/Express + MongoDB 
    - Caso 37: **Carreras: editar, archivar y borrar.** `PATCH /careers/:id` actualiza nombre/tipo/universidad/instituto (quitar el instituto → `academicUnit: null`); *Archivar* la oculta del catálogo (restaurable con **“Ver archivadas”** en Catálogo → Carreras); `DELETE` sin planes → `200` y con planes → `409`.
    - Caso 38: **Correlativas regularizadas por defecto.** El confirm del plan y `saveCorrelativas` guardan `requiredStatus: "REGULARIZADA"` cuando no se indica otro: una correlativa regularizada **habilita** avanzar; exigir `APROBADA` bloquea hasta aprobar. En *Editar plan*, las correlativas nuevas se agregan con ese default, el select prioriza "Alcanza regularizada" y el control por plan aplica el requisito a todas las correlativas.
 
+11. **Inicio limpio, baja reversible, edición de materias y validaciones (v2.6)**
+   - Caso 39: **Baja reversible de planes.** En el Home, *Quitar plan* pide confirmación; con progreso, `DELETE /user-study-plans/:id` archiva la inscripción (`archivedAt`, devuelve `200` y el plan desaparece de la lista); al volver a inscribirse al mismo plan, `POST /user-study-plans` **reactiva la inscripción conservando el progreso** (`archivedAt: null`); sin progreso, la inscripción se borra y un segundo `DELETE` responde `404`.
+   - Caso 40: **Edición de materias en lote.** En *Editar plan*, editar solo el nombre visible de una materia guarda `nameOverride` y ese nombre prevalece en Grafo/Tablero/Progreso/Home sin cambiar el catálogo; el guardado en lote envía solo las filas modificadas (resaltadas), rechaza guardar con algún código vacío o **duplicado** (aviso y control visual) y el botón "Guardar datos del plan" queda deshabilitado sin cambios reales.
+   - Caso 41: **Validaciones reutilizables de cuenta/registro.** En Registro y en Mi cuenta: nombre/apellido 2–50 caracteres con solo letras/espacios/guiones; email ≤ 254 (normalizado a minúsculas); contraseña 6–72 con confirmación coincidente; nickName ≥ 3. El frontend valida por campo (blur) y el backend rechaza con `400` por las mismas cotas (Joi); nombre con un dígito → `400` en ambos lados.
+   - Caso 42: **Home limpio.** La portada de un usuario con inscripciones muestra solo filas de planes (estado "Inscripto", materias, años, créditos, chip de tecnicatura), pestañas y "Sumar otra carrera"; no renderiza *Ver materias*, *Qué puedo cursar* ni *Mi avance* (el detalle perezoso restante es el accordion de tecnicatura en las tarjetas del catálogo).
+
 ## Plan de Ejecución
 
 1. Configurar un entorno de prueba (backend en puerto 3000, frontend en puerto 5173, MongoDB y Redis locales).
@@ -134,6 +140,8 @@ Verificación de la tanda v2.5 (panel ADMIN: institutos con color y CRUD con gua
 - **E2E admin por API (14/14):** `401` sin token en `POST /academic-units`; alta de universidad e instituto con `color: "#12ab34"`; color inválido → `400`; `PATCH` color (`#ff8800`) y nombre → `200`; carrera creada en el instituto → `GET /academic-units?withCounts=1` con `color` y `careerCount=1`; `DELETE` instituto con carreras → `409`; editar carrera (`careerType` + quitar/poner instituto) → `200`; borrados carrera → instituto → universidad → `200`. Usuario temporal y datos de prueba eliminados; la base quedó idéntica (2 usuarios, 1 universidad, 4 institutos, 63 carreras).
 - **Correlativas en base scratch (5/5):** `saveCorrelativas` graba `requiredStatus: "REGULARIZADA"`; una correlativa regularizada **habilita** el avance; al exigir `APROBADA`, regularizada no alcanza; aprobada sí habilita.
 - **Frontend:** `tsc -b` (strict) + `eslint` sin errores.
+
+> **Pendiente (19–20/10, v2.6):** la tanda de Inicio limpio + baja reversible (CHANGELOG 1.22/1.23) y la de edición de materias + validaciones reutilizables (Casos 39–42) **no tienen corrida registrada todavía**; queda pendiente ejecutarlos sobre la app (Home, *Quitar plan* → reinscripción, *Editar plan* en lote y los formularios de Registro/Mi cuenta). Con la baja reversible, `GET /user-study-plans` solo lista inscripciones con `archivedAt: null`.
 
 ## Resultados de la Ejecución v2.4 (16/10/2026)
 

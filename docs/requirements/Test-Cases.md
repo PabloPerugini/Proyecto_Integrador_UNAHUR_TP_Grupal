@@ -1,8 +1,8 @@
 # Documento de Seguimiento de Testing
 
 **Proyecto:** Gradify — Grafo Interactivo de Correlatividades y Seguimiento de Progreso Académico
-**Versión:** 2.4
-**Fecha:** 2026-10-16
+**Versión:** 2.5
+**Fecha:** 2026-10-20
 **Sponsor Organización:** Universidad Nacional de Hurlingham (UNAHUR) — Licenciatura en Informática
 **Autor:** Equipo del proyecto integrador
 **Tutor:** Prof. Alejandra Pinto
@@ -189,6 +189,22 @@ Verificación de la tanda v2.5 sobre el **stack Docker** (API :3000, Mongo :2701
 **BUG-020 (nuevo):** el controlador de institutos llamaba `updatedAcademicUnit`/`getAcademicUnitById` (nombres inexistentes) → editar un instituto respondía `400` siempre; resuelto y cubierto por el E2E (`PATCH` color/rename `200`).
 
 > Pendiente UI: pestañas del panel, toasts, dropzone y colores persistidos quedaron verificados **por API** (y con `tsc`/`lint` verdes); los casos manuales de navegador (20–23, 25–38) siguen sin resultado registrado.
+
+---
+
+## Corrida 11 (20/10/2026, v2.6: inicio limpio, baja reversible, edición de materias y validaciones) — pendiente
+
+Registro anticipado de las dos tandas posteriores a la corrida 10 (CHANGELOG 1.22–1.24):
+
+- **19/10 (1.22/1.23):** Home limpio (sin *Ver materias/Qué puedo cursar/Mi avance*), filas de inscripciones con *Quitar plan*, `DELETE /user-study-plans/:id` **reversible** (`archivedAt` + reactivación conservando progreso) y archivadas integradas a Catálogo → Carreras. Verificado en esa entrega con `npm test` 32/32, `tsc`/`lint`/`build` verdes y E2E Docker de alta → progreso → baja → reinscripción (progreso conservado); **no hay registro de casos del Test-Plan**.
+- **20/10 (1.24, Casos 39–42):** edición de materias con `nameOverride` + guardado en lote (filas modificadas, código obligatorio y sin duplicados) y validaciones reutilizables Registro/Mi cuenta (front `userValidation.ts` + backend Joi). **Pendiente de corrida**: no hay resultados registrados aún.
+
+| Caso | Qué verifica | Estado |
+| ---- | ------------ | ------ |
+| 39 | Quitar plan archiva (`404` si ya no existe); reinscripción reactiva con progreso conservado | 🟡 pendiente de ejecutar |
+| 40 | `nameOverride` persiste y prevalece; lote solo con filas modificadas; código duplicado bloquea | 🟡 pendiente de ejecutar |
+| 41 | Registro/Mi cuenta validan por campo (2–50, email ≤ 254, contraseña 6–72, nick ≥ 3) y el backend lo replica | 🟡 pendiente de ejecutar |
+| 42 | Home sin *Ver materias/Qué puedo cursar/Mi avance*; detalle necesario solo en Mi progreso/grafo | 🟡 pendiente de ejecutar |
 
 ---
 

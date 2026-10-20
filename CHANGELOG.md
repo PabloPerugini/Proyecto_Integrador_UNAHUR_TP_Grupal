@@ -1,12 +1,20 @@
 # Changelog del Proyecto
 
-**Proyecto:** Grafo Interactivo de Correlatividades y Seguimiento de Progreso Académico (UNAHUR — TP Integrador Academia)
+**Proyecto:** Grafo Interactivo de Correlatividades y Seguimiento de Progreso Académico (UNAHUR - TP Integrador Academia)
 
 El registro histórico de requisitos/alcance por versión se mantiene en [BRD.md](docs/requirements/BRD.md#1-historial-de-cambios) y [FRD.md](docs/requirements/FRD.md#1-historial-de-cambios). Este archivo rastrea las mejoras técnicas por fecha y solo registra lo que existe en la aplicación.
 
 ---
 
-## [1.23] — 2026-10-19
+## [1.24] - 2026-10-20
+
+### Editar plan: materias con nombre por plan + validaciones reutilizables en cuenta y registro
+- **Nombre visible por materia:** `PlanSubject.nameOverride` (texto libre, default vacío) se edita en la tabla de *Editar plan* y prevalece en toda la app (`subjectName`): Grafo, Tablero, Mi progreso y Home muestran el nombre del plan sin tocar el catálogo. El modelo trimea y el servicio acepta el campo en `updatePlanSubject`.
+- **Guardado en lote:** el botón "Guardar cambios" envía solo las **materias modificadas** (filas resaltadas), cuenta lo guardado y persiste el mensaje ante un error parcial (`Se actualizaron N materia(s) antes del error`). Validaciones de guardado: **código obligatorio** por materia y **códigos duplicados bloquean** (aviso + control visual por fila). Cada fila resalta; el botón "Guardar datos del plan" queda deshabilitado sin cambios de plan.
+- **Validaciones reutilizables:** módulo `frontend/src/utils/userValidation.ts` compartido por Registro y Mi cuenta: nombre/apellido 2–50 caracteres **solo letras** (con espacios, guiones o apóstrofes), email ≤ 254, contraseña 6–72, nickName ≥ 3, confirmación coincidente; validación por campo en blur y errores inline por campo. El backend replica las cotas con Joi (`user.schemas.js`: min/max agregados) y el email se normaliza a minúsculas.
+- **Docs:** FRD 2.6 / BRD 2.5 (US-12/US-13, SC001/SC006/SC007, baja reversible), Matriz 1.7, Test-Plan 2.6 (Casos 39–42, pendientes de corrida), Test-Cases 2.5.
+
+## [1.23] - 2026-10-19
 
 ### Admin: restauración de carreras archivadas integrada al catálogo
 - **Sin pantalla aparte:** se quitó *Archivadas* del menú admin y la ruta `/admin/archivadas`. La restauración vive en **Cargar plan → Catálogo → pestaña Carreras** con el interruptor **“Ver archivadas (N)”**; las filas archivadas se muestran atenuadas con badge y acción **Restaurar**.

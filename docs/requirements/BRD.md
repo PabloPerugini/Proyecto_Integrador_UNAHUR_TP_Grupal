@@ -11,8 +11,8 @@
 | Institución           | Universidad Nacional de Hurlingham (UNAHUR)                          |
 | Unidad Académica      | Facultad de Informática — Proyecto Integrador Programación           |
 | Tipo de documento     | BRD — Documentación de Requerimientos de Negocio                     |
-| Versión               | 2.4                                                                   |
-| Fecha                 | 16 de octubre de 2026                                              |
+| Versión               | 2.5                                                                   |
+| Fecha                 | 20 de octubre de 2026                                              |
 | Sponsor Operación     | Secretaría Académica / Dirección de Carrera                          |
 | Sponsor Organización  | UNAHUR                                                               |
 | Integrantes           | Perugini, Pablo; Acuña, Marcos; Masgo Sandoval, Joaquín; Renaud, Román; Remonda, Eliel; Cotera, Dylan |
@@ -42,6 +42,7 @@
 | 2.2     | 09/10/2026   | Equipo | Nueva arquitectura: cuentas JWT con roles USUARIO/ADMIN; universidades, carreras, planes de estudio y progreso por usuario; correlativas resueltas en el confirm (`prerequisites`); grafo y sugerencias por plan (`/study-plans/:id/graph`, `/study-plans/:id/sugerencias`); borrado en cascada; compose único de 4 servicios. |
 | 2.3     | 14/10/2026   | Equipo | Catálogo curado por instituto (19 carreras canónicas, `isArchived`, filtros `?unit`/`includeArchived`, `withCounts`); Home Institutos→Carreras→Planes con "qué puedo cursar" y avance perezosos; **tecnicatura intermedia** (flag `intermediate`, sub-plan virtual `/study-plans/:id/intermediate`, pestañas Lic/Tec); **articulación** entre carreras (`continuesIn` + UI admin); **correlativas que bloquean el avance** (validación en backend + pre-chequeo en Mi progreso); promedio con notas y exportar CSV; seguridad (ADMIN en import/creación, `checkOrigin` CSRF, logout invalida JWT) y versionado liviano de planes; AppShell único por rol, Mi cuenta, Admin Usuarios y Archivadas; 26 unitarios. |
 | 2.4     | 16/10/2026   | Equipo | **Tipo de carrera** (`careerType`: Licenciatura/Tecnicatura/Profesorado/Ingenieria/Otro) para distinguir el pregrado del grado en el catálogo; **título intermedio honesto**: aviso cuando el plan lo declara sin materias marcadas, **marcado en lote** (todo el plan / un año / un período) y **propuesta de IA revisable** validada contra las materias reales; chip 🎓 Tecnicatura en el catálogo; 32 unitarios. |
+| 2.5     | 20/10/2026   | Equipo | **Inicio limpio**: la portada muestra solo inscripciones y accesos (*Ver materias*, *Qué puedo cursar* y *Mi avance* pasan a Mi progreso/grafo). **Baja reversible de planes**: quitar el plan conserva el progreso (inscripción archivada) y la reinscripción lo reactiva. Archivadas integradas a **Catálogo → Carreras**. **Edición de materias** en el plan con nombre visible editable y guardado en lote. **Validaciones reutilizables** de cuenta/registro (nombre, email, contraseña y confirmación) compartidas entre Registro y Mi cuenta. |
 
 ---
 
@@ -125,6 +126,7 @@ El alcance incluye:
 - Motor de sugerencias de inscripción basado en reglas de negocio (C1–C6, R0–R6): `GET /study-plans/:id/sugerencias` + sección en Mi progreso (ver FRD §3.1.2).
 - Panel de estadísticas del progreso del estudiante (porcentaje de avance, créditos, **promedio** y exportación a **CSV**).
 - Administración de usuarios (roles USUARIO/ADMIN y baja) y restauración de carreras archivadas desde el catálogo, más **Mi cuenta** (perfil y contraseña).
+- **Baja reversible** de la inscripción al plan: el estudiante puede quitar un plan sin perder su progreso y retomarlo más tarde con el avance intacto.
 
 ---
 
@@ -206,12 +208,12 @@ Vista de alto nivel. El detalle por pantalla se encuentra en el **FRD, Sección 
 
 | Pantalla   | Descripción                                                                     |
 | ---------- | ------------------------------------------------------------------------------- |
-| SC001      | Inicio: "Mis inscripciones" o Institutos → Carreras → Planes, con color por instituto, búsqueda y accesos de administración. |
+| SC001      | Inicio: "Mis inscripciones" (filas con acciones Grafo/Tablero/Mi progreso/Quitar plan y "Sumar otra carrera") o Institutos → Carreras → Planes, con color por instituto, búsqueda y accesos de administración. |
 | SC002      | Grafo del plan: nodos por estado, camino crítico, barra de progreso, banner de título intermedio y pestañas Licenciatura/Tecnicatura. |
 | SC003      | Tablero del plan: el mismo contenido en columnas por año/cuatrimestre, con pestañas Licenciatura/Tecnicatura.          |
 | SC004      | Mi progreso: estadísticas (aprobadas, créditos, avance, promedio), avance por año, edición por materia y exportación a CSV. |
 | SC005      | Cargar plan: subida del PDF oficial, que crea la carrera y sus materias (solo ADMIN). |
-| SC006      | Admin del plan: edición de materias y correlatividades, **marcado en lote de tecnicatura**, tipo de carrera y publicación.           |
+| SC006      | Admin del plan: edición de materias (nombre por plan y guardado en lote) y correlatividades, **marcado en lote de tecnicatura**, tipo de carrera y publicación.           |
 | SC007      | Mi cuenta: perfil (nombre, apellido, email) y cambio de contraseña.              |
 | SC008      | Usuarios (ADMIN): listado, cambio de rol USUARIO/ADMIN y baja.                   |
 | SC009      | Carreras archivadas (ADMIN, dentro de Catálogo → Carreras): listado con “Ver archivadas” y restauración. |
@@ -236,6 +238,7 @@ Vista de alto nivel. El detalle por pantalla se encuentra en el **FRD, Sección 
 | Tipo de carrera         | `Career.careerType` (Licenciatura/Tecnicatura/Profesorado/Ingenieria/Otro) para distinguir el pregrado del grado en el catálogo. |
 | Marcado en lote         | Marcar/desmarcar el flag de tecnicatura de muchas materias a la vez (todo el plan, un año o un período). |
 | Articulación            | `Career.continuesIn`: carrera en la que un trayecto puede continuar (p. ej. tecnicatura → licenciatura). |
+| Baja reversible         | Al quitar un plan con progreso, la inscripción se archiva (`archivedAt`) y conserva el avance; reinscribirse al mismo plan la reactiva sin perder nada. |
 | Carrera archivada       | Carrera con `isArchived` que no se muestra en el catálogo salvo opt-in de `ADMIN`; se puede restaurar. |
 
 ---

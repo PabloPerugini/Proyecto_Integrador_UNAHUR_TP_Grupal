@@ -361,7 +361,7 @@ paths:
     patch:
       tags:
         - StudyPlans
-      summary: Actualiza materia (incluye prerequisites — default REGULARIZADA en correlativas nuevas — con anti-ciclos)
+      summary: Actualiza materia (incluye nameOverride — nombre visible por plan —, prerequisites — default REGULARIZADA en correlativas nuevas — con anti-ciclos)
       parameters:
         - $ref: "#/components/parameters/id"
         - name: subjectId
