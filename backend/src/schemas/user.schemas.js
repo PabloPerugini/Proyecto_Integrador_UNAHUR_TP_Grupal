@@ -11,6 +11,8 @@ const userSchema = Joi.object({
 
   firstName: Joi.string()
     .trim()
+    .min(2)
+    .max(50)
     .required()
     .messages({
       "string.empty": "El nombre es obligatorio",
@@ -19,6 +21,8 @@ const userSchema = Joi.object({
   
   lastName: Joi.string()
     .trim()
+    .min(2)
+    .max(50)
     .required()
     .messages({
       "string.empty": "El apellido es obligatorio",
@@ -29,6 +33,7 @@ const userSchema = Joi.object({
     .email()
     .trim()
     .lowercase()
+    .max(254)
     .required()
     .messages({
       "string.email": "Email inválido",
@@ -38,6 +43,7 @@ const userSchema = Joi.object({
 
   password: Joi.string()
     .min(6)
+    .max(72)
     .required()
     .messages({
       "string.min": "La contraseña debe tener al menos 6 caracteres",

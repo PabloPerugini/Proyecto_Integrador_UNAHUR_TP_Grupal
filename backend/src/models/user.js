@@ -12,23 +12,29 @@ const userSchema = new mongoose.Schema(
     firstName: {
       type: String,
       required: true,
+      minlength: 2,
+      maxlength: 50,
       trim: true,
     },
     lastName: {
       type: String,
       required: true,
+      minlength: 2,
+      maxlength: 50,
       trim: true,
     },
     email: {
       type: String,
       required: [true, "Email es obligatorio"],
       unique: true,
+      maxlength: 254,
       trim: true,
       lowercase: true,
     },
     password: {
       type: String,
       required: [true, "La contraseña es obligatoria"],
+      maxlength: 72,
     },
     rol: {
       type: String,

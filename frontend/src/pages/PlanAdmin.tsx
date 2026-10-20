@@ -7,11 +7,11 @@ import PageHeader from '../components/PageHeader';
 import MessageBanner from '../components/MessageBanner';
 
 interface SubjectForm {
-  code: string; year: string; period: string; credits: string; optional: boolean; intermediate: boolean;
+  name: string; code: string; year: string; period: string; credits: string; optional: boolean; intermediate: boolean;
   prerequisites: PlanPrerequisite[];
 }
 function fromSubject(s: PlanSubject): SubjectForm {
-  return { code: s.code ?? '', year: s.year == null ? '' : String(s.year), period: s.period == null ? '' : String(s.period), credits: String(s.credits ?? 0), optional: Boolean(s.optional), intermediate: Boolean(s.intermediate),
+  return { name: subjectName(s), code: s.code ?? '', year: s.year == null ? '' : String(s.year), period: s.period == null ? '' : String(s.period), credits: String(s.credits ?? 0), optional: Boolean(s.optional), intermediate: Boolean(s.intermediate),
     prerequisites: (s.prerequisites ?? []).map(p => ({ planSubject: prerequisiteId(p) ?? '', requiredStatus: p.requiredStatus })).filter(p => Boolean(p.planSubject)) };
 }
 function validNum(value: string, label: string, min: number, max: number): number | null {
@@ -37,7 +37,18 @@ export default function PlanAdmin() {
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const plan = plans.find(p => p._id === selected);
+  const plan = plans.find(p => p._id === selected);  const enteredCreditsIntermediate = intermediateTitle.trim()
+    ? Number(creditsIntermediate || '0')
+    : 0;
+  
+  const planHasChanges = Boolean(
+    plan && (
+      name.trim() !== plan.name.trim() ||
+      status !== plan.status ||
+      intermediateTitle.trim() !== (plan.intermediateTitle ?? '').trim() ||
+      enteredCreditsIntermediate !== (plan.creditsIntermediate ?? 0)
+    ),
+  );
   const intermediateCount = subjects.filter(s => s.intermediate).length;
   const bulkYears = Array.from(new Set(subjects.map(s => s.year).filter((y): y is number => typeof y === 'number'))).sort((a, b) => a - b);
 
@@ -70,8 +81,33 @@ export default function PlanAdmin() {
 
   const selectPlan = (next: string) => { setSelected(next); navigate(`/admin/${next}`); };
   const modify = (subjectId: string, change: Partial<SubjectForm>) => setDraft(current => ({ ...current, [subjectId]: { ...current[subjectId], ...change } }));
+  const prerequisiteSignature = (prerequisites: PlanPrerequisite[]) => prerequisites
+    .map(p => `${prerequisiteId(p) ?? ''}:${p.requiredStatus}`)
+    .sort()
+    .join('|');
+  const codeOwners = new Map<string, string[]>();
+  for (const subject of subjects) {
+    const code = draft[subject._id]?.code.trim();
+    if (code) codeOwners.set(code, [...(codeOwners.get(code) ?? []), subject._id]);
+  }
+  const duplicateCodes = new Set(
+    [...codeOwners.entries()].filter(([, owners]) => owners.length > 1).map(([code]) => code),
+  );
+  const isSubjectDirty = (subject: PlanSubject) => {
+    const edit = draft[subject._id];
+    if (!edit) return false;
+    return edit.name.trim() !== subjectName(subject).trim()
+      || edit.code.trim() !== (subject.code ?? '').trim()
+      || edit.year.trim() !== (subject.year == null ? '' : String(subject.year))
+      || edit.period.trim() !== (subject.period == null ? '' : String(subject.period))
+      || edit.credits.trim() !== String(subject.credits ?? 0)
+      || edit.optional !== Boolean(subject.optional)
+      || edit.intermediate !== Boolean(subject.intermediate)
+      || prerequisiteSignature(edit.prerequisites) !== prerequisiteSignature(subject.prerequisites ?? []);
+  };
+  const dirtySubjects = subjects.filter(isSubjectDirty);
   const savePlan = async () => {
-    if (!plan || !name.trim() || working) return;
+    if (!plan || !planHasChanges || working) return;
     setWorking(true);
     try {
       await studyPlansApi.update(plan._id, {
@@ -85,23 +121,48 @@ export default function PlanAdmin() {
     } catch (e) { flashFromError(e, 'No se pudo guardar el plan'); }
     finally { setWorking(false); }
   };
-  const saveSubject = async (subject: PlanSubject) => {
-    const edit = draft[subject._id]; if (!edit || working || !plan) return;
+  const saveSubjects = async () => {
+    if (!plan || working) return;
+    const pending = subjects.filter(isSubjectDirty);
+    if (!pending.length) {
+      flash('info', 'No hay cambios de materias para guardar.');
+      return;
+    }
+    if (duplicateCodes.size) {
+      flash('warning', `Hay códigos repetidos: ${[...duplicateCodes].join(', ')}.`);
+      return;
+    }
+    for (const subject of pending) {
+      const edit = draft[subject._id];
+      if (!edit || !edit.code.trim()) {
+        flash('warning', `La materia ${subjectName(subject)} debe tener un código.`);
+        return;
+      }
+    }
+
     setWorking(true);
+    let saved = 0;
     try {
-      await studyPlansApi.updateSubject(plan._id, subject._id, {
-        code: edit.code.trim(), year: validNum(edit.year, 'Año', 1, 20), period: validNum(edit.period, 'Período', 1, 12),
-        credits: validNum(edit.credits, 'Créditos', 0, 1000) ?? 0, optional: edit.optional, intermediate: edit.intermediate,
-        prerequisites: edit.prerequisites.map(p => ({ planSubject: prerequisiteId(p) || '', requiredStatus: p.requiredStatus })),
-      });
-      const list = await studyPlansApi.getSubjects(plan._id);
-      setSubjects(orderedSubjects(list)); setDraft(Object.fromEntries(list.map(s => [s._id, fromSubject(s)])));
-      flash('success', `Materia ${subjectName(subject)} actualizada.`);
-    } catch (e) { flashFromError(e, 'No se pudo actualizar la materia'); }
+      for (const subject of pending) {
+        const edit = draft[subject._id];
+        if (!edit) continue;
+        await studyPlansApi.updateSubject(plan._id, subject._id, {
+          nameOverride: edit.name.trim(), code: edit.code.trim(), year: validNum(edit.year, 'Año', 1, 20), period: validNum(edit.period, 'Período', 1, 12),
+          credits: validNum(edit.credits, 'Créditos', 0, 1000) ?? 0, optional: edit.optional, intermediate: edit.intermediate,
+          prerequisites: edit.prerequisites.map(p => ({ planSubject: prerequisiteId(p) || '', requiredStatus: p.requiredStatus })),
+        });
+        saved += 1;
+      }
+      await reloadSubjects(plan._id);
+      flash('success', `${saved} materia(s) actualizada(s).`);
+    } catch (e) {
+      await reloadSubjects(plan._id).catch(() => undefined);
+      flashFromError(e, saved ? `Se actualizaron ${saved} materia(s) antes del error.` : 'No se pudieron actualizar las materias');
+    }
     finally { setWorking(false); }
   };
   const removeSubject = async (subject: PlanSubject) => {
-    if (!plan || working || !window.confirm(`¿Quitar ${subjectName(subject)} del plan?`)) return;
+    if (!plan || working || !window.confirm(`¿Eliminar ${subjectName(subject)} del plan?`)) return;
     setWorking(true);
     try {
       await studyPlansApi.deleteSubject(plan._id, subject._id);
@@ -210,7 +271,13 @@ export default function PlanAdmin() {
         </Form.Select><Form.Text muted>Publicar el borrador no lo convierte en un plan oficial; conserva su propietario.</Form.Text></Form.Group>
         <Form.Group className="mb-3"><Form.Label>Título intermedio (tecnicatura, opcional)</Form.Label><Form.Control value={intermediateTitle} onChange={e => setIntermediateTitle(e.target.value)} placeholder="Ej. Técnico/a Universitario/a en…" /></Form.Group>
         {intermediateTitle.trim() && <Form.Group className="mb-3"><Form.Label>Créditos de la tecnicatura</Form.Label><Form.Control type="number" min={0} value={creditsIntermediate} onChange={e => setCreditsIntermediate(e.target.value)} /></Form.Group>}
-        <Button disabled={working || !name.trim()} onClick={() => void savePlan()}>Guardar datos del plan</Button>
+        <Button
+          disabled={working || !name.trim() || !planHasChanges}
+          onClick={() => void savePlan()}
+        >
+          {working && <Spinner size="sm" className="me-1" />}
+          Guardar datos del plan
+        </Button>
       </Card.Body></Card>
       <Card className="mb-4"><Card.Header><strong>Correlatividades desde PDF</strong></Card.Header><Card.Body>
         <p className="small text-muted mb-2">Subí el PDF de correlatividades: se reconoce cada materia contra el plan (sin guardar) y después aplicás. Solo lo reconocido con requisitos se guarda; ante un ciclo no se guarda nada.</p>
@@ -252,8 +319,8 @@ export default function PlanAdmin() {
         <div className="table-responsive"><Table size="sm" striped hover><thead><tr><th>Materia</th><th>Código</th><th>Año</th><th>Período</th><th>Créditos</th><th>Optativa</th><th title="Pertenece a la tecnicatura intermedia">Tec</th><th>Correlatividades</th><th>Acciones</th></tr></thead><tbody>
           {subjects.map(s => {
             const v = draft[s._id]; if (!v) return null;
-            return <tr key={s._id}><td style={{ minWidth: 190 }}><strong>{subjectName(s)}</strong></td>
-              <td><Form.Control size="sm" style={{ minWidth: 90 }} value={v.code} onChange={e => modify(s._id, { code: e.target.value })} /></td>
+            return <tr key={s._id} className={isSubjectDirty(s) ? 'table-warning' : undefined}><td style={{ minWidth: 190 }}><Form.Control size="sm" value={v.name} aria-label={`Nombre de ${subjectName(s)}`} onChange={e => modify(s._id, { name: e.target.value })} /></td>
+              <td><Form.Control size="sm" style={{ minWidth: 90 }} value={v.code} isInvalid={duplicateCodes.has(v.code.trim())} aria-invalid={duplicateCodes.has(v.code.trim())} onChange={e => modify(s._id, { code: e.target.value })} /><Form.Control.Feedback type="invalid">Código repetido.</Form.Control.Feedback></td>
               <td><Form.Control size="sm" type="number" min={1} style={{ width: 72 }} value={v.year} onChange={e => modify(s._id, { year: e.target.value })} /></td>
               <td><Form.Control size="sm" type="number" min={1} style={{ width: 72 }} value={v.period} onChange={e => modify(s._id, { period: e.target.value })} /></td>
               <td><Form.Control size="sm" type="number" min={0} style={{ width: 85 }} value={v.credits} onChange={e => modify(s._id, { credits: e.target.value })} /></td>
@@ -267,11 +334,18 @@ export default function PlanAdmin() {
                   </div>;
                 })}
               </div></details></td>
-              <td style={{ minWidth: 135 }}><Button size="sm" disabled={working} onClick={() => void saveSubject(s)}>Guardar</Button>{' '}<Button size="sm" variant="outline-danger" disabled={working} onClick={() => void removeSubject(s)}>Quitar</Button></td>
+              <td style={{ minWidth: 90 }}><Button size="sm" variant="outline-danger" disabled={working} onClick={() => void removeSubject(s)}>Eliminar</Button></td>
             </tr>;
           })}
         </tbody></Table></div>
         {!subjects.length && <p className="text-muted mb-0">El plan todavía no tiene materias. Cargalas desde la importación de PDF.</p>}
+        {!!subjects.length && <div className="d-flex flex-wrap align-items-center justify-content-end gap-2 mt-3 pt-3 border-top" style={{ position: 'sticky', bottom: 0, background: 'var(--bs-body-bg)', zIndex: 2 }}>
+          {dirtySubjects.length > 0 && <span className="small text-muted">{dirtySubjects.length} materia(s) modificada(s)</span>}
+          <Button disabled={working || dirtySubjects.length === 0} onClick={() => void saveSubjects()}>
+            {working && <Spinner size="sm" className="me-1" />}
+            Guardar cambios
+          </Button>
+        </div>}
       </Card.Body></Card>
     </>}
   </div>;

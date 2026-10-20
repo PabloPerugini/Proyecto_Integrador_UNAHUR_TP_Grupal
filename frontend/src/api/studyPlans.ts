@@ -101,6 +101,7 @@ export interface PlanSubject {
   _id: string;
   studyPlan: string;
   subject: string | SubjectRef | null;
+  nameOverride?: string;
   code?: string;
   kind?: 'Materia' | 'ACA' | 'AU' | 'OTRA';
   generic?: 'CFC' | 'CFB' | 'CFP' | 'ACA' | null;
@@ -137,6 +138,9 @@ export interface ProgressInput {
 }
 
 export function subjectName(subject: PlanSubject): string {
+  const customName = subject.nameOverride?.trim();
+  if (customName) return customName;
+
   const name = subject.subject && typeof subject.subject === 'object' ? subject.subject.name : null;
   return (typeof name === 'string' && name.trim()) || subject.code?.trim() || 'Materia sin nombre';
 }

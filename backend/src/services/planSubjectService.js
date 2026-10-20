@@ -209,6 +209,12 @@ const updatePlanSubject = async (studyPlanId, id, data) => {
     updated = true;
   }
 
+  // Nombre personalizado para este plan, sin modificar el catálogo general.
+  if (data.nameOverride !== undefined) {
+    planSubject.nameOverride = String(data.nameOverride).trim();
+    updated = true;
+  }
+
   // Año
   if (data.year !== undefined) {
     planSubject.year = data.year;

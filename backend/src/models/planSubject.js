@@ -20,6 +20,12 @@ const planSubjectSchema = new mongoose.Schema(
       trim: true,
     },
 
+    nameOverride: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
     kind: {
       type: String,
       enum: ["Materia", "ACA", "AU", "OTRA"],
