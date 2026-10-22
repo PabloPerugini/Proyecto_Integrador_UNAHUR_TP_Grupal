@@ -6,6 +6,13 @@ El registro histórico de requisitos/alcance por versión se mantiene en [BRD.md
 
 ---
 
+## [1.25] - 2026-10-22
+
+### Admin: eliminar plan de estudio desde "Planes de estudio guardados"
+- **Acción nueva:** en *Cargar plan → Planes de estudio guardados*, el menú ⋮ de cada fila suma **“Eliminar plan…”** (rojo) con confirmación que advierte la cascada **irreversible**: materias, progreso de los inscriptos e importación del PDF.
+- **API:** `studyPlansApi.deletePlan` llama a `DELETE /study-plans/:id` (existente en el backend, sin uso desde la UI hasta ahora); el éxito muestra un flash con lo eliminado (`removed.subjects/enrollments/progress/imports`), el `409` de planes con inscriptos ajenos se muestra con el mensaje del servidor y la lista se refresca al instante.
+- **Verificación:** frontend `tsc -b`, `lint` y `build` verdes.
+
 ## [1.24] - 2026-10-20
 
 ### Editar plan: materias con nombre por plan + validaciones reutilizables en cuenta y registro

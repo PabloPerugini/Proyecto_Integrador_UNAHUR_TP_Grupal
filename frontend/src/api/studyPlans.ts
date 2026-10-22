@@ -136,6 +136,12 @@ export interface ProgressInput {
   academicDate?: string | null;
   origin?: string | null;
 }
+export interface DeletedPlanCounts {
+  subjects: number;
+  enrollments: number;
+  progress: number;
+  imports: number;
+}
 
 export function subjectName(subject: PlanSubject): string {
   const customName = subject.nameOverride?.trim();
@@ -174,6 +180,8 @@ export const studyPlansApi = {
   bulkIntermediate: (planId: string, data: { intermediate: boolean; ids?: string[]; year?: number; period?: number }) =>
     request<{ matched: number; modified: number }>(`/study-plans/${planId}/subjects/intermediate`, { method: 'PATCH', body: JSON.stringify(data) }),
   deleteSubject: (planId: string, subjectId: string) => request<unknown>(`/study-plans/${planId}/subjects/${subjectId}`, { method: 'DELETE' }),
+  deletePlan: (planId: string) =>
+    request<{ message: string; removed: DeletedPlanCounts }>(`/study-plans/${planId}`, { method: 'DELETE' }),
   getGraph: (planId: string) => request<GraphLike>(`/study-plans/${planId}/graph`),
   getIntermediate: (planId: string) => request<IntermediateView>(`/study-plans/${planId}/intermediate`),
   getSugerencias: (planId: string) => request<SugerenciasLike>(`/study-plans/${planId}/sugerencias`),

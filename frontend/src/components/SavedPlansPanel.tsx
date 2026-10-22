@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button, Card, Dropdown, Form, Pagination, Table } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { studyPlansApi, careerName, type StudyPlan } from '../api/studyPlans';
+import { useFlashMessage } from '../hooks/useFlashMessage';
+import MessageBanner from './MessageBanner';
 
 const PAGE_SIZE = 10;
 
@@ -24,10 +26,22 @@ function universityName(plan: StudyPlan): string {
 
 export default function SavedPlansPanel({ refreshKey = 0 }: { refreshKey?: number }) {
   const navigate = useNavigate();
+  const { msg, flash, flashFromError, clear } = useFlashMessage();
   const [plans, setPlans] = useState<StudyPlan[]>([]);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const loadPlans = useCallback(async () => {
+    try {
+      const data = await studyPlansApi.getAll();
+      setPlans(data);
+      setError('');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Error cargando planes');
+    }
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -46,11 +60,42 @@ export default function SavedPlansPanel({ refreshKey = 0 }: { refreshKey?: numbe
     );
   }, [plans, search]);
 
+  // Borrado definitivo del plan: la API elimina en cascada materias,
+  // progreso de los inscriptos e importaciones del PDF.
+  const handleDelete = async (plan: StudyPlan) => {
+    if (deletingId) return;
+    const confirmed = window.confirm(
+      `¿Eliminar definitivamente "${plan.name}"?\n\n` +
+      'Se borran también sus materias, el progreso registrado de los estudiantes ' +
+      'y la importación del PDF. Esta acción NO es reversible.',
+    );
+    if (!confirmed) return;
+
+    setDeletingId(plan._id);
+    try {
+      const result = await studyPlansApi.deletePlan(plan._id);
+      const r = result.removed;
+      flash(
+        'success',
+        `Plan "${plan.name}" eliminado: ${r.subjects} materia(s), ` +
+        `${r.enrollments} inscripción(es), ${r.progress} registro(s) de progreso ` +
+        `y ${r.imports} importación(es).`,
+      );
+      await loadPlans();
+    } catch (err) {
+      // 409: el backend protege planes con inscriptos ajenos.
+      flashFromError(err, 'No se pudo eliminar el plan.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const current = Math.min(page, totalPages);
   const visible = filtered.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE);
 
   return <Card className="mb-4">
+    <MessageBanner message={msg} onClose={clear} />
     <Card.Header className="d-flex flex-wrap justify-content-between align-items-center gap-2">
       <strong>Planes de estudio guardados</strong>
       <Form.Control
@@ -75,10 +120,18 @@ export default function SavedPlansPanel({ refreshKey = 0 }: { refreshKey?: numbe
             <td className="text-end">
               <Button size="sm" variant="outline-primary" onClick={() => navigate(`/admin/${p._id}`)}>Editar</Button>{' '}
               <Dropdown align="end" className="d-inline-block">
-                <Dropdown.Toggle size="sm" variant="outline-secondary" id={`plan-more-${p._id}`} aria-label={`Más acciones para ${p.name}`}>⋮</Dropdown.Toggle>
+                <Dropdown.Toggle size="sm" variant="outline-secondary" id={`plan-more-${p._id}`} aria-label={`Más acciones para ${p.name}`} disabled={deletingId === p._id}>⋮</Dropdown.Toggle>
                 <Dropdown.Menu popperConfig={{ strategy: 'fixed' }}>
                   <Dropdown.Item onClick={() => navigate(`/grafo/${p._id}`)}>Ver grafo</Dropdown.Item>
                   <Dropdown.Item onClick={() => navigate(`/tablero/${p._id}`)}>Ir al tablero</Dropdown.Item>
+                  <Dropdown.Divider />
+                  <Dropdown.Item
+                    className="text-danger"
+                    disabled={Boolean(deletingId)}
+                    onClick={() => { void handleDelete(p); }}
+                  >
+                    {deletingId === p._id ? 'Eliminando…' : 'Eliminar plan…'}
+                  </Dropdown.Item>
                 </Dropdown.Menu>
               </Dropdown>
             </td>
