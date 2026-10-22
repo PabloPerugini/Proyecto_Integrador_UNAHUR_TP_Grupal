@@ -17,7 +17,8 @@
     "snapshot:planes": "node scripts/validaciones.js golden",
     "validar": "node scripts/validaciones.js todo",
     "seed:planes": "node scripts/seed-planes.js",
-    "curar:catalogo": "node scripts/curar-catalogo.js"
+    "curar:catalogo": "node scripts/curar-catalogo.js",
+    "test:jest": "jest"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
@@ -37,6 +38,14 @@
     "yamljs": "^0.3.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.14"
+    "jest": "^30.5.2",
+    "nodemon": "^3.1.14",
+    "supertest": "^7.3.1"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": [
+      "**/tests-jest/**/*.test.js"
+    ]
   }
 }
