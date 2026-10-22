@@ -56,7 +56,7 @@ export interface Career {
 }
 
 export type SubjectKind = 'Materia' | 'ACA' | 'AU' | 'OTRA';
-export type SubjectStatus = 'Aprobada' | 'Regular' | 'Cursando' | 'Pendiente';
+export type SubjectStatus = 'Aprobada' | 'Regular' | 'Cursando' | 'Disponible' | 'Bloqueada';
 
 export interface Hours {
   his: number;
@@ -119,6 +119,7 @@ export interface ProgressSummary {
 
 export interface GraphNode {
   id: string;
+  planSubjectId?: string;
   code: string;
   name: string;
   year: number | null;
@@ -142,7 +143,7 @@ export interface GraphStats {
   total: number;
   aprobadas: number;
   disponibles: number;
-  pendientes: number;
+  bloqueadas: number;
   enCurso: number;
   regulares: number;
   creditsTotal: number;
@@ -159,6 +160,7 @@ export interface IntermediateProgress {
 
 export interface GraphData {
   title: string;
+  userStudyPlanId?: string;
   color?: string;
   nodes: GraphNode[];
   edges: GraphEdge[];
@@ -223,7 +225,7 @@ export interface Sugerencias {
   materiasA: { C1: string[]; C2: string[]; C3: string[]; C5?: string[] };
   materiasB: { regla: string; count: number }[];
   disponibles: { code: string; name: string; critica: boolean }[];
-  finalesPendientes: { code: string; name: string }[];
+  finalesPorRendir: { code: string; name: string }[];
   comunesDisponibles: { code: string; name: string }[];
   ritmo: { ultimos12Meses: number; regularizadas: number; sugeridas: number };
   mensajes: SugerenciaMensaje[];

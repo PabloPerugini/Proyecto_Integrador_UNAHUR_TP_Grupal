@@ -1,47 +1,107 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import {
   ReactFlow,
   ReactFlowProvider,
   useReactFlow,
   Background,
+  BackgroundVariant,
+  ViewportPortal,
   Controls,
   Handle,
   Position,
+  MarkerType,
   type Node,
   type Edge,
   type NodeProps,
+  type CoordinateExtent
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Alert, Badge, Button, Card, Form } from 'react-bootstrap';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getPlanGraph } from '../api/planGraphAdapter';
 import { studyPlansApi, careerName, type StudyPlan } from '../api/studyPlans';
-import type { GraphData, IntermediateProgress } from '../types';
+import type { GraphData, IntermediateProgress, SubjectStatus } from '../types';
 import { useCareerSelection } from '../context/CareerContext';
+import { useTheme } from '../hooks/useTheme';
 import { yearLabel } from '../utils/subjects';
-import { STATUS_COLOR, STATUS_BADGE, statusColor, statusLabel } from '../utils/status';
+import { STATUS_BADGE, statusColor, statusLabel, resolveNodeStatus } from '../utils/status';
 import { instituteColor, instituteGradientTec } from '../utils/instituteColors';
-import ColorDot from '../components/ColorDot';
+import { getDirectSuccessorCodes, HIGHLIGHT_COLOR } from '../utils/graphHighlight';
+import { getStudyPath } from '../utils/studyPaths';
+import SubjectStatusAction from '../components/SubjectStatusAction';
+import SubjectStatusIcon from '../components/SubjectStatusIcon';
+import AcademicEdge from '../components/AcademicEdge';
+import { useAcademicEdgeLayout } from '../hooks/useAcademicEdgeLayout';
+import type { AcademicLayout } from '../utils/academicEdgeLayout';
+import '../components/AcademicMap.css';
 
 interface PlanNodeData {
+  onAdvance?: (code: string, backwards?: boolean) => void;
+  progressSaving?: boolean;
   code: string;
   name: string;
   year: number | null;
   cuatrimestre?: number | null;
   duration?: string | null;
-  status: string;
+  status: SubjectStatus;
   available: boolean;
   critical: boolean;
   optimal: boolean;
+  highlightedNext: boolean;
+  newlyUnlocked?: boolean;
+  selectedSubject: boolean;
   credits: number;
 }
 
-function nodeBorder(d: Pick<PlanNodeData, 'optimal' | 'critical' | 'available'>, selected = false): string {
-  if (selected) return '3px solid #212529';
-  if (d.optimal) return '3px solid #d9870b';
-  if (d.critical) return '3px solid #fd7e14';
-  if (d.available) return '3px solid #ffc107';
-  return '3px solid rgba(0,0,0,.15)';
+const BORDER_WIDTH = 2;
+const DIMMED_OPACITY = 0.55;
+const AVAILABLE_COLOR = '#3B82F6';
+const IN_PROGRESS_COLOR = '#0561e5';
+const UNLOCK_COLOR = IN_PROGRESS_COLOR;
+const UNLOCK_HIGHLIGHT_MS = 5000;
+const GRAPH_BACKGROUND = {
+  color: '#f8fbff',
+  dotsColor: '#d3dceb',
+  dotsGap: 24,
+  dotsSize: 1.4,
+  dark: {
+    color: '#101923',
+    dotsColor: '#293547',
+  },
+};
+// Configuración de las flechas
+const EDGE_COLORS = {
+  normal: '#94a3b8',
+  critical: '#fd7e14',
+  optimal: '#d9870b',
+};
+
+const EDGE_WIDTH = {
+  normal: 1.25,
+  critical: 3,
+  optimal: 3,
+};
+
+const ARROW_SIZE = {
+  width: 40,
+  height: 40,
+};
+function nodeBorder(
+  d: Pick<PlanNodeData, 'optimal' | 'critical' | 'available' | 'status' | 'highlightedNext' | 'newlyUnlocked'>,
+  selected = false
+): string {
+  const width = `${BORDER_WIDTH}px solid`;
+
+  if (d.optimal) return `${width} ${EDGE_COLORS.optimal}`;
+  if (d.critical) return `${width} ${EDGE_COLORS.critical}`;
+  if (selected) return `${width} #2563EB`;
+  if (d.newlyUnlocked) return `${width} ${UNLOCK_COLOR}`;
+  if (d.highlightedNext) return `${width} ${HIGHLIGHT_COLOR}`;
+  if (d.status === 'Aprobada') return `${width} #258b43`;
+  if (d.status === 'Cursando') return `${width} ${IN_PROGRESS_COLOR}`;
+  if (d.available) return `${width} ${AVAILABLE_COLOR}`;
+
+  return `${width} #CBD5E1`;
 }
 
 function StatusBadges({ d }: { d: Pick<PlanNodeData, 'available' | 'optimal' | 'critical'> }) {
@@ -60,67 +120,116 @@ function toPlanNodeData(
   criticalSet: Set<string>,
   fastSet: Set<string>,
 ): PlanNodeData {
+  const status = resolveNodeStatus(n.status, availableSet.has(n.code));
   return {
     code: n.code,
     name: n.name,
     year: n.year,
     cuatrimestre: n.cuatrimestre,
     duration: n.duration ?? null,
-    status: n.status,
-    available: availableSet.has(n.code),
+    status,
+    available: status === 'Disponible',
     critical: criticalSet.has(n.code),
     optimal: fastSet.has(n.code),
+    highlightedNext: false,
+    selectedSubject: false,
     credits: n.credits,
   };
 }
 
+
+
+
+
 function PlanNode({ data }: NodeProps<Node<Record<string, unknown>>>) {
   const d = data as unknown as PlanNodeData;
-  const color = statusColor(d.status);
-  const label = statusLabel(d.status);
-  const border = nodeBorder(d);
+  const pathColor = d.optimal ? EDGE_COLORS.optimal : d.critical ? EDGE_COLORS.critical : undefined;
+  const color = pathColor ?? statusColor(d.status);
+  const border = nodeBorder(d, d.selectedSubject);
+
   return (
     <div
+      className={`plan-node${!pathColor && d.status === 'Cursando' ? ' plan-node--in-progress' : ''}${d.highlightedNext || d.newlyUnlocked ? ' plan-node--highlighted-next' : ''}`}
       style={{
+        ...(d.newlyUnlocked ? { '--plan-highlight-color': UNLOCK_COLOR } : {}),
         background: color,
-        color: '#fff',
-        borderRadius: 8,
-        padding: '6px 10px 5px',
-        minWidth: 170,
-        maxWidth: 220,
+        color: pathColor ? '#211407' : '#23395d',
+        outline: pathColor && d.selectedSubject ? '2px solid #23395d' : undefined,
+        outlineOffset: 3,
+        borderRadius: 12,
+
+        width: 220,
+        height: 'auto',
+        minHeight: 90,
+
+        boxSizing: 'border-box',
         border,
-        boxShadow: '0 2px 6px rgba(0,0,0,.25)',
+
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'flex-start',
+        textAlign: 'left',
+        gap: 10,
       }}
     >
-      <Handle type="target" position={Position.Top} style={{ background: '#333' }} />
-      <div style={{ fontWeight: 700, fontSize: 12, lineHeight: 1.25 }}>{d.name}</div>
-      <div style={{ fontSize: 11, opacity: 0.92, marginTop: 2 }}>
-        Año {d.year ?? '—'} · {d.code} · {d.credits} cr
+      <SubjectStatusAction
+        status={d.status}
+        name={d.name}
+        onAdvance={d.onAdvance ? () => d.onAdvance?.(d.code) : undefined}
+        onRevert={d.onAdvance ? () => d.onAdvance?.(d.code, true) : undefined}
+        disabled={d.progressSaving}
+        highlightColor={d.newlyUnlocked ? UNLOCK_COLOR : d.highlightedNext ? HIGHLIGHT_COLOR : undefined}
+      />
+      <Handle
+        type="target"
+        position={Position.Left}
+        style={{ opacity: 0 }}
+      />
+
+      {/* Nombre de la materia */}
+      <div
+        style={{
+          fontWeight: 700,
+          fontSize: 15,
+          lineHeight: 1.4,
+          width: '100%',
+          overflowWrap: 'break-word',
+          paddingRight: 16,
+        }}
+      >
+        {d.name}
       </div>
-      <div style={{ fontSize: 10, opacity: 0.95, marginTop: 2, display: 'flex', alignItems: 'center', gap: 5 }}>
-        <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#fff', flexShrink: 0 }} />
-        {label}
-        <StatusBadges d={d} />
-      </div>
-      <Handle type="source" position={Position.Bottom} style={{ background: '#333' }} />
+
+      <Handle
+        type="source"
+        position={Position.Right}
+        style={{ opacity: 0 }}
+      />
     </div>
   );
 }
 
+
+
+
 function YearLabel({ data }: NodeProps<Node<Record<string, unknown>>>) {
-  const year = (data as { year?: number }).year;
+  const { label, width, isYear, subjectCount } = data as { label: string; width: number; isYear: boolean; subjectCount?: number };
   return (
     <div
       style={{
-        fontWeight: 700,
-        fontSize: 14,
+        width,
+        fontWeight: isYear ? 700 : 600,
+        fontSize: 16,
         color: 'var(--bs-secondary-color)',
         whiteSpace: 'nowrap',
-        transform: 'translateX(-50%)',
-        textAlign: 'center',
+        textAlign: isYear ? 'center' : 'left',
+        paddingBottom: isYear ? 8 : 0,
+        borderBottom: isYear ? '1px solid var(--bs-secondary-color)' : undefined,
       }}
     >
-      Año {year}
+      {label}
+      {!isYear && <div className="plan-semester-count">{subjectCount} {subjectCount === 1 ? 'materia' : 'materias'}</div>}
     </div>
   );
 }
@@ -165,25 +274,34 @@ function IntermediateBanner({ intermediate }: { intermediate: IntermediateProgre
 }
 
 const nodeTypes = { plan: PlanNode, yearLabel: YearLabel };
+const edgeTypes = { academic: AcademicEdge };
+const EMPTY_EDGES: GraphData['edges'] = [];
 
-const LEGEND: { color: string; label: string }[] = [
-  { color: STATUS_COLOR.Aprobada, label: 'Aprobada' },
-  { color: STATUS_COLOR.Regular, label: 'Regular' },
-  { color: STATUS_COLOR.Cursando, label: 'En curso' },
-  { color: STATUS_COLOR.Pendiente, label: 'Pendiente' },
-  { color: '#ffc107', label: 'Disponible' },
-  { color: '#fd7e14', label: 'Camino crítico' },
-  { color: '#d9870b', label: 'Ruta óptima' },
-];
-
-function FitButton() {
+function LayoutViewport({ layout }: { layout: AcademicLayout | undefined }) {
   const { fitView } = useReactFlow();
-  return (
-    <Button variant="outline-secondary" size="sm" onClick={() => fitView({ padding: 0.2 })}>
-      Ajustar vista
-    </Button>
-  );
+  useEffect(() => {
+    if (!layout) return;
+    const frame = requestAnimationFrame(() => { void fitView({ padding: 0.2 }); });
+    return () => cancelAnimationFrame(frame);
+  }, [layout, fitView]);
+  return null;
 }
+
+// Separación visual del grafo: dos columnas de cuatrimestres dentro de cada año.
+const GRAPH_SPACING = {
+  nodeWidth: 220,
+  columnGap: 90,
+  yearGap: 140,
+  rowGap: 152,
+};
+
+const STATUS_LEGEND: { status: SubjectStatus; label: string; stat: 'aprobadas' | 'regulares' | 'enCurso' | 'bloqueadas' | 'disponibles' }[] = [
+  { status: 'Aprobada', label: 'Aprobadas', stat: 'aprobadas' },
+  { status: 'Regular', label: 'Regulares', stat: 'regulares' },
+  { status: 'Cursando', label: 'En curso', stat: 'enCurso' },
+  { status: 'Bloqueada', label: 'Bloqueadas', stat: 'bloqueadas' },
+  { status: 'Disponible', label: 'Disponibles', stat: 'disponibles' },
+];
 
 interface FastPathStep {
   code: string;
@@ -200,7 +318,7 @@ interface DetailProps {
   onClose: () => void;
 }
 
-function DetailPanel({ graph, selectedNode, requires, successors, fastPath, onClose }: DetailProps) {
+function DetailPanel({ selectedNode, requires, successors, fastPath, onClose }: DetailProps) {
   return (
     <div className="plan-detail">
       <Card>
@@ -217,8 +335,8 @@ function DetailPanel({ graph, selectedNode, requires, successors, fastPath, onCl
                 <code>{selectedNode.code}</code> · año {selectedNode.year ?? '-'} · cuat. {selectedNode.cuatrimestre ?? '-'} · {selectedNode.credits} cr
               </p>
               <div className="mb-2">
-                <Badge bg={(graph.availableNow ?? []).includes(selectedNode.code) ? 'warning' : 'secondary'} text="dark">
-                  {(graph.availableNow ?? []).includes(selectedNode.code) ? 'Disponible ahora' : 'Bloqueada'}
+                <Badge bg={STATUS_BADGE[selectedNode.status]}>
+                  {statusLabel(selectedNode.status)}
                 </Badge>
               </div>
 
@@ -239,11 +357,12 @@ function DetailPanel({ graph, selectedNode, requires, successors, fastPath, onCl
               {fastPath.cost > 0 && (
                 <div className="mt-3 p-2" style={{ background: 'rgba(217,135,11,.14)', borderRadius: 8, borderLeft: '3px solid #d9870b' }}>
                   <div className="fw-semibold" style={{ color: '#b26a00', fontSize: 13 }}>
-                    ¡Podés cursarla en ≈ {fastPath.cost}{' '}
-                    {fastPath.cost === 1 ? 'cuatrimestre' : 'cuatrimestres'}!
+                    Para llegar a aprobar esta materia: ≈ {fastPath.cost}{' '}
+                    {fastPath.cost === 1 ? 'cuatrimestre' : 'cuatrimestres'} como mínimo
                   </div>
                   <div className="small text-muted mb-2">
-                    Si rendís a tiempo y en el orden ideal, este es el camino más corto para aprobarla:
+                    De las secuencias de correlativas que llevan a esta materia, esta es la que más tiempo requiere.
+                    Seguí el orden de la lista y avanzá con las otras correlativas en paralelo.
                   </div>
                   <ol className="small mb-2 ps-3" style={{ lineHeight: 1.6 }}>
                     {fastPath.steps.map((s, i) => {
@@ -254,8 +373,8 @@ function DetailPanel({ graph, selectedNode, requires, successors, fastPath, onCl
                           <span className={isLast ? 'fw-bold' : ''}>{s.name}</span>
                           <span className="text-muted">
                             {' '}
-                            · {s.cost === 0 ? 'ya aprobada' : s.cost === 1 ? '+1 cdm. por cursarla' : '+2 cdm. por cursarla'}
-                            {s.cost > 0 && <span> (acumulado ≈ {acc})</span>}
+                            · {s.cost === 0 ? 'ya aprobada' : s.cost === 1 ? '1 cuatrimestre' : '2 cuatrimestres'}
+                            {s.cost > 0 && <span> (total hasta acá: {acc})</span>}
                           </span>
                           {isLast && (
                             <span className="badge ms-1" style={{ background: '#d9870b' }}>
@@ -267,8 +386,9 @@ function DetailPanel({ graph, selectedNode, requires, successors, fastPath, onCl
                     })}
                   </ol>
                   <div className="small text-muted" style={{ opacity: 0.85 }}>
-                    Cálculo: 1 cuatrimestre por materia cuatrimestral, 2 si es anual, TC o TF. Ya aprobadas no cuentan.
-                    No contempla superposición horaria ni cupos.
+                    El tiempo incluye la materia elegida y supone que podés cursar las otras ramas en paralelo.
+                    {' '}Las aprobadas no suman tiempo; las que estás cursando cuentan con su duración completa.
+                    {' '}La oferta de materias, los horarios y los cupos pueden alargar este plazo.
                   </div>
                 </div>
               )}
@@ -281,6 +401,8 @@ function DetailPanel({ graph, selectedNode, requires, successors, fastPath, onCl
 }
 
 export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'grafo' | 'tablero' }) {
+  const { theme } = useTheme();
+  const graphBackground = theme === 'dark' ? GRAPH_BACKGROUND.dark : GRAPH_BACKGROUND;
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { careerId: selectedCareerId, setCareerId: setSelectedCareerId } = useCareerSelection();
@@ -297,7 +419,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
     const inSet = new Set(nodes.map((n) => n.code));
     const edges = graph.edges.filter((e) => inSet.has(e.source) && inSet.has(e.target));
     const availableNow = (graph.availableNow ?? []).filter((c) => inSet.has(c));
-    const aprobadas = nodes.filter((n) => (n.status ?? 'Pendiente') === 'Aprobada');
+    const aprobadas = nodes.filter((n) => n.status === 'Aprobada');
     const creditsTotal = nodes.reduce((a, n) => a + (n.credits ?? 0), 0);
     const creditsAprobados = aprobadas.reduce((a, n) => a + (n.credits ?? 0), 0);
     return {
@@ -312,7 +434,9 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
         total: nodes.length,
         aprobadas: aprobadas.length,
         disponibles: availableNow.length,
-        pendientes: nodes.length - aprobadas.length,
+        bloqueadas: nodes.filter((n) => n.status === 'Bloqueada').length,
+        enCurso: nodes.filter((n) => n.status === 'Cursando').length,
+        regulares: nodes.filter((n) => n.status === 'Regular').length,
         creditsTotal,
         creditsAprobados,
       },
@@ -320,9 +444,69 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
   }, [graph, tab, interCodes]);
   const view = initialView;
   const [pinnedCode, setPinnedCode] = useState<string | null>(null);
+  const [pathMode, setPathMode] = useState<'critical' | 'optimal' | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [plans, setPlans] = useState<StudyPlan[]>([]);
   const selectedPlan = useMemo(() => plans.find((p) => p._id === id) ?? null, [plans, id]);
+  const [progressSaving, setProgressSaving] = useState(false);
+  const [progressError, setProgressError] = useState<string | null>(null);
+  const [unlockHighlight, setUnlockHighlight] = useState<{ source: string; codes: Set<string> } | null>(null);
+  useEffect(() => {
+    if (!unlockHighlight) return;
+    const timer = window.setTimeout(() => setUnlockHighlight(null), UNLOCK_HIGHLIGHT_MS);
+    return () => window.clearTimeout(timer);
+  }, [unlockHighlight]);
+  const newlyUnlockedCodes = useMemo(() => new Set(
+    (graph?.nodes ?? []).filter(node => node.status === 'Disponible' && unlockHighlight?.codes.has(node.code)).map(node => node.code),
+  ), [graph, unlockHighlight]);
+  const progressOperation = useRef<symbol | null>(null);
+  useEffect(() => {
+    progressOperation.current = null;
+    setProgressSaving(false);
+    setProgressError(null);
+    setUnlockHighlight(null);
+    setPathMode(null);
+    setPinnedCode(null);
+    return () => { progressOperation.current = null; };
+  }, [id]);
+
+  const advanceSubject = useCallback(async (code: string, backwards = false) => {
+    const subject = graph?.nodes.find(node => node.code === code);
+    const status = backwards
+      ? subject?.status === 'Aprobada' ? 'CURSANDO' : subject?.status === 'Cursando' ? 'DISPONIBLE' : null
+      : subject?.status === 'Disponible' ? 'CURSANDO' : subject?.status === 'Cursando' ? 'APROBADA' : null;
+    if (!status || !subject?.planSubjectId || !graph?.userStudyPlanId || !selectedPlan || progressOperation.current) return;
+    const operation = Symbol();
+    progressOperation.current = operation;
+    setProgressSaving(true);
+    setProgressError(null);
+    let saved = false;
+    try {
+      await studyPlansApi.saveProgress(graph.userStudyPlanId, subject.planSubjectId, { status });
+      saved = true;
+      const updated = await getPlanGraph(selectedPlan, true);
+      if (progressOperation.current === operation) {
+        if (backwards) setUnlockHighlight(null);
+        if (status === 'APROBADA') {
+          const successors = getDirectSuccessorCodes(updated.edges, code);
+          const previous = new Map(graph.nodes.map(node => [node.code, node.status]));
+          const codes = new Set(updated.nodes.filter(node => successors.has(node.code)
+            && previous.get(node.code) === 'Bloqueada' && node.status === 'Disponible').map(node => node.code));
+          setUnlockHighlight(codes.size ? { source: code, codes } : null);
+        }
+        setGraph(updated);
+      }
+    } catch (error) {
+      if (progressOperation.current === operation) setProgressError(saved
+        ? 'El cambio se guardó, pero no se pudo actualizar el mapa. Recargá la página para ver el progreso actualizado.'
+        : error instanceof Error ? error.message : 'No se pudo guardar el progreso. Intentá nuevamente.');
+    } finally {
+      if (progressOperation.current === operation) {
+        progressOperation.current = null;
+        setProgressSaving(false);
+      }
+    }
+  }, [graph, selectedPlan]);
 
   // Color del instituto (oficial UNAHUR) con fallback a carrera/grafo.
   const planBaseColor = useMemo(() => {
@@ -392,7 +576,10 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setPinnedCode(null);
+      if (e.key === 'Escape') {
+        setPinnedCode(null);
+        setPathMode(mode => mode === 'optimal' ? null : mode);
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -405,61 +592,20 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
 
   const selectedNode = useMemo(() => displayGraph?.nodes.find((n) => n.code === selectedCode) ?? null, [displayGraph, selectedCode]);
   const byCodeMap = useMemo(() => new Map((displayGraph?.nodes ?? []).map((n) => [n.code, n])), [displayGraph]);
+  const highlightedNextCodes = useMemo(() => getDirectSuccessorCodes(
+    displayGraph?.edges ?? [], selectedNode?.code ?? null,
+  ), [displayGraph, selectedNode]);
 
-  const fastPath = useMemo(() => {
-    if (!displayGraph || !selectedCode || !byCodeMap.has(selectedCode)) {
-      return { set: new Set<string>(), edgeSet: new Set<string>(), chain: [] as string[], chainNames: [] as string[], chainCosts: [] as number[], cost: 0 };
-    }
-    const prereqOf = new Map<string, string[]>();
-    for (const e of displayGraph.edges) {
-      const subs = prereqOf.get(e.target) ?? [];
-      subs.push(e.source);
-      prereqOf.set(e.target, subs);
-    }
-    // costo en cuatrimestres: cuatrimestral = 1, anual/TC/TF = 2; aprobadas = 0.
-    const costOf = (code: string) => {
-      const n = byCodeMap.get(code);
-      if (!n || (n.status ?? 'Pendiente') === 'Aprobada') return 0;
-      return n.duration === 'A' || n.duration === 'TF' ? 2 : 1;
-    };
-    const memo = new Map<string, number>();
-    const chainMemo = new Map<string, string[]>();
-    const computing = new Set<string>();
-    const dp = (code: string): number => {
-      if (computing.has(code)) return 0;
-      if (memo.has(code)) return memo.get(code)!;
-      computing.add(code);
-      let best = 0;
-      let bestSub: string | null = null;
-      for (const p of prereqOf.get(code) ?? []) {
-        const node = byCodeMap.get(p);
-        if (!node || (node.status ?? 'Pendiente') === 'Aprobada') continue;
-        const d = dp(p) + costOf(p);
-        if (d > best) {
-          best = d;
-          bestSub = p;
-        }
-      }
-      computing.delete(code);
-      memo.set(code, best);
-      const subChain = bestSub && chainMemo.has(bestSub) ? chainMemo.get(bestSub)! : [];
-      chainMemo.set(code, bestSub && subChain.length ? [...subChain, code] : [code]);
-      return best;
-    };
-    const chain = chainMemo.get(selectedCode) ?? [selectedCode];
-    const cost = dp(selectedCode) + costOf(selectedCode);
-    const set = new Set(chain);
-    const edgeSet = new Set<string>();
-    for (let i = 0; i < chain.length - 1; i += 1) edgeSet.add(`${chain[i]}->${chain[i + 1]}`);
-    return {
-      set,
-      edgeSet,
-      chain,
-      chainNames: chain.map((c) => byCodeMap.get(c)!.name),
-      chainCosts: chain.map(costOf),
-      cost,
-    };
-  }, [displayGraph, selectedCode, byCodeMap]);
+  const fastPath = useMemo(() => getStudyPath(
+    displayGraph?.nodes ?? [], displayGraph?.edges ?? [], selectedCode,
+  ), [displayGraph, selectedCode]);
+  const criticalPath = useMemo(() => getStudyPath(
+    displayGraph?.nodes ?? [], displayGraph?.edges ?? [],
+  ), [displayGraph]);
+  const activePath = pathMode === 'critical' && criticalPath.chain.length > 0
+    ? criticalPath
+    : pathMode === 'optimal' && fastPath.chain.length > 0 ? fastPath : null;
+  const activeMode = activePath ? pathMode : null;
 
   const fastPathSteps = useMemo(
     () =>
@@ -471,57 +617,309 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
     [fastPath.chain, fastPath.chainCosts, byCodeMap],
   );
 
-  const flowNodes: Node[] = useMemo(() => {
+  const baseNodes: Node[] = useMemo(() => {
     const g = displayGraph;
     if (!g) return [];
-    const criticalSet = new Set(g.criticalPath ?? []);
+    const criticalSet = new Set<string>();
     const availableSet = new Set(g.availableNow ?? []);
-    const yearGroups = new Map<number, PlanNodeData[]>();
-    const planNodes: Node[] = g.nodes.map((n) => {
-      const data = toPlanNodeData(n, availableSet, criticalSet, fastPath.set);
-      if (n.year != null) {
-        const arr = yearGroups.get(n.year) ?? [];
-        arr.push(data);
-        yearGroups.set(n.year, arr);
-      }
-      return { id: n.code, type: 'plan' as const, position: n.position, data: { ...data } };
-    });
-    const labels: Node[] = [];
-    for (const [year, list] of yearGroups) {
-      const x = list.reduce((a, d) => a + (g.nodes.find((n) => n.code === d.code)?.position.x ?? 0), 0) / list.length;
-      const top = Math.min(...list.map((d) => g.nodes.find((n) => n.code === d.code)?.position.y ?? 0)) - 40;
-      labels.push({
-        id: `year-${year}`,
+    const yearGroups = new Map<number | null, GraphData['nodes']>();
+    for (const n of g.nodes) {
+      const list = yearGroups.get(n.year) ?? [];
+      list.push(n);
+      yearGroups.set(n.year, list);
+    }
+
+    const nodes: Node[] = [];
+    const { nodeWidth, columnGap, yearGap, rowGap } = GRAPH_SPACING;
+    const columnStep = nodeWidth + columnGap;
+    const yearWidth = nodeWidth * 2 + columnGap;
+    const addLabel = (id: string, label: string, x: number, y: number, isYear = false) => {
+      nodes.push({
+        id,
         type: 'yearLabel' as const,
-        position: { x, y: top },
-        data: { year },
+        position: { x, y },
+        data: { label, width: isYear ? yearWidth : nodeWidth, isYear },
         draggable: false,
         selectable: false,
+        focusable: false,
       });
+    };
+    const addGroup = (
+      id: string,
+      label: string,
+      subjects: GraphData['nodes'],
+      x: number,
+      y: number
+    ) => {
+      // No crear columnas vacías
+      if (subjects.length === 0) return;
+
+      addLabel(id, label, x, y);
+
+      nodes[nodes.length - 1].data.subjectCount = subjects.length;
+
+      subjects.forEach((n, row) => {
+        nodes.push({
+          id: n.code,
+          type: 'plan',
+          position: {
+            x,
+            y: y + 64 + row * rowGap,
+          },
+          data: {
+            ...toPlanNodeData(
+              n,
+              availableSet,
+              criticalSet,
+              new Set()
+            ),
+          },
+        });
+      });
+    };
+    const sortedYears = [...yearGroups.entries()].sort(
+      ([a], [b]) => (a ?? Number.MAX_SAFE_INTEGER) - (b ?? Number.MAX_SAFE_INTEGER),
+    );
+    sortedYears.forEach(([year, subjects], index) => {
+      const c1: GraphData['nodes'] = [];
+      const c2: GraphData['nodes'] = [];
+      const annual: GraphData['nodes'] = [];
+      const unassigned: GraphData['nodes'] = [];
+      for (const n of subjects) {
+        if (n.duration === 'A') annual.push(n);
+        else if (n.cuatrimestre === 1) c1.push(n);
+        else if (n.cuatrimestre === 2) c2.push(n);
+        else unassigned.push(n);
+      }
+
+      const x = index * (yearWidth + yearGap);
+      const id = `graph-heading-${year ?? 'unknown'}`;
+      addLabel(id, year == null ? 'Sin año' : `Año ${year}`, x, 0, true);
+      addGroup(`${id}-c1`, '1.er cuatrimestre', c1, x, 50);
+      addGroup(`${id}-c2`, '2.º cuatrimestre', c2, x + columnStep, 50);
+
+      // Las anuales y las materias sin período no se asignan a un cuatrimestre ficticio.
+      const extraY = 114 + Math.max(c1.length, c2.length) * rowGap + 30;
+      if (annual.length > 0) addGroup(`${id}-annual`, 'Anuales', annual, x, extraY);
+      if (unassigned.length > 0) addGroup(`${id}-unassigned`, 'Sin cuatrimestre', unassigned, x + columnStep, extraY);
+    });
+    return nodes;
+  }, [displayGraph]);
+
+  const { layout, layoutError, onNodesChange, nodeSizes } = useAcademicEdgeLayout(baseNodes, displayGraph?.edges ?? EMPTY_EDGES);
+  const flowNodes: Node[] = useMemo(() => baseNodes.map(node => {
+    const related = node.id === selectedCode || highlightedNextCodes.has(node.id) || newlyUnlockedCodes.has(node.id);
+    return {
+      ...node,
+      position: layout?.positions[node.id] ?? node.position,
+      style: { opacity: node.type === 'plan' && (activePath ? !activePath.set.has(node.id) : selectedNode && !related) ? DIMMED_OPACITY : 1 },
+      data: node.type === 'plan' ? {
+        ...node.data,
+        optimal: activeMode === 'optimal' && fastPath.set.has(node.id),
+        critical: activeMode === 'critical' && criticalPath.set.has(node.id),
+        highlightedNext: !activeMode && highlightedNextCodes.has(node.id),
+        newlyUnlocked: !activeMode && newlyUnlockedCodes.has(node.id),
+        selectedSubject: node.id === selectedCode,
+        // React Flow stores this handler in data; only the icon's click invokes it.
+        // eslint-disable-next-line react-hooks/refs
+        onAdvance: graph?.userStudyPlanId ? advanceSubject : undefined,
+        progressSaving,
+      } : {
+        ...node.data,
+        width: layout?.yearWidths[node.id] ?? node.data.width,
+      },
+    };
+  }), [baseNodes, layout, fastPath.set, criticalPath.set, activeMode, activePath, highlightedNextCodes, selectedCode, selectedNode, graph?.userStudyPlanId, advanceSubject, progressSaving, newlyUnlockedCodes]);
+
+  const MAP_MARGINS = {
+    left: 700,    // Espacio a la izquierda
+    right: 700,   // Espacio a la derecha
+    top: 25,     // Espacio arriba
+    bottom: 400,  // Espacio abajo
+  };
+
+  const mapExtent = useMemo<CoordinateExtent>(() => {
+    // Límites temporales si todavía no hay materias
+    if (flowNodes.length === 0) {
+      return [
+        [-500, -500],
+        [500, 500],
+      ];
     }
-    labels.sort((a, b) => (a.data as { year: number }).year - (b.data as { year: number }).year);
-    return [...planNodes, ...labels];
-  }, [displayGraph, fastPath]);
+
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+
+    flowNodes.forEach((node) => {
+      const { x, y } = node.position;
+
+      // Calcular ancho de cada nodo
+      const fallbackWidth =
+        node.type === 'yearLabel' &&
+        typeof node.data.width === 'number'
+          ? node.data.width
+          : GRAPH_SPACING.nodeWidth;
+
+      const width =
+        nodeSizes[node.id]?.width ?? fallbackWidth;
+
+      // Calcular alto de cada nodo
+      const height =
+        nodeSizes[node.id]?.height ??
+        (node.type === 'yearLabel' ? 55 : 110);
+
+      // Detectar los extremos del grafo
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+
+      maxX = Math.max(maxX, x + width);
+      maxY = Math.max(maxY, y + height);
+    });
+
+    // Aplicar márgenes independientes
+    return [
+      [
+        minX - MAP_MARGINS.left,
+        minY - MAP_MARGINS.top,
+      ],
+      [
+        maxX + MAP_MARGINS.right,
+        maxY + MAP_MARGINS.bottom,
+      ],
+    ];
+  }, [flowNodes, nodeSizes]);
+
+  const semesterPanels = useMemo(() => {
+    const getPosition = (node: Node) =>
+      layout?.positions[node.id] ?? node.position;
+
+    // Agrupar materias según su encabezado de cuatrimestre
+    const groups: {
+      heading: Node;
+      subjects: Node[];
+    }[] = [];
+
+    let currentGroup: {
+      heading: Node;
+      subjects: Node[];
+    } | null = null;
+
+    for (const node of baseNodes) {
+      if (node.type === 'yearLabel') {
+        if (node.data.isYear) {
+          currentGroup = null;
+        } else {
+          currentGroup = {
+            heading: node,
+            subjects: [],
+          };
+
+          groups.push(currentGroup);
+        }
+      } else if (node.type === 'plan' && currentGroup) {
+        currentGroup.subjects.push(node);
+      }
+    }
+
+    return groups.map(({ heading, subjects }) => {
+      const p = getPosition(heading);
+
+      const paddingTop = -12;
+      const paddingBottom = 24;
+
+      const panelTop = p.y - paddingTop;
+
+      const headingBottom =
+        p.y + (nodeSizes[heading.id]?.height ?? 40);
+
+      const subjectsBottom = subjects.map((subject) => {
+        const position = getPosition(subject);
+        const height = nodeSizes[subject.id]?.height ?? 100;
+
+        return position.y + height;
+      });
+
+      const contentBottom = Math.max(
+        headingBottom,
+        ...subjectsBottom
+      );
+
+      const height = Math.max(
+        100,
+        contentBottom - panelTop + paddingBottom
+      );
+
+      return {
+        id: heading.id,
+        x: p.x - 24,
+        y: panelTop,
+        width: GRAPH_SPACING.nodeWidth + 48,
+        height,
+      };
+    });
+  }, [baseNodes, layout, nodeSizes]);
+
 
   const flowEdges: Edge[] = useMemo(() => {
     if (!displayGraph) return [];
-    const criticalSet = new Set(displayGraph.criticalPath ?? []);
+
     return displayGraph.edges.map((e) => {
-      const onOptimal = fastPath.edgeSet.has(e.id);
-      const onCritical = criticalSet.has(e.source) && criticalSet.has(e.target);
+      const highlightedNext = !activeMode && e.source === selectedCode && highlightedNextCodes.has(e.target);
+      const newlyUnlocked = !activeMode && e.source === unlockHighlight?.source && newlyUnlockedCodes.has(e.target);
+      const leadsToAvailable = !activeMode && byCodeMap.get(e.source)?.status === 'Aprobada'
+        && byCodeMap.get(e.target)?.status === 'Disponible';
+      const onOptimal = activeMode === 'optimal' && fastPath.edgeSet.has(e.id);
+      const onCritical = activeMode === 'critical' && criticalPath.edgeSet.has(e.id);
+
+      // Color de la línea y la punta
+      const color = newlyUnlocked ? UNLOCK_COLOR : highlightedNext
+        ? HIGHLIGHT_COLOR
+        : onOptimal
+        ? EDGE_COLORS.optimal
+        : onCritical
+          ? EDGE_COLORS.critical
+          : leadsToAvailable ? AVAILABLE_COLOR : EDGE_COLORS.normal;
+
+      // Grosor de la línea
+      const baseWidth = onOptimal
+        ? EDGE_WIDTH.optimal
+        : onCritical
+          ? EDGE_WIDTH.critical
+          : EDGE_WIDTH.normal;
+      const strokeWidth = highlightedNext || newlyUnlocked ? 1.5 : baseWidth;
+
       return {
         id: e.id,
         source: e.source,
         target: e.target,
+        type: 'academic',
+        data: { sections: layout?.routes[e.id] },
         animated: onOptimal || onCritical,
-        style: onOptimal
-          ? { stroke: '#d9870b', strokeWidth: 2.5, strokeDasharray: '6 3' }
-          : onCritical
-            ? { stroke: '#fd7e14', strokeWidth: 2 }
-            : undefined,
+
+        // Estilo de la línea
+        style: {
+          stroke: color,
+          strokeWidth,
+          strokeLinejoin: 'round',
+          strokeLinecap: 'round',
+          opacity: activeMode ? (onOptimal || onCritical ? 1 : 0.2) : selectedNode && !highlightedNext && !newlyUnlocked ? DIMMED_OPACITY : 1,
+          ...(onOptimal ? { strokeDasharray: '6 3' } : {}),
+        },
+
+        // Estilo de la punta
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          color,
+          width: ARROW_SIZE.width,
+          height: ARROW_SIZE.height,
+          markerUnits: 'userSpaceOnUse',
+        },
       };
     });
-  }, [displayGraph, fastPath]);
+  }, [displayGraph, fastPath, criticalPath, activeMode, selectedCode, highlightedNextCodes, selectedNode, layout, unlockHighlight, newlyUnlockedCodes, byCodeMap]);
+
 
   const boardGroups = useMemo(() => {
     interface YearGroup {
@@ -536,13 +934,14 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
       creditsAprob: number;
     }
     if (!displayGraph) return [] as YearGroup[];
-    const criticalSet = new Set(displayGraph.criticalPath ?? []);
+    const criticalSet = activeMode === 'critical' ? criticalPath.set : new Set<string>();
+    const optimalSet = activeMode === 'optimal' ? fastPath.set : new Set<string>();
     const availableSet = new Set(displayGraph.availableNow ?? []);
     const m = new Map<number, YearGroup>();
     for (const n of displayGraph.nodes) {
       const y = n.year ?? 999;
       const g = m.get(y) ?? { year: y, c1: [], c2: [], anual: [], cuat: [], total: 0, aprobadas: 0, credits: 0, creditsAprob: 0 };
-      const data = toPlanNodeData(n, availableSet, criticalSet, fastPath.set);
+      const data = toPlanNodeData(n, availableSet, criticalSet, optimalSet);
       g.total += 1;
       g.credits += n.credits ?? 0;
       if (n.status === 'Aprobada') {
@@ -568,7 +967,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
       g.anual.sort((a, b) => a.name.localeCompare(b.name));
     }
     return out;
-  }, [displayGraph, fastPath]);
+  }, [displayGraph, fastPath, criticalPath, activeMode]);
 
   const requires = useMemo(() => {
     if (!selectedNode || !displayGraph) return [];
@@ -578,11 +977,8 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
   }, [selectedNode, byCodeMap, displayGraph]);
 
   const successors = useMemo(() => {
-    if (!selectedNode || !displayGraph) return [];
-    return Array.from(byCodeMap.values()).filter((n) =>
-      displayGraph.edges.some((e) => e.source === selectedNode.code && e.target === n.code),
-    );
-  }, [selectedNode, byCodeMap, displayGraph]);
+    return Array.from(byCodeMap.values()).filter((n) => highlightedNextCodes.has(n.code));
+  }, [byCodeMap, highlightedNextCodes]);
 
   if (err) {
     return <Alert variant="danger" className="mt-3">{err}</Alert>;
@@ -590,13 +986,18 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
 
   const renderCard = (d: PlanNodeData, selected: boolean) => {
     const border = nodeBorder(d, selected);
+    const pathColor = d.optimal ? EDGE_COLORS.optimal : d.critical ? EDGE_COLORS.critical : undefined;
     return (
       <button
         key={d.code}
+        className={!pathColor && d.status === 'Cursando' ? 'plan-node--in-progress' : undefined}
         onClick={() => setPinnedCode((prev) => (prev === d.code ? null : d.code))}
         style={{
-          background: statusColor(d.status),
-          color: '#fff',
+          background: pathColor ?? statusColor(d.status),
+          color: pathColor ? '#211407' : '#fff',
+          opacity: activePath && !activePath.set.has(d.code) ? DIMMED_OPACITY : 1,
+          outline: pathColor && selected ? '2px solid #23395d' : undefined,
+          outlineOffset: 3,
           border,
           borderRadius: 10,
           padding: '8px 12px',
@@ -604,7 +1005,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
           maxWidth: 240,
           flex: '1 1 200px',
           textAlign: 'left',
-          boxShadow: '0 2px 6px rgba(0,0,0,.2)',
+          boxShadow: d.status === 'Cursando' ? undefined : '0 2px 6px rgba(0,0,0,.2)',
           cursor: 'pointer',
         }}
       >
@@ -635,42 +1036,52 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
 
   return (
     <ReactFlowProvider>
-      <div className="plan-graph" style={{ height: 'calc(100dvh - 118px)', display: 'flex', flexDirection: 'column', maxWidth: 1400, margin: '0 auto' }}>
-        <div className="d-flex align-items-center gap-3 px-3 pt-3 pb-2 flex-wrap">
-          <div className="d-flex align-items-center gap-2 me-auto">
-            <ColorDot color={planBaseColor} size={16} />
-            <div>
-              <h1 className="mb-0 fs-4">
-                {selectedPlan ? `${careerName(selectedPlan)} · ${selectedPlan.name}` : 'Plan de estudios'} ·{' '}
-                {view === 'grafo' ? 'Correlatividades' : 'Tablero de avance'}
-              </h1>
-              {plans.length > 0 && (
-                <Form.Select
-                  size="sm"
-                  value={id ?? ''}
-                  onChange={(e) => changeCareer(e.target.value)}
-                  aria-label="Cambiar plan de estudios"
-                  style={{ maxWidth: 320 }}
-                >
-                  {plans
-                    .filter((p) => p._id === id || enrollments.includes(p._id))
-                    .map((p) => (
-                      <option key={p._id} value={p._id}>{p.name} — {careerName(p)}</option>
-                    ))}
-                </Form.Select>
-              )}
-            </div>
+      <div
+        className="plan-graph"
+        style={{
+          '--plan-highlight-color': HIGHLIGHT_COLOR,
+          '--plan-in-progress-color': IN_PROGRESS_COLOR,
+          height: 'calc(100dvh - 118px)',
+          display: 'flex',
+          flexDirection: 'column',
+          width: '100%',
+          maxWidth: 'none',
+          margin: '0 auto',
+        } as CSSProperties}
+      >
+        <header className="plan-map-header">
+          <div className="plan-map-heading">
+            <h1 className="plan-map-heading__title">
+              {selectedPlan?.name ?? 'Plan de estudios'}
+            </h1>
+            <p className="plan-map-heading__subtitle">
+              {selectedPlan ? `${careerName(selectedPlan)} · ` : ''}
+              {view === 'grafo' ? 'mapa de correlatividades' : 'tablero de avance'}
+            </p>
+            {displayGraph && (
+              <p className="small text-secondary mt-1 mb-0">
+                <strong>{displayGraph.stats.total}</strong> {displayGraph.stats.total === 1 ? 'materia' : 'materias'}
+              </p>
+            )}
           </div>
+        </header>
 
-          {displayGraph && (
-            <div className="d-flex gap-1 small text-muted flex-wrap">
-              <Badge bg="secondary">Materias {displayGraph.stats.total}</Badge>
-              <Badge bg="success">{displayGraph.stats.aprobadas} aprobadas</Badge>
-              <Badge bg="warning" text="dark">{displayGraph.stats.disponibles} disponibles</Badge>
-              <Badge bg="secondary">Créditos {displayGraph.stats.creditsAprobados}/{displayGraph.stats.creditsTotal}</Badge>
-            </div>
+        <div className="plan-map-toolbar">
+          {plans.length > 0 && (
+            <Form.Select
+              size="sm"
+              className="plan-map-header__select"
+              value={id ?? ''}
+              onChange={(e) => changeCareer(e.target.value)}
+              aria-label="Cambiar plan de estudios"
+            >
+              {plans
+                .filter((p) => p._id === id || enrollments.includes(p._id))
+                .map((p) => (
+                  <option key={p._id} value={p._id}>{p.name} — {careerName(p)}</option>
+                ))}
+            </Form.Select>
           )}
-
           {selectedPlan?.intermediateTitle && (
             <div className="d-flex gap-1" role="tablist" aria-label="Vista del plan">
               <Button
@@ -678,7 +1089,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
                 role="tab"
                 aria-selected={tab === 'lic'}
                 variant={tab === 'lic' ? 'primary' : 'outline-primary'}
-                onClick={() => { setTab('lic'); setPinnedCode(null); }}
+                onClick={() => { setTab('lic'); setPinnedCode(null); setPathMode(null); }}
               >
                 Licenciatura
               </Button>
@@ -688,7 +1099,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
                 aria-selected={tab === 'tec'}
                 variant={tab === 'tec' ? 'primary' : 'outline-primary'}
                 style={tab === 'tec' ? { background: instituteGradientTec(planBaseColor), borderColor: 'transparent' } : undefined}
-                onClick={() => { setTab('tec'); setPinnedCode(null); }}
+                onClick={() => { setTab('tec'); setPinnedCode(null); setPathMode(null); }}
                 title={interCodes ? `${interCodes.size} materias de la tecnicatura` : selectedPlan.intermediateTitle}
               >
                 Tecnicatura
@@ -696,11 +1107,73 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
             </div>
           )}
 
-          {view === 'grafo' && <FitButton />}
-          <Button variant="outline-secondary" size="sm" onClick={() => navigate('/')}>← Volver</Button>
+          <div className="d-flex flex-wrap align-items-center gap-2 ms-auto" role="group" aria-label="Navegación y caminos del plan">
+            <Button variant="outline-secondary" size="sm" onClick={() => navigate('/')}>← Volver</Button>
+            <Button
+              variant={activeMode === 'critical' ? 'warning' : 'outline-secondary'}
+              size="sm"
+              aria-pressed={activeMode === 'critical'}
+              aria-describedby="plan-path-help"
+              disabled={criticalPath.chain.length === 0}
+              style={activeMode === 'critical' ? { background: EDGE_COLORS.critical, borderColor: EDGE_COLORS.critical, color: '#211407' } : undefined}
+              title="Ver la secuencia de materias pendientes que más tiempo requiere en todo el plan"
+              onClick={() => setPathMode(mode => mode === 'critical' ? null : 'critical')}
+            >
+              Camino crítico
+            </Button>
+            <Button
+              variant={pathMode === 'optimal' ? 'warning' : 'outline-secondary'}
+              size="sm"
+              aria-pressed={pathMode === 'optimal'}
+              aria-describedby="plan-path-help"
+              disabled={!displayGraph?.nodes.length}
+              style={pathMode === 'optimal' ? { background: EDGE_COLORS.optimal, borderColor: EDGE_COLORS.optimal, color: '#211407' } : undefined}
+              title={pathMode === 'optimal' ? 'Desactivar el camino óptimo' : 'Activar y elegir una materia para ver cómo llegar a aprobarla'}
+              onClick={() => setPathMode(mode => mode === 'optimal' ? null : 'optimal')}
+            >
+              Camino óptimo
+            </Button>
+          </div>
         </div>
 
         {err && <Alert variant="danger" className="mx-3">{err}</Alert>}
+        {progressError && <Alert variant="warning" className="mx-3" dismissible onClose={() => setProgressError(null)}>{progressError}</Alert>}
+        {criticalPath.hasCycle && <Alert variant="warning" className="mx-3 py-1 small">Hay un ciclo entre las correlativas pendientes. No se puede calcular el camino crítico.</Alert>}
+        <div id="plan-path-help" className="mx-3 mb-2 small" role="status">
+          {activePath ? (
+            <>
+              <div>
+                <strong>{activeMode === 'critical' ? 'Camino crítico: mirá el plan completo.' : `Camino óptimo: cómo llegar a ${selectedNode?.name}.`}</strong>{' '}
+                {activeMode === 'critical'
+                  ? 'Resalta la secuencia de materias pendientes que más tiempo requiere. Cada una habilita la siguiente: retrasar esta secuencia puede demorar la finalización del plan.'
+                  : 'Resalta la secuencia de correlativas que más tiempo requiere hasta aprobar la materia elegida, incluyéndola. Te permite identificar por dónde empezar.'}
+              </div>
+              <div className="text-muted">
+                Tiempo estimado de esta secuencia: <strong>≈ {activePath.cost} {activePath.cost === 1 ? 'cuatrimestre' : 'cuatrimestres'}</strong>.
+                {' '}Supone que avanzás con las otras correlativas en paralelo; también tenés que cumplirlas.
+                {' '}Volvé a pulsar el botón activo para recuperar los colores de estado.
+              </div>
+            </>
+          ) : pathMode === 'optimal' ? (
+            <div className="rounded px-3 py-2" style={{ background: 'rgba(217,135,11,.12)', borderLeft: `3px solid ${EDGE_COLORS.optimal}` }}>
+              <strong>Camino óptimo activado.</strong>{' '}
+              {displayGraph?.nodes.every(node => node.status === 'Aprobada')
+                ? 'Ya aprobaste todas las materias de esta vista. No quedan recorridos pendientes.'
+                : selectedNode?.status === 'Aprobada'
+                  ? `Ya aprobaste ${selectedNode.name}. Elegí otra materia para ver cómo llegar a aprobarla.`
+                  : fastPath.hasCycle
+                    ? 'Las correlativas de esta materia forman un ciclo y no permiten calcular el recorrido. Podés elegir otra materia.'
+                    : `Hacé clic en una materia ${view === 'grafo' ? 'del mapa' : 'del tablero'} para ver el recorrido hasta aprobarla y su tiempo estimado.`}
+              {' '}Para salir, volvé a pulsar «Camino óptimo».
+            </div>
+          ) : (
+            <span className="text-muted">
+              <strong>Camino crítico:</strong> qué secuencia de materias puede demorar la finalización del plan.
+              {' '}<strong>Camino óptimo:</strong> activá el botón y elegí una materia para ver cómo llegar a aprobarla.
+            </span>
+          )}
+        </div>
+        {view === 'grafo' && layoutError && <Alert variant="warning" className="mx-3">No se pudieron optimizar las flechas. Se muestran conexiones ortogonales simples. {layoutError}</Alert>}
         {id && !selectedPlan && plans.length > 0 && <Alert variant="warning" className="mx-3">Seleccioná un plan válido. Los enlaces antiguos de carrera ya no corresponden al grafo.</Alert>}
         {displayGraph && displayGraph.edges.length === 0 && <Alert variant="info" className="mx-3 py-1 small">No hay correlatividades vinculadas todavía. Podés agregarlas desde Administrar plan.</Alert>}
         {graph?.intermediate && graph.intermediate.total > 0 && (
@@ -720,7 +1193,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
         )}
 
         <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', margin: '0 8px 8px' }}>
-          {view === 'grafo' && graph && !tecEmpty && (
+          {displayGraph && !tecEmpty && (
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8, flexShrink: 0 }}>
               <div
                 style={{
@@ -737,26 +1210,26 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
                   boxShadow: '0 2px 8px rgba(0,0,0,.12)',
                 }}
               >
-                <span className="small fw-semibold text-secondary me-1" style={{ whiteSpace: 'nowrap' }}>Leyenda</span>
-                {LEGEND.map((l) => (
+                <span className="small fw-semibold text-secondary me-1" style={{ whiteSpace: 'nowrap' }}>Estados</span>
+                {STATUS_LEGEND.map((l) => (
                   <span
                     key={l.label}
                     className="d-inline-flex align-items-center gap-1"
                     style={{ fontSize: 12, whiteSpace: 'nowrap', color: 'var(--bs-body-color)' }}
                   >
-                    <span
-                      style={{
-                        width: 12,
-                        height: 12,
-                        borderRadius: '50%',
-                        display: 'inline-block',
-                        background: l.color,
-                        border: '1px solid rgba(0,0,0,.3)',
-                      }}
-                    />
+                    <span className="d-inline-flex" aria-hidden="true"><SubjectStatusIcon status={l.status} /></span>
                     {l.label}
+                    <strong className="plan-state-count">{displayGraph.stats[l.stat]}</strong>
                   </span>
                 ))}
+                {activeMode && (
+                  <span className="d-inline-flex align-items-center gap-1 border-start ps-3" style={{ fontSize: 12, whiteSpace: 'nowrap', color: 'var(--bs-body-color)' }}>
+                    <svg width="28" height="16" viewBox="0 0 28 16" fill="none" aria-hidden="true" style={{ color: EDGE_COLORS[activeMode] }}>
+                      <path d="M1 8h24m-6-5 6 5-6 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    {activeMode === 'critical' ? 'Camino crítico' : 'Camino óptimo'}
+                  </span>
+                )}
               </div>
             </div>
           )}
@@ -767,18 +1240,43 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
                 nodes={flowNodes}
                 edges={flowEdges}
                 nodeTypes={nodeTypes}
+                edgeTypes={edgeTypes}
+                onNodesChange={onNodesChange}
+                translateExtent={mapExtent}
                 onNodeClick={(_, node) => {
                   if (node.type === 'yearLabel') return;
                   setPinnedCode((prev) => (prev === node.id ? null : node.id));
                 }}
                 fitView
                 fitViewOptions={{ padding: 0.2 }}
-                nodesDraggable
-                defaultEdgeOptions={{ markerEnd: { type: 'arrowclosed' } }}
-                style={{ width: '100%', height: '100%' }}
+                minZoom={0.38}
+                nodesDraggable={false}
+                panOnDrag={true}
+                nodeClickDistance={7}
+                defaultEdgeOptions={{
+                  type: 'academic',
+                }}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  background: graphBackground.color,
+                  borderRadius: 20,
+                  overflow: 'hidden',
+                }}
               >
-                <Background gap={20} color="var(--bs-secondary-bg)" />
+                <ViewportPortal>
+                  {semesterPanels.map(panel => <div key={panel.id} className="plan-semester-panel" aria-hidden="true"
+                    style={{ left: panel.x, top: panel.y, width: panel.width, height: panel.height }} />)}
+                </ViewportPortal>
+                <Background
+                  variant={BackgroundVariant.Dots}
+                  gap={GRAPH_BACKGROUND.dotsGap}
+                  size={GRAPH_BACKGROUND.dotsSize}
+                  color={graphBackground.dotsColor}
+                  bgColor={graphBackground.color}
+                />
                 <Controls position="bottom-left" />
+                <LayoutViewport layout={layout} />
               </ReactFlow>
             )}
 

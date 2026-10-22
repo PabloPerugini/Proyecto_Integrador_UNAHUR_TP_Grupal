@@ -1,21 +1,21 @@
 import type { GraphData, GraphNode, SubjectStatus } from '../types';
 import { studyPlansApi, orderedSubjects, subjectName, prerequisiteId, careerName, type PlanSubject, type StudyPlan, type ProgressStatus } from './studyPlans';
 import { getCareerColor } from '../utils/careerColor';
+import { resolveProgressStatuses } from '../utils/progressStatus';
 
 function toLabel(status: ProgressStatus | undefined): SubjectStatus {
-  return status === 'APROBADA' ? 'Aprobada' : status === 'REGULARIZADA' ? 'Regular' : status === 'CURSANDO' ? 'Cursando' : 'Pendiente';
+  return status === 'APROBADA' ? 'Aprobada' : status === 'REGULARIZADA' ? 'Regular' : status === 'CURSANDO' ? 'Cursando' : status === 'DISPONIBLE' ? 'Disponible' : 'Bloqueada';
 }
-function isSatisfied(status: ProgressStatus | undefined, required: string): boolean {
-  return status === 'APROBADA' || (required === 'REGULARIZADA' && status === 'REGULARIZADA');
-}
-export async function getPlanGraph(plan: StudyPlan): Promise<GraphData> {
+export async function getPlanGraph(plan: StudyPlan, strictProgress = false): Promise<GraphData> {
   const [items, enrollments] = await Promise.all([
     studyPlansApi.getSubjects(plan._id),
-    studyPlansApi.getMine().catch(() => []),
+    studyPlansApi.getMine().catch(error => { if (strictProgress) throw error; return []; }),
   ]);
   const enrollment = enrollments.find(p => (typeof p.studyPlan === 'string' ? p.studyPlan : p.studyPlan?._id) === plan._id);
-  const savedProgress = enrollment ? await studyPlansApi.getProgress(enrollment._id).catch(() => []) : [];
-  const statusById = new Map(savedProgress.map(p => [typeof p.planSubject === 'string' ? p.planSubject : p.planSubject?._id, p.status]));
+  const savedProgress = enrollment ? await studyPlansApi.getProgress(enrollment._id).catch(error => { if (strictProgress) throw error; return []; }) : [];
+  const statusById = resolveProgressStatuses(items, new Map(savedProgress.map(p => [
+    typeof p.planSubject === 'string' ? p.planSubject : p.planSubject?._id ?? '', p.status,
+  ])));
   const itemsSorted = orderedSubjects(items);
   const byId = new Map(itemsSorted.map(s => [s._id, s]));
   const seen = new Set<string>();
@@ -34,6 +34,7 @@ export async function getPlanGraph(plan: StudyPlan): Promise<GraphData> {
     const d: GraphNode['duration'] = item.duration === 'ANUAL' ? 'A' : item.duration === 'OTRA' ? 'TF' : 'C';
     return {
       id: codeById.get(item._id)!, code: codeById.get(item._id)!, name: subjectName(item),
+      planSubjectId: item._id,
       year: item.year ?? null, cuatrimestre: item.period ?? null, duration: d,
       credits: item.credits ?? 0, kind: item.kind ?? 'Materia', optional: item.optional ?? false,
       intermediate: item.intermediate ?? false, status: toLabel(statusById.get(item._id)),
@@ -47,25 +48,19 @@ export async function getPlanGraph(plan: StudyPlan): Promise<GraphData> {
     const target = codeById.get(item._id)!;
     return [{ id: `${source}->${target}`, source, target }];
   }));
-  const availableNow = itemsSorted.filter(item => {
-    const status = statusById.get(item._id);
-    return status !== 'APROBADA' && status !== 'CURSANDO' &&
-      (item.prerequisites ?? []).every(prereq => {
-        const otherId = prerequisiteId(prereq);
-        return otherId && isSatisfied(statusById.get(otherId), prereq.requiredStatus);
-      });
-  }).map(item => codeById.get(item._id)!);
+  const availableNow = nodes.filter(n => n.status === 'Disponible').map(n => n.code);
   const approved = itemsSorted.filter(item => statusById.get(item._id) === 'APROBADA');
   const totalCredits = itemsSorted.reduce((a,s) => a + (s.credits ?? 0), 0);
   const approvedCredits = approved.reduce((a,s) => a + (s.credits ?? 0), 0);
   const intermediateItems = itemsSorted.filter(s => s.intermediate);
   return {
     title: `${careerName(plan)} · ${plan.name}`,
+    userStudyPlanId: enrollment?._id,
     color: typeof plan.career === 'object' && plan.career ? getCareerColor({ name: plan.career.name || '', color: plan.career.color, academicUnit: plan.career.academicUnit ?? null }) : '#238a42',
     nodes, edges, availableNow, criticalPath: [], hasCycle: false, topologicalOrder: [],
     stats: {
       total: nodes.length, aprobadas: approved.length, disponibles: availableNow.length,
-      pendientes: nodes.filter(n => n.status === 'Pendiente').length,
+      bloqueadas: nodes.filter(n => n.status === 'Bloqueada').length,
       enCurso: nodes.filter(n => n.status === 'Cursando').length,
       regulares: nodes.filter(n => n.status === 'Regular').length,
       creditsTotal: totalCredits, creditsAprobados: approvedCredits,

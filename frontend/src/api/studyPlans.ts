@@ -101,7 +101,6 @@ export interface PlanSubject {
   _id: string;
   studyPlan: string;
   subject: string | SubjectRef | null;
-  nameOverride?: string;
   code?: string;
   kind?: 'Materia' | 'ACA' | 'AU' | 'OTRA';
   generic?: 'CFC' | 'CFB' | 'CFP' | 'ACA' | null;
@@ -120,7 +119,7 @@ export interface UserStudyPlan {
   studyPlan: string | StudyPlan | null;
   createdAt?: string;
 }
-export type ProgressStatus = 'PENDIENTE' | 'CURSANDO' | 'REGULARIZADA' | 'APROBADA';
+export type ProgressStatus = 'DISPONIBLE' | 'BLOQUEADA' | 'CURSANDO' | 'REGULARIZADA' | 'APROBADA';
 export interface SubjectProgress {
   _id: string;
   userStudyPlan: string;
@@ -136,17 +135,8 @@ export interface ProgressInput {
   academicDate?: string | null;
   origin?: string | null;
 }
-export interface DeletedPlanCounts {
-  subjects: number;
-  enrollments: number;
-  progress: number;
-  imports: number;
-}
 
 export function subjectName(subject: PlanSubject): string {
-  const customName = subject.nameOverride?.trim();
-  if (customName) return customName;
-
   const name = subject.subject && typeof subject.subject === 'object' ? subject.subject.name : null;
   return (typeof name === 'string' && name.trim()) || subject.code?.trim() || 'Materia sin nombre';
 }
@@ -180,8 +170,6 @@ export const studyPlansApi = {
   bulkIntermediate: (planId: string, data: { intermediate: boolean; ids?: string[]; year?: number; period?: number }) =>
     request<{ matched: number; modified: number }>(`/study-plans/${planId}/subjects/intermediate`, { method: 'PATCH', body: JSON.stringify(data) }),
   deleteSubject: (planId: string, subjectId: string) => request<unknown>(`/study-plans/${planId}/subjects/${subjectId}`, { method: 'DELETE' }),
-  deletePlan: (planId: string) =>
-    request<{ message: string; removed: DeletedPlanCounts }>(`/study-plans/${planId}`, { method: 'DELETE' }),
   getGraph: (planId: string) => request<GraphLike>(`/study-plans/${planId}/graph`),
   getIntermediate: (planId: string) => request<IntermediateView>(`/study-plans/${planId}/intermediate`),
   getSugerencias: (planId: string) => request<SugerenciasLike>(`/study-plans/${planId}/sugerencias`),
