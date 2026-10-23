@@ -1234,7 +1234,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
             </div>
           )}
 
-          <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
+          <div style={{ flex: 1, minHeight: 400, position: 'relative', height: '100%' }}>
             {view === 'grafo' && graph && !tecEmpty && (
               <ReactFlow
                 nodes={flowNodes}
