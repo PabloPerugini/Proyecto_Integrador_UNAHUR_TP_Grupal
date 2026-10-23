@@ -102,6 +102,7 @@ export interface PlanSubject {
   studyPlan: string;
   subject: string | SubjectRef | null;
   code?: string;
+  nameOverride?: string | null;
   kind?: 'Materia' | 'ACA' | 'AU' | 'OTRA';
   generic?: 'CFC' | 'CFB' | 'CFP' | 'ACA' | null;
   year?: number | null;
@@ -119,7 +120,13 @@ export interface UserStudyPlan {
   studyPlan: string | StudyPlan | null;
   createdAt?: string;
 }
-export type ProgressStatus = 'DISPONIBLE' | 'BLOQUEADA' | 'CURSANDO' | 'REGULARIZADA' | 'APROBADA';
+export type ProgressStatus =
+  | 'PENDIENTE'
+  | 'DISPONIBLE'
+  | 'BLOQUEADA'
+  | 'CURSANDO'
+  | 'REGULARIZADA'
+  | 'APROBADA';
 export interface SubjectProgress {
   _id: string;
   userStudyPlan: string;
@@ -170,6 +177,9 @@ export const studyPlansApi = {
   bulkIntermediate: (planId: string, data: { intermediate: boolean; ids?: string[]; year?: number; period?: number }) =>
     request<{ matched: number; modified: number }>(`/study-plans/${planId}/subjects/intermediate`, { method: 'PATCH', body: JSON.stringify(data) }),
   deleteSubject: (planId: string, subjectId: string) => request<unknown>(`/study-plans/${planId}/subjects/${subjectId}`, { method: 'DELETE' }),
+  deletePlan: (planId: string) => request<{
+    removed: { subjects: number; enrollments: number; progress: number; imports: number };
+  }>(`/study-plans/${planId}`, { method: 'DELETE' }),
   getGraph: (planId: string) => request<GraphLike>(`/study-plans/${planId}/graph`),
   getIntermediate: (planId: string) => request<IntermediateView>(`/study-plans/${planId}/intermediate`),
   getSugerencias: (planId: string) => request<SugerenciasLike>(`/study-plans/${planId}/sugerencias`),

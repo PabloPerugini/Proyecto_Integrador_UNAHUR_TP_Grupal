@@ -13,15 +13,12 @@ const {
 const { isPdfBuffer } = require("../middlewares/upload");
 
 const {
-  parseOfficialPlan,
-} = require("../services/pdfParser.service");
-
-const {
-  extractPlanWithAI,
   classifyIntermediateWithAI,
 } = require("../services/aiExtract.service");
 
 const { isConfigured } = require("../services/ai.service");
+
+const { extractPlan } = require("../services/planExtraction.strategy");
 
 // Obtener las importaciones del usuario
 const getUserPlanImports = async (req, res) => {
@@ -202,57 +199,17 @@ const previewPlanPdf = async (req, res) => {
 
     processing = true;
 
-    // 2. Ejecutar el parser tradicional
-    let parsed;
+    // 2 y 3. Extracción del plan: parser determinístico primero y, si no
+    // detectó materias, IA como fallback. La elección vive en el contexto
+    // de estrategias (planExtraction.strategy.js); el controller solo
+    // consume el resultado (parsed/aiFallback/aiProvider igual que antes).
+    const extraction = await extractPlan(req.file.buffer, {
+      originalname: req.file.originalname,
+    });
 
-    try {
-      parsed = await parseOfficialPlan(
-        req.file.buffer
-      );
-    } catch (error) {
-      const parseError = new Error(
-        "No se pudo leer el PDF. Verificá que contenga texto extraíble"
-      );
-
-      parseError.statusCode = 422;
-      throw parseError;
-    }
-
-    // 3. Intentar IA si el parser no detectó materias
-    let aiFallback = false;
-    let aiProvider = null;
-
-    if (
-      (!Array.isArray(parsed.subjects) ||
-        parsed.subjects.length === 0) &&
-      isConfigured()
-    ) {
-      try {
-        const careerHint = req.file.originalname
-          .replace(/\.pdf$/i, "")
-          .replace(/[_-]+/g, " ")
-          .slice(0, 120);
-
-        const aiResult = await extractPlanWithAI(
-          req.file.buffer,
-          {
-            careerHint,
-            expectedMin: null,
-            expectedMax: null,
-          }
-        );
-
-        parsed = aiResult;
-        aiFallback = true;
-        aiProvider = aiResult.provider || null;
-
-      } catch (error) {
-        console.error(
-          "Falló la extracción con IA:",
-          error.message
-        );
-      }
-    }
+    const parsed = extraction.parsed;
+    const aiFallback = extraction.aiFallback;
+    let aiProvider = extraction.aiProvider;
 
     // 4. Comprobar que obtuvimos materias
     if (

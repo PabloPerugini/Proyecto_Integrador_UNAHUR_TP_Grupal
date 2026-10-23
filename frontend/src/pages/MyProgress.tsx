@@ -10,7 +10,10 @@ import PdfDropzone from '../components/PdfDropzone';
 import { IconBoard, IconCheck, IconCoins } from '../components/icons';
 import { instituteColor, instituteGradientTec } from '../utils/instituteColors';
 
-const STATUS: Record<ProgressStatus, string> = {
+// La tabla solo permite elegir estados registrables; DISPONIBLE/BLOQUEADA son
+// estados derivados que calcula el plan (no se guardan).
+type SelectableStatus = Extract<ProgressStatus, 'PENDIENTE' | 'CURSANDO' | 'REGULARIZADA' | 'APROBADA'>;
+const STATUS: Record<SelectableStatus, string> = {
   PENDIENTE: 'Pendiente', CURSANDO: 'Cursando', REGULARIZADA: 'Regularizada', APROBADA: 'Aprobada',
 };
 interface Draft { status: ProgressStatus; grade: string }
@@ -268,7 +271,7 @@ export default function MyProgress() {
       <div className="card mb-4"><div className="card-header d-flex justify-content-between align-items-center gap-2 flex-wrap"><span className="d-flex align-items-center gap-2"><IconCoins size={16} /> Estado por materia</span><span className="d-flex gap-2">{selectedPlan?.intermediateTitle && <><Button size="sm" variant={tab === 'lic' ? 'primary' : 'outline-primary'} onClick={() => setTab('lic')}>Licenciatura</Button><Button size="sm" variant={tab === 'tec' ? 'primary' : 'outline-primary'} style={tab === 'tec' ? { background: instituteGradientTec(baseColor), borderColor: 'transparent' } : undefined} onClick={() => setTab('tec')}>Tecnicatura</Button></>}{enrollment && <Button size="sm" variant="outline-secondary" onClick={() => exportCsv()}>Exportar CSV</Button>}{enrollment && <Button size="sm" disabled={working || dirty.length === 0} onClick={() => void saveAll()}>{working ? 'Guardando…' : `Guardar cambios (${dirty.length})`}</Button>}</span></div>
         <div className="card-body">{tab === 'tec' && <p className="small text-muted">Vista de tecnicatura{selectedPlan?.intermediateTitle ? `: ${selectedPlan.intermediateTitle}` : ''}: lo que cargues acá cuenta para ambas titulaciones.</p>}<Table size="sm" responsive striped hover><thead><tr><th>Materia</th><th>Año</th><th>Estado</th><th>Nota</th><th>Créditos</th></tr></thead><tbody>
           {visibleSubjects.map(s => <tr key={s._id}><td><strong>{subjectName(s)}</strong><div className="text-muted small">{s.code || 'Sin código'}</div></td><td>{s.year ?? '—'}{s.period != null ? ` · ${s.period}º` : ''}</td>
-            <td><Form.Select size="sm" disabled={!enrollment || working} value={draft[s._id]?.status ?? 'PENDIENTE'} onChange={e => update(s._id, { status: e.target.value as ProgressStatus })}>{(Object.keys(STATUS) as ProgressStatus[]).map(k => <option key={k} value={k}>{STATUS[k]}</option>)}</Form.Select></td>
+            <td><Form.Select size="sm" disabled={!enrollment || working} value={draft[s._id]?.status ?? 'PENDIENTE'} onChange={e => update(s._id, { status: e.target.value as ProgressStatus })}>{(Object.keys(STATUS) as SelectableStatus[]).map(k => <option key={k} value={k}>{STATUS[k]}</option>)}</Form.Select></td>
             <td><Form.Control size="sm" type="number" min={0} max={10} style={{ width: 86 }} disabled={!enrollment || working} value={draft[s._id]?.grade ?? ''} onChange={e => update(s._id, { grade: e.target.value })} /></td><td>{s.credits ?? 0}</td></tr>)}
         </tbody></Table>
         {!visibleSubjects.length && <p className="text-muted">{tab === 'tec' && subjects.length > 0 ? 'La tecnicatura todavía no tiene materias marcadas.' : 'Este plan todavía no tiene materias.'}</p>}
