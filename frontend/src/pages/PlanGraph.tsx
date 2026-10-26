@@ -24,7 +24,7 @@ import type { GraphData, IntermediateProgress, SubjectStatus } from '../types';
 import { useCareerSelection } from '../context/CareerContext';
 import { useTheme } from '../hooks/useTheme';
 import { yearLabel } from '../utils/subjects';
-import { STATUS_BADGE, statusColor, statusLabel, resolveNodeStatus } from '../utils/status';
+import { STATUS_BADGE, STATUS_TEXT_COLOR, statusColor, statusLabel, resolveNodeStatus } from '../utils/status';
 import { instituteColor, instituteGradientTec } from '../utils/instituteColors';
 import { getDirectSuccessorCodes, HIGHLIGHT_COLOR } from '../utils/graphHighlight';
 import { getStudyPath } from '../utils/studyPaths';
@@ -33,6 +33,7 @@ import SubjectStatusIcon from '../components/SubjectStatusIcon';
 import AcademicEdge from '../components/AcademicEdge';
 import { useAcademicEdgeLayout } from '../hooks/useAcademicEdgeLayout';
 import type { AcademicLayout } from '../utils/academicEdgeLayout';
+import { orderColumnsForCrossings } from '../utils/academicOrdering';
 import '../components/AcademicMap.css';
 
 interface PlanNodeData {
@@ -108,7 +109,7 @@ function StatusBadges({ d }: { d: Pick<PlanNodeData, 'available' | 'optimal' | '
   return (
     <>
       {d.available && <span className="badge text-bg-warning" style={{ fontSize: 9 }}>disponible</span>}
-      {d.optimal && <span className="badge" style={{ fontSize: 9, background: '#d9870b' }}>óptima</span>}
+      {d.optimal && <span className="badge" style={{ fontSize: 9, background: '#d9870b', color: '#211407' }}>óptima</span>}
       {d.critical && <span className="badge text-bg-dark" style={{ fontSize: 9 }}>crítico</span>}
     </>
   );
@@ -153,7 +154,7 @@ function PlanNode({ data }: NodeProps<Node<Record<string, unknown>>>) {
       style={{
         ...(d.newlyUnlocked ? { '--plan-highlight-color': UNLOCK_COLOR } : {}),
         background: color,
-        color: pathColor ? '#211407' : '#23395d',
+        color: pathColor ? '#211407' : STATUS_TEXT_COLOR,
         outline: pathColor && d.selectedSubject ? '2px solid #23395d' : undefined,
         outlineOffset: 3,
         borderRadius: 12,
@@ -680,6 +681,14 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
     const sortedYears = [...yearGroups.entries()].sort(
       ([a], [b]) => (a ?? Number.MAX_SAFE_INTEGER) - (b ?? Number.MAX_SAFE_INTEGER),
     );
+    const yearLabels: { id: string; label: string; x: number }[] = [];
+    const columns: {
+      id: string;
+      label: string;
+      subjects: GraphData['nodes'];
+      x: number;
+      y: number;
+    }[] = [];
     sortedYears.forEach(([year, subjects], index) => {
       const c1: GraphData['nodes'] = [];
       const c2: GraphData['nodes'] = [];
@@ -694,14 +703,26 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
 
       const x = index * (yearWidth + yearGap);
       const id = `graph-heading-${year ?? 'unknown'}`;
-      addLabel(id, year == null ? 'Sin año' : `Año ${year}`, x, 0, true);
-      addGroup(`${id}-c1`, '1.er cuatrimestre', c1, x, 50);
-      addGroup(`${id}-c2`, '2.º cuatrimestre', c2, x + columnStep, 50);
+      yearLabels.push({ id, label: year == null ? 'Sin año' : `Año ${year}`, x });
+      if (c1.length > 0) columns.push({ id: `${id}-c1`, label: '1.er cuatrimestre', subjects: c1, x, y: 50 });
+      if (c2.length > 0) columns.push({ id: `${id}-c2`, label: '2.º cuatrimestre', subjects: c2, x: x + columnStep, y: 50 });
 
       // Las anuales y las materias sin período no se asignan a un cuatrimestre ficticio.
       const extraY = 114 + Math.max(c1.length, c2.length) * rowGap + 30;
-      if (annual.length > 0) addGroup(`${id}-annual`, 'Anuales', annual, x, extraY);
-      if (unassigned.length > 0) addGroup(`${id}-unassigned`, 'Sin cuatrimestre', unassigned, x + columnStep, extraY);
+      if (annual.length > 0) columns.push({ id: `${id}-annual`, label: 'Anuales', subjects: annual, x, y: extraY });
+      if (unassigned.length > 0) columns.push({ id: `${id}-unassigned`, label: 'Sin cuatrimestre', subjects: unassigned, x: x + columnStep, y: extraY });
+    });
+
+    // El orden dentro de cada columna se optimiza para reducir cruces; las
+    // columnas (año y cuatrimestre) no se mueven.
+    const orderedColumns = orderColumnsForCrossings(
+      columns.map(column => column.subjects),
+      g.edges,
+    );
+
+    yearLabels.forEach(({ id, label, x }) => addLabel(id, label, x, 0, true));
+    columns.forEach((column, index) => {
+      addGroup(column.id, column.label, orderedColumns[index], column.x, column.y);
     });
     return nodes;
   }, [displayGraph]);
@@ -994,7 +1015,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
         onClick={() => setPinnedCode((prev) => (prev === d.code ? null : d.code))}
         style={{
           background: pathColor ?? statusColor(d.status),
-          color: pathColor ? '#211407' : '#fff',
+          color: pathColor ? '#211407' : STATUS_TEXT_COLOR,
           opacity: activePath && !activePath.set.has(d.code) ? DIMMED_OPACITY : 1,
           outline: pathColor && selected ? '2px solid #23395d' : undefined,
           outlineOffset: 3,
@@ -1014,11 +1035,11 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
           <span
             className="badge"
             style={{
-              background: 'rgba(255,255,255,.22)',
-              color: '#fff',
+              background: 'rgba(35,57,93,.08)',
+              color: pathColor ? '#211407' : STATUS_TEXT_COLOR,
               fontSize: 9,
               flexShrink: 0,
-              border: '1px solid rgba(255,255,255,.4)',
+              border: '1px solid rgba(35,57,93,.22)',
             }}
           >
             {d.cuatrimestre === 1 ? '1C' : d.cuatrimestre === 2 ? '2C' : d.duration === 'A' || d.duration === 'TF' ? 'Anual' : 'Cuatrimestral'}

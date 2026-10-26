@@ -7,6 +7,7 @@ const UserStudyPlan = require("../models/userStudyPlan");
 const SubjectProgress = require("../models/subjectProgress");
 const { buildGraph } = require("./graph.service");
 const { buildSugerencias } = require("./sugerencias.service");
+const { uniqueSubjectCodes } = require("./codes.service");
 
 const STATUS_ES = {
   APROBADA: "Aprobada",
@@ -19,9 +20,9 @@ async function loadPlanData(studyPlanId, userId) {
   const items = await PlanSubject.find({ studyPlan: studyPlanId })
     .populate("subject", "name")
     .lean();
-  const codeById = new Map(
-    items.map((ps) => [String(ps._id), ps.code?.trim() || String(ps._id).slice(-8)]),
-  );
+  // Sin códigos únicos, dos 'ACA' repetidos generan dos nodos con el mismo id
+  // y rompen el consumidor del grafo (React Flow exige ids únicos).
+  const codeById = uniqueSubjectCodes(items.map((ps) => ({ _id: ps._id, code: ps.code })));
   const subjects = items.map((ps) => ({
     code: codeById.get(String(ps._id)),
     name: ps.subject?.name?.trim() || ps.code?.trim() || "Materia sin nombre",

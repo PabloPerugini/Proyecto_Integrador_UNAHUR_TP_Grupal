@@ -39,6 +39,22 @@
     {
       "file": "Instituto de Tecnología e Ingeniería/Ingeniería Metalúrgica/DI-681-2025-INGENIERO-A-METALURGICO-A-UNAHUR.pdf",
       "motivo": "Disposición CONEAU con anexo tabular del plan de Metalúrgica. Parseo actual: 46 materias, 2173 créditos; nombres alineados con el plan de referencia (49) salvo la materia 'Nuevos Entornos…' que el plan nombra 'Cultura y alfabetización digital en la universidad'. Sin fusiones detectadas. Se mantiene fuera del golden: el plan de referencia es el PDF del plan."
+    },
+    {
+      "file": "Instituto de Tecnología e Ingeniería/Licenciatura en Informática/Correlativas-Licenciatura-en-Informatica.pdf",
+      "motivo": "Correlatividades generadas por el equipo a partir de la tabla de https://informaticaunahur.github.io/licenciatura-informatica/ para importar en Gradify. No es un documento oficial de UNAHUR ni fuente del parser de planes: se excluye del golden."
+    },
+    {
+      "file": "Instituto de Tecnología e Ingeniería/Licenciatura en Desarrollo de Videojuegos y Simulaciones/Correlativas-Licenciatura-en-Desarrollo-de-Videojuegos-y-Simulaciones.pdf",
+      "motivo": "Correlatividades generadas por el equipo a partir de la tabla de https://informaticaunahur.github.io/licenciatura-videojuegos-simulaciones/ para importar en Gradify. No es un documento oficial de UNAHUR ni fuente del parser de planes: se excluye del golden."
+    },
+    {
+      "file": "Instituto de Tecnología e Ingeniería/Licenciatura en Ciberseguridad/Correlativas-Licenciatura-en-Ciberseguridad.pdf",
+      "motivo": "Correlatividades generadas por el equipo a partir de la tabla de https://informaticaunahur.github.io/licenciatura-ciberseguridad/ para importar en Gradify. No es un documento oficial de UNAHUR ni fuente del parser de planes: se excluye del golden."
+    },
+    {
+      "file": "Instituto de Tecnología e Ingeniería/_obsoletos/Correlativas-Tecnicatura-en-Inteligencia-Artificial.pdf",
+      "motivo": "Correlatividades generadas por el equipo a partir de la tabla de https://informaticaunahur.github.io/tecnicatura-inteligencia-artificial/ para importar en Gradify. No es un documento oficial de UNAHUR ni fuente del parser de planes: el plan de referencia sigue siendo _obsoletos/planes-carreras-informatica-para-web-ia.pdf."
     }
   ]
 }

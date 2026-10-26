@@ -13,6 +13,8 @@
     "test:status": "node --experimental-strip-types --test tests/progressStatus.test.mjs",
     "test:graph": "node --experimental-strip-types --test tests/graphHighlight.test.mjs",
     "test:layout": "node --experimental-strip-types --test tests/academicEdgeLayout.test.mjs",
+    "test:order": "node --experimental-strip-types --test tests/academicOrdering.test.mjs",
+    "test:contrast": "node --experimental-strip-types --test tests/statusContrast.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

@@ -14,9 +14,9 @@ const createUser = async (req, res) => {
       user: newUser,
     });
   } catch (error) {
-    if (error.code === 11000) {
+    if (error.statusCode === 409 || error.code === 11000) {
       return res.status(409).json({
-        message: "Email o NickName ya registrado",
+        message: error.message || "Email o NickName ya registrado",
       });
     }
     return res.status(400).json({
@@ -123,10 +123,10 @@ const updateUser = async (req, res) => {
       user: updatedUser,
     });
   } catch (error) {
-    // Colisión concurrente de email/nickName: 409 en vez del crudo de Mongo.
-    if (error.code === 11000) {
+    // Colisión concurrente de email/nickName: 409 (servicio o Mongo).
+    if (error.statusCode === 409 || error.code === 11000) {
       return res.status(409).json({
-        message: "Email o NickName ya registrado",
+        message: error.message || "Email o NickName ya registrado",
       });
     }
     return res.status(400).json({

@@ -15,18 +15,25 @@ const getAllUsers = async () => {
   return User.find();
 };
 
+// Colisión de email/nickName: unicity. El controlador la mapea a 409.
+const conflictError = (message) => {
+  const error = new Error(message);
+  error.statusCode = 409;
+  return error;
+};
+
 // Crear usuario
 const createUser = async (userData) => {
   const emailExists = await findUserByEmail(userData.email);
 
   if (emailExists) {
-    throw new Error("El email ya está registrado");
+    throw conflictError("El email ya está registrado");
   }
 
   const nickNameExists = await findUserByNickName(userData.nickName);
 
   if (nickNameExists) {
-    throw new Error("El NickName ya está registrado");
+    throw conflictError("El NickName ya está registrado");
   }
 
   const newUser = await User.create({
@@ -56,7 +63,7 @@ const updateUser = async (nickName, userData) => {
     const emailExists = await findUserByEmail(userData.email);
 
     if (emailExists) {
-      throw new Error("El email ya está registrado");
+      throw conflictError("El email ya está registrado");
     }
   }
 
@@ -65,7 +72,7 @@ const updateUser = async (nickName, userData) => {
     const nickNameExists = await findUserByNickName(userData.nickName);
 
     if (nickNameExists) {
-      throw new Error("El NickName ya está registrado");
+      throw conflictError("El NickName ya está registrado");
     }
   }
 

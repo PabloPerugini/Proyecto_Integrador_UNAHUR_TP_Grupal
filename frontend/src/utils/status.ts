@@ -15,6 +15,10 @@ export const STATUS_COLOR: Record<SubjectStatus, string> = {
   Bloqueada: '#edf0f4',
 };
 
+// Los fondos de estado son claros: el texto debe ser oscuro para mantener
+// contraste suficiente en las tarjetas del grafo y del tablero.
+export const STATUS_TEXT_COLOR = '#23395d';
+
 export const STATUS_LABEL: Record<SubjectStatus, string> = {
   Aprobada: 'Aprobada',
   Regular: 'Regular',

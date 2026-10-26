@@ -33,6 +33,7 @@ export default function PlanAdmin() {
   const [intermediateTitle, setIntermediateTitle] = useState('');
   const [creditsIntermediate, setCreditsIntermediate] = useState('');
   const [corrResult, setCorrResult] = useState<CorrParseResult | null>(null);
+  const [corrSaved, setCorrSaved] = useState<{ saved: number; dropped: number } | null>(null);
   const [bulkYear, setBulkYear] = useState('');
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
@@ -50,6 +51,17 @@ export default function PlanAdmin() {
     ),
   );
   const intermediateCount = subjects.filter(s => s.intermediate).length;
+  const corrSummary = subjects.reduce(
+    (acc, subject) => {
+      const count = (subject.prerequisites ?? []).length;
+      if (count) {
+        acc.subjects += 1;
+        acc.requirements += count;
+      }
+      return acc;
+    },
+    { subjects: 0, requirements: 0 },
+  );
   const bulkYears = Array.from(new Set(subjects.map(s => s.year).filter((y): y is number => typeof y === 'number'))).sort((a, b) => a - b);
 
   const loadPlans = async () => {
@@ -68,7 +80,7 @@ export default function PlanAdmin() {
   useEffect(() => {
     if (!selected) { setSubjects([]); return; }
     let active = true;
-    setLoading(true); setError(null);
+    setLoading(true); setError(null); setCorrResult(null); setCorrSaved(null);
     studyPlansApi.getSubjects(selected).then(list => {
       if (!active) return;
       setSubjects(orderedSubjects(list));
@@ -223,7 +235,7 @@ export default function PlanAdmin() {
   };
   const parseCorrFile = async (file: File) => {
     if (!plan || working) return;
-    setWorking(true); clear();
+    setWorking(true); clear(); setCorrSaved(null);
     try {
       const r = await studyPlansApi.parseCorrelativas(plan._id, file);
       setCorrResult(r);
@@ -238,7 +250,8 @@ export default function PlanAdmin() {
     setWorking(true);
     try {
       const r = await studyPlansApi.saveCorrelativas(plan._id, updates);
-      await reloadSubjects(plan._id); setCorrResult(null);
+      await reloadSubjects(plan._id);
+      setCorrSaved({ saved: r.saved, dropped: r.dropped.length });
       flash('success', `Correlativas guardadas en ${r.saved} materias.${r.dropped.length ? ` Descartadas: ${r.dropped.length}.` : ''}`);
     } catch (e) { flashFromError(e, 'No se pudieron guardar las correlativas (¿ciclo?)'); }
     finally { setWorking(false); }
@@ -248,7 +261,7 @@ export default function PlanAdmin() {
     setWorking(true);
     try {
       await studyPlansApi.saveCorrelativas(plan._id, subjects.filter(s => s.code).map(s => ({ code: s.code as string, requires: [] })));
-      await reloadSubjects(plan._id); setCorrResult(null);
+      await reloadSubjects(plan._id); setCorrResult(null); setCorrSaved(null);
       flash('success', 'Correlativas eliminadas del plan.');
     } catch (e) { flashFromError(e, 'No se pudieron eliminar las correlativas'); }
     finally { setWorking(false); }
@@ -280,12 +293,15 @@ export default function PlanAdmin() {
         </Button>
       </Card.Body></Card>
       <Card className="mb-4"><Card.Header><strong>Correlatividades desde PDF</strong></Card.Header><Card.Body>
-        <p className="small text-muted mb-2">Subí el PDF de correlatividades: se reconoce cada materia contra el plan (sin guardar) y después aplicás. Solo lo reconocido con requisitos se guarda; ante un ciclo no se guarda nada.</p>
+        <p className="small text-muted mb-2">Subí el PDF de correlatividades: se reconoce cada materia contra el plan (sin guardar) y después la guardás con <strong>«Guardar correlativas del PDF»</strong>. Ese botón es el que aplica el PDF; <strong>«Guardar cambios manuales»</strong> (abajo de la tabla) solo guarda ediciones hechas a mano. Solo lo reconocido con requisitos se guarda; ante un ciclo no se guarda nada.</p>
         <div className="d-flex flex-wrap gap-2 align-items-center">
-          <Form.Control type="file" accept="application/pdf" style={{ maxWidth: 320 }} disabled={working} onChange={e => { const f = (e.target as HTMLInputElement).files?.[0]; if (f) void parseCorrFile(f); }} />
-          <Button size="sm" disabled={working || !corrResult} onClick={() => void applyCorr()}>Aplicar reconocidas</Button>
+          <Form.Control type="file" accept="application/pdf" style={{ maxWidth: 320 }} disabled={working} onChange={e => { const input = e.currentTarget as HTMLInputElement; const f = input.files?.[0]; if (f) void parseCorrFile(f); input.value = ''; }} />
+          <Button size="sm" disabled={working || !corrResult || Boolean(corrSaved)} onClick={() => void applyCorr()}>Guardar correlativas del PDF</Button>
           <Button size="sm" variant="outline-danger" disabled={working || !subjects.length} onClick={() => void clearCorr()}>Quitar todas</Button>
         </div>
+        {corrSaved && <div className="alert alert-success py-2 mt-3 mb-0" role="status">
+          Se guardaron correlativas en <strong>{corrSaved.saved}</strong> materia(s){corrSaved.dropped ? `; se descartaron ${corrSaved.dropped} referencia(s)` : ''}. El plan ya las tiene aplicadas.
+        </div>}
         {corrResult && <div className="mt-3">
           <p className="mb-1"><strong>{corrResult.matchedCount}/{corrResult.total}</strong> reconocidas · origen {corrResult.sourceKind ?? '—'}</p>
           <div className="table-responsive" style={{ maxHeight: 260, overflowY: 'auto' }}><Table size="sm" striped><thead><tr><th>Materia PDF</th><th>Plan</th><th>Requiere</th></tr></thead><tbody>
@@ -294,7 +310,7 @@ export default function PlanAdmin() {
           {!!corrResult.unmatched.length && <p className="small text-muted mt-2">Sin reconocer ({corrResult.unmatched.length}): {corrResult.unmatched.slice(0, 8).join(' · ')}{corrResult.unmatched.length > 8 ? '…' : ''}</p>}
         </div>}
       </Card.Body></Card>
-      <Card className="mb-4"><Card.Header className="d-flex justify-content-between flex-wrap gap-2"><strong>Materias y correlatividades ({subjects.length})</strong><Button size="sm" variant="outline-secondary" onClick={() => navigate(`/grafo/${plan._id}`)}>Ver grafo</Button></Card.Header><Card.Body>
+      <Card className="mb-4"><Card.Header className="d-flex justify-content-between flex-wrap gap-2"><div className="d-flex align-items-center gap-2 flex-wrap"><strong>Materias y correlatividades ({subjects.length})</strong><span className="small text-muted">{corrSummary.subjects} con correlativas · {corrSummary.requirements} requisitos</span></div><Button size="sm" variant="outline-secondary" onClick={() => navigate(`/grafo/${plan._id}`)}>Ver grafo</Button></Card.Header><Card.Body>
         <p className="small text-muted">Las materias importadas se editan aquí. Los nombres pertenecen al catálogo general de materias; en esta pantalla se editan sus datos propios del plan.</p>
         {intermediateTitle.trim() && intermediateCount === 0 && subjects.length > 0 && (
           <div className="alert alert-warning py-2">
@@ -341,9 +357,9 @@ export default function PlanAdmin() {
         {!subjects.length && <p className="text-muted mb-0">El plan todavía no tiene materias. Cargalas desde la importación de PDF.</p>}
         {!!subjects.length && <div className="d-flex flex-wrap align-items-center justify-content-end gap-2 mt-3 pt-3 border-top" style={{ position: 'sticky', bottom: 0, background: 'var(--bs-body-bg)', zIndex: 2 }}>
           {dirtySubjects.length > 0 && <span className="small text-muted">{dirtySubjects.length} materia(s) modificada(s)</span>}
-          <Button disabled={working || dirtySubjects.length === 0} onClick={() => void saveSubjects()}>
+          <Button disabled={working || dirtySubjects.length === 0} title="Guarda solo los cambios manuales de la tabla. Para aplicar el PDF usá «Guardar correlativas del PDF»." onClick={() => void saveSubjects()}>
             {working && <Spinner size="sm" className="me-1" />}
-            Guardar cambios
+            Guardar cambios manuales
           </Button>
         </div>}
       </Card.Body></Card>
