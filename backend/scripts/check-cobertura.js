@@ -15,6 +15,8 @@
  */
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
+
 
 const { requireCorpus, resolvePlanesDir } = require("./lib/requireCorpus");
 
@@ -37,6 +39,10 @@ function walkPdfs(dir) {
     else if (e.isFile() && /\.pdf$/i.test(e.name)) out.push(norm(path.relative(PLANES_DIR, abs)));
   }
   return out;
+}
+
+function hashPdf(abs) {
+  return crypto.createHash("sha256").update(fs.readFileSync(abs)).digest("hex");
 }
 
 function main() {
@@ -91,7 +97,37 @@ function main() {
     }
   }
 
-  // 4) Golden huérfano (sin entrada en la referencia)
+  // 4b) Duplicados binarios: dos PDFs con el mismo hash son un mismo archivo
+  // subido dos veces. Nunca deben convivir en la referencia/exclusiones.
+  const hashes = new Map(); // hash -> ruta relativa
+  for (const rel of allPdfs) {
+    const h = hashPdf(path.join(PLANES_DIR, ...rel.split("/")));
+    if (hashes.has(h)) {
+      problemas.push(`PDF duplicado (mismo contenido): ${hashes.get(h)} y ${rel}`);
+    } else {
+      hashes.set(h, rel);
+    }
+  }
+
+  // 4c) Resumen por instituto: planes vs modelos de correlativas, y si el
+  // instituto tiene al menos un par plan+correlativa para probar el flujo.
+  const institutos = {};
+  for (const f of [...refList, ...excList]) {
+    const inst = f.split("/")[0];
+    institutos[inst] = institutos[inst] || { plan: 0, corr: 0, exc: 0 };
+    if (excFiles.has(f)) institutos[inst].exc += 1;
+    else if (ref.planes.find((e) => e.file === f && e.tipo === "correlativas")) institutos[inst].corr += 1;
+    else institutos[inst].plan += 1;
+  }
+  for (const [inst, n] of Object.entries(institutos)) {
+    console.log(`  cobertura por instituto: ${inst} — planes=${n.plan} correlativas=${n.corr} excluidos=${n.exc}`);
+    const pares = ref.planes.filter((e) => e.tipo !== "correlativas" && e.file.startsWith(`${inst}/`) && e.pairCorrelativas).length;
+    if (pares === 0) {
+      problemas.push(`sin pares plan+correlativa en ${inst}: agregá pairCorrelativas a la referencia `);
+    }
+  }
+
+  // 5) Golden huérfano (sin entrada en la referencia)
   const refSlugs = new Set(refList.map(slug));
   for (const f of fs.readdirSync(GOLDEN_DIR).filter((f) => f.endsWith(".json"))) {
     if (!refSlugs.has(f.replace(/\.json$/i, ""))) {

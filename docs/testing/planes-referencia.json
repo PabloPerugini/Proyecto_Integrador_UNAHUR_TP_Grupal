@@ -27,19 +27,6 @@
       "notas": ""
     },
     {
-      "file": "Instituto de Biotecnología/Tecnicatura Universitaria en Producción Agroecológica Periurbana/Plan-de-estudios-Tecnicatura-Universitaria-en-Produccion-Agroecologica-Periurbana.pdf",
-      "career": "Tecnicatura Universitaria en Producción Agroecológica Periurbana",
-      "tipo": "tecnicatura",
-      "expectedSubjects": [
-        15,
-        35
-      ],
-      "expectedCredits": null,
-      "hasIntermediate": false,
-      "pairCorrelativas": null,
-      "notas": "Dialecto Asignatura|Campo|Carga|Correlatividad sin columna D (BUG-002): el parser devuelve 0, el fallback IA rescata 23 materias (verificado con groq y gemini)."
-    },
-    {
       "file": "Instituto de Biotecnología/Tecnicatura Universitaria en Producción Agroecológica Periurbana/Plan-de-estudios-TUPAP-2025.pdf",
       "career": "Tecnicatura Universitaria en Producción Agroecológica Periurbana",
       "tipo": "tecnicatura",

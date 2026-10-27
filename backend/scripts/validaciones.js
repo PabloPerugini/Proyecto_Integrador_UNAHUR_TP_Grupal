@@ -4,7 +4,7 @@
  * Uso: node scripts/validaciones.js <cobertura|masiva|salud|golden|todo|--help> [-- args...]
  *   npm run validar          -> todo (cobertura + golden --check + salud + masiva)
  *   npm run test:cobertura   -> cobertura (cada PDF de files/ clasificado: referencia o exclusión con motivo)
- *   npm run test:planes      -> masiva (carga E2E por API real, 43 PDFs)
+ *   npm run test:planes      -> masiva (carga E2E por API real, 56 PDFs)
  *   npm run test:salud       -> salud (control de correlativas + negativo)
  *   npm run snapshot:planes  -> golden (snapshot determinístico, -- --check)
  *
