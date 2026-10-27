@@ -15,6 +15,15 @@ El registro histórico de requisitos/alcance por versión se mantiene en [BRD.md
 - **Fix de importación:** `POST /plan-imports/confirm` deduplica por slug las filas repetidas del PDF (p. ej. ACA por año o una fila cortada) en lugar de rechazar el plan completo; la respuesta informa `duplicatesDropped`. Mismo criterio que usaba `seed-planes.js`, que ahora ya no necesita su deduplicación previa para poder guardar.
 - **Verificación:** `test:cobertura` OK, `snapshot:planes -- --check` sin diferencias, `test:institutos` con preview por instituto y E2E real de `preview + confirm + delete` en los cuatro institutos.
 
+### Estructura, estilos y calidad
+- **CSS centralizado:** todo el estilo global pasó a `frontend/src/styles/` (`index.css` + 8 partials por responsabilidad). `main.tsx` importa Bootstrap, `@xyflow/react` y recién después `./styles/index.css`; se eliminó `src/index.css` y los CSS sueltos de componentes. Paridad del CSS compilado verificada por reglas.
+- **Código muerto:** se eliminaron `AcademicMapCanvas.tsx`, `academicMapLayout.ts`, `academicMapRouting.ts`, `ColorDot.tsx` y su CSS, sin consumidores.
+- **Capas backend:** `progressService.js` encapsula el acceso a `UserProgress`/`Subject` y `userService.bumpTokenVersion` el bump de logout; los controladores ya no importan modelos Mongoose.
+- **Parser de PDFs:** `pdfParser.service.js` (2.657 líneas) quedó como fachada de `services/pdf/` (`raw`, `shared`, `officialPlan`, `academicHistory`, `correlativas`), con la misma API pública y golden sin diferencias.
+- **Lint backend:** ESLint 10 con configuración plana (`backend/eslint.config.js`) y scripts `lint`/`lint:fix`; 0 errores.
+- **Docs:** `docs/ARCHITECTURE.md` (capas, flujo de importación, parser, modelo de datos, pruebas) y `docs/CSS.md` (partials, tokens y convenciones).
+- **Verificación:** backend 45 unitarios + 24 Jest + lint + cobertura + golden; frontend lint, build, `test:order` y `test:contrast`.
+
 ## [1.25] - 2026-10-22
 
 ### Admin: eliminar plan de estudio desde "Planes de estudio guardados"

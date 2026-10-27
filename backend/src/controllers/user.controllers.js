@@ -1,5 +1,4 @@
 const userService = require("../services/userService");
-const User = require("../models/user");
 const { signToken, getUserId } = require("../middlewares/auth");
 const { userUpdateSchema } = require("../schemas/user.schemas");
 
@@ -212,7 +211,7 @@ const logoutUser = async (req, res) => {
     // Invalida el JWT vigente (bump de versión) además de borrar la cookie.
     const userId = getUserId(req);
     if (userId) {
-      await User.updateOne({ _id: userId }, { $inc: { tokenVersion: 1 } });
+      await userService.bumpTokenVersion(userId);
     }
     const { clearAuthCookie } = require("../middlewares/auth");
     if (typeof res.clearCookie === "function") clearAuthCookie(res);

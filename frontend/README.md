@@ -33,11 +33,10 @@ src/
 ├── context/       # Contextos (ThemeContext, CareerContext, ...)
 ├── hooks/         # Custom hooks
 ├── pages/         # Páginas / rutas de la aplicación
+├── styles/        # CSS global centralizado (index.css + partials)
 ├── types/         # Tipos TypeScript
 ├── App.tsx        # Rutas y proveedores
-├── main.tsx       # Punto de entrada (monta Bootstrap + App)
-├── App.css
-└── index.css
+└── main.tsx       # Punto de entrada (Bootstrap + estilos + App)
 ```
 
 ## Tecnologías
@@ -52,3 +51,4 @@ src/
 - Cada entidad del backend tiene su módulo en `src/api/` (ej: `careers.ts`) y se unifica en `src/api/index.ts` como `apiService`.
 - Las páginas viven en `src/pages/`, los componentes reutilizables en `src/components/`.
 - Estado global con Context (ThemeContext para tema, CareerContext para la carrera activa, etc.).
+- El CSS global vive en `src/styles/`; ver [`docs/CSS.md`](../docs/CSS.md) para el orden de partials y los tokens.

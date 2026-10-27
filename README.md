@@ -17,10 +17,13 @@ Proyecto integrador de la materia **Programación - Informática (UNAHUR)**. El 
 ```
 .
 ├── backend/    # API REST (Node.js + Express + MongoDB + Redis)
-└── frontend/   # Aplicación web (React + Vite + TypeScript)
+├── frontend/   # Aplicación web (React + Vite + TypeScript)
+└── docs/       # Arquitectura, estilos, testing y referencia del corpus
 ```
 
 Cada carpeta tiene su propio `README.md` con instrucciones de instalación y ejecución.
+La arquitectura y las reglas de capas están en [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md);
+el CSS y los tokens, en [`docs/CSS.md`](docs/CSS.md).
 
 ## Tecnologías
 
@@ -55,7 +58,8 @@ docker compose up --build
 
 ```bash
 cd backend
-npm test                  # unitarios (32): matcher, anti-ciclos, RN04, AR-3, registro/roles, seguridad, intermedio
+npm test                  # unitarios (45): matcher, anti-ciclos, RN04, AR-3, registro/roles, seguridad, intermedio, códigos únicos y confirm
+npm run lint              # ESLint del backend (0 errores)
 npm run validar           # todo: cobertura + golden --check + salud + masiva (necesita API + corpus)
 npm run test:cobertura    # cada PDF de files/ está en la referencia o excluido con motivo (sin API)
 npm run test:planes       # carga E2E de los 56 PDFs del corpus por la API real

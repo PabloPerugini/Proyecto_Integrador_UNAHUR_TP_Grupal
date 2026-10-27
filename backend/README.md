@@ -18,6 +18,9 @@ docker compose up --build
 
 # Opción 2: solo este servicio (necesitás Mongo y Redis corriendo)
 npm run dev
+
+# Lint
+npm run lint
 ```
 
 Una vez iniciado:
@@ -35,7 +38,7 @@ src/
 ├── controllers/       # Lógica de los endpoints (*.controllers.js)
 ├── models/            # Modelos Mongoose
 ├── middlewares/       # Validaciones y helpers por ruta
-├── services/          # Lógica transversal (ej: cache.service)
+├── services/          # Lógica transversal; pdf/ separa los parsers por documento
 └── config/            # Conexiones (mongo, redisClient)
 ```
 

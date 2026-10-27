@@ -81,7 +81,7 @@ async function runPlan(entry) {
   }
 
   // 1. preview (mismo camino que la UI: parseo + validación, sin guardar).
-  let parsed = null;
+  let parsed;
   try {
     const { status, body } = await preview(abs, 300000);
     r.httpParse = status;
@@ -141,7 +141,7 @@ async function runCorrelativas(entry) {
     r.mensaje = "archivo no encontrado en PLANES_DIR";
     return r;
   }
-  let parsed = null;
+  let parsed;
   try {
     const { status, body } = await preview(abs, 300000);
     r.httpParse = status;

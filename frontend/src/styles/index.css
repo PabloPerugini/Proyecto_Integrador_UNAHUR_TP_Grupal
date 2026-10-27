@@ -15,7 +15,6 @@
    6. pages           dropzone, select buscable, grafo
    7. responsive      media queries generales
    8. splash          pantalla de inicio (antes en su componente)
-   9. academic-map    tablero académico (antes en lazy chunk)
    ───────────────────────────────────────────────────────────── */
 @import "./tokens.css";
 @import "./base.css";
@@ -25,4 +24,3 @@
 @import "./pages.css";
 @import "./responsive.css";
 @import "./splash.css";
-@import "./academic-map.css";

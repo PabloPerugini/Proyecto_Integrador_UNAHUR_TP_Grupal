@@ -103,6 +103,12 @@ const deleteUser = async (nickName) => {
   return User.findOneAndDelete({ nickName });
 };
 
+// Invalidar el JWT vigente de un usuario (logout): sube tokenVersion.
+const bumpTokenVersion = async (userId) => {
+  if (!userId) return null;
+  return User.updateOne({ _id: userId }, { $inc: { tokenVersion: 1 } });
+};
+
 module.exports = {
   findUserByEmail,
   findUserByNickName,
@@ -110,4 +116,5 @@ module.exports = {
   createUser,
   updateUser,
   deleteUser,
+  bumpTokenVersion,
 };
