@@ -1,4 +1,3 @@
-import './SplashScreen.css'
 import GradifyLogo from './GradifyLogo'
 import { IconChart, IconGraph, IconUpload } from './icons'
 

@@ -22,7 +22,6 @@ import {
   type AcademicMapSubject,
 } from '../utils/academicMapLayout';
 import { routeAcademicMapEdges } from '../utils/academicMapRouting';
-import './AcademicMap.css';
 
 interface AcademicMapCanvasProps {
   subjects: GraphData['nodes'];

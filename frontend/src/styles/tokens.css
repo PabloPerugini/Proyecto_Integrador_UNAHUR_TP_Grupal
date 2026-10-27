@@ -1,0 +1,62 @@
+/* ─────────────────────────────────────────────────────────────
+   Tokens de diseño de Gradify.
+   Paleta, sombras y radios que consumen todos los partials.
+   El tema oscuro solo redefine los mismos nombres en
+   [data-bs-theme="dark"], así los componentes no cambian.
+   ───────────────────────────────────────────────────────────── */
+
+:root {
+  font-family: "Inter", "Segoe UI", system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  color-scheme: light dark;
+
+  --gradify-font: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --gradify-brand: #238a42;
+  --gradify-brand-2: #0a6b4e;
+  --gradify-brand-rgb: 35, 138, 66;
+  --gradify-accent: #ffb020;
+
+  --gradify-app-bg: #f3f4f9;
+  --gradify-surface: #ffffff;
+  --gradify-surface-2: #f6f7fb;
+  --gradify-surface-3: #eef0f7;
+  --gradify-border: #e6e8f0;
+  --gradify-text: #1b1f2a;
+  --gradify-text-muted: #6b7280;
+  --gradify-sidebar-bg: rgba(255, 255, 255, 0.82);
+  --gradify-glass: rgba(255, 255, 255, 0.72);
+
+  /* Estados semánticos (chips y avisos). El RGB permite opacidades. */
+  --gradify-success-rgb: 25, 135, 84;
+  --gradify-success-text: #157347;
+  --gradify-warn-rgb: 255, 193, 7;
+  --gradify-warn-text: #b46a00;
+
+  --gradify-shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.04), 0 1px 3px rgba(16, 24, 40, 0.06);
+  --gradify-shadow: 0 4px 14px rgba(16, 24, 40, 0.08);
+  --gradify-shadow-lg: 0 14px 34px rgba(16, 24, 40, 0.14);
+
+  --gradify-radius: 16px;
+  --gradify-radius-sm: 12px;
+  --gradify-radius-xs: 9px;
+}
+
+[data-bs-theme="dark"] {
+  --gradify-app-bg: #0d1016;
+  --gradify-surface: #151922;
+  --gradify-surface-2: #1b202b;
+  --gradify-surface-3: #212736;
+  --gradify-border: rgba(255, 255, 255, 0.09);
+  --gradify-text: #e7eaf0;
+  --gradify-text-muted: #98a1b3;
+  --gradify-sidebar-bg: rgba(21, 25, 34, 0.9);
+  --gradify-glass: rgba(21, 25, 34, 0.7);
+
+  /* En oscuro los textos de estado suben de luminosidad. */
+  --gradify-success-text: #6ee7b7;
+  --gradify-warn-text: #fcd34d;
+
+  --gradify-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --gradify-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+  --gradify-shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.55);
+}

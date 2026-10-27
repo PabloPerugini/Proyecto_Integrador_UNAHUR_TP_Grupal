@@ -15,7 +15,6 @@ import {
   type NodeProps,
   type CoordinateExtent
 } from '@xyflow/react';
-import '@xyflow/react/dist/style.css';
 import { Alert, Badge, Button, Card, Form } from 'react-bootstrap';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getPlanGraph } from '../api/planGraphAdapter';
@@ -34,7 +33,6 @@ import AcademicEdge from '../components/AcademicEdge';
 import { useAcademicEdgeLayout } from '../hooks/useAcademicEdgeLayout';
 import type { AcademicLayout } from '../utils/academicEdgeLayout';
 import { orderColumnsForCrossings } from '../utils/academicOrdering';
-import '../components/AcademicMap.css';
 
 interface PlanNodeData {
   onAdvance?: (code: string, backwards?: boolean) => void;

@@ -1,0 +1,28 @@
+/* ─────────────────────────────────────────────────────────────
+   Gradify — punto único de entrada de estilos.
+
+   main.tsx importa este archivo después de Bootstrap y de
+   @xyflow/react: el orden garantiza que las reglas propias ganen
+   en igual especificidad. No agregar estilos sueltos acá: cada
+   partial tiene su responsabilidad.
+
+   Orden de carga (replica el orden histórico de src/index.css):
+   1. tokens          variables de diseño (claro/oscuro)
+   2. base            normalización y fondo
+   3. bootstrap       ajustes sobre Bootstrap
+   4. layout          shell, sidebar, auth
+   5. components      tarjetas, tabs, stats, theme toggle
+   6. pages           dropzone, select buscable, grafo
+   7. responsive      media queries generales
+   8. splash          pantalla de inicio (antes en su componente)
+   9. academic-map    tablero académico (antes en lazy chunk)
+   ───────────────────────────────────────────────────────────── */
+@import "./tokens.css";
+@import "./base.css";
+@import "./bootstrap-overrides.css";
+@import "./layout.css";
+@import "./components.css";
+@import "./pages.css";
+@import "./responsive.css";
+@import "./splash.css";
+@import "./academic-map.css";

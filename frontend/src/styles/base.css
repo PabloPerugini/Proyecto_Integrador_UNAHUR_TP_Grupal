@@ -1,0 +1,48 @@
+/* ─────────────────────────────────────────────────────────────
+   Base: normalización liviana, tipografía y fondo de la app.
+   Va después de Bootstrap y antes de los componentes.
+   ───────────────────────────────────────────────────────────── */
+
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100vh;
+}
+
+body {
+  margin: 0;
+  font-family: var(--gradify-font);
+  background-color: var(--gradify-app-bg);
+  color: var(--gradify-text);
+  overflow-x: hidden;
+  background-image: radial-gradient(ellipse 80% 60% at 0% -10%, rgba(var(--gradify-brand-rgb), 0.05), transparent 60%);
+}
+
+a {
+  color: var(--gradify-brand);
+}
+
+::selection {
+  background: rgba(var(--gradify-brand-rgb), 0.22);
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--gradify-border);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--gradify-text-muted);
+  background-clip: content-box;
+}
+
