@@ -150,7 +150,7 @@ src/
 | `npm run snapshot:planes -- --check` | El parser no cambió su salida (golden, cero diff).          |
 | `npm run test:institutos`            | Un plan y su correlativa por instituto, por HTTP real.      |
 | `npm run test:salud`                 | Extracción de correlativas de Salud + controles negativos.  |
-| `npm run test:planes`                | Carga E2E de los 56 PDFs contra la API real.                |
+| `npm run test:planes`                | Carga E2E de los 43 PDFs de referencia contra la API real.  |
 | `npm run lint` / `npm run build` (frontend) | ESLint y build de producción.                        |
 | `npm run test:order` / `npm run test:contrast` (frontend) | Orden y contraste del CSS.        |
 

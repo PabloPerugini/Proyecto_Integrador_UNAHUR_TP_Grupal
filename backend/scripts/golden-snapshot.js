@@ -4,8 +4,9 @@
  * Uso: npm run snapshot:planes         -> (re)genera docs/testing/golden/*.json
  *        npm run snapshot:planes -- --check -> compara parseo actual vs golden
  *
- * Parsea los 29 PDFs DIRECTO con pdfParser.service (sin DB, sin IA, sin
- * cuota): planes con parseOfficialPlan, correlativas con parseCorrelativas.
+ * Parsea los 43 PDFs de la referencia (29 planes y 14 correlativas) DIRECTO
+ * con pdfParser.service (sin DB, sin IA, sin cuota): planes con
+ * parseOfficialPlan, correlativas con parseCorrelativas.
  * Cada fix del parser se aprueba solo con diff=0 en los archivos que ya
  * estaban bien + mejora en su objetivo.
  */

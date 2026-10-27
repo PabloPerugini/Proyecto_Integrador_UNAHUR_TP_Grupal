@@ -62,7 +62,7 @@ npm test                  # unitarios (45): matcher, anti-ciclos, RN04, AR-3, re
 npm run lint              # ESLint del backend (0 errores)
 npm run validar           # todo: cobertura + golden --check + salud + masiva (necesita API + corpus)
 npm run test:cobertura    # cada PDF de files/ está en la referencia o excluido con motivo (sin API)
-npm run test:planes       # carga E2E de los 56 PDFs del corpus por la API real
+npm run test:planes       # carga E2E de los 43 PDFs de la referencia por la API real
 npm run test:institutos   # un plan + su correlativa por instituto (feliz y negativo)
 npm run test:salud        # control de correlativas de Salud + control negativo
 npm run snapshot:planes -- --check   # gate anti-regresiones del parser (diff = 0)

@@ -6,8 +6,9 @@
  * Recorre docs/testing/planes-referencia.json de forma SECUENCIAL contra la
  * API por el mismo camino que la UI nueva: POST /plan-imports/preview con el
  * PDF (parseo + validación + caché). NO persiste StudyPlans: el guardado
- * (confirm) ya se ejercita en el smoke manual y borrar 29 planes con sus
- * materias por API es costo sin valor para medir el parser.
+ * (confirm) ya se ejercita en el smoke manual; persistir y borrar los planes
+ * de la referencia con sus materias por API es costo sin valor para medir el
+ * parser.
  *
  * Criterios por caso de plan: OK (en rango de referencia), OK-IA (rescate
  * por IA), WARN (observaciones), FAIL (fuera de rango o error), SKIP
