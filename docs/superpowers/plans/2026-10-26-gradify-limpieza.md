@@ -62,4 +62,4 @@
 - [x] ESLint backend + `npm run lint`; `docs/ARCHITECTURE.md` y `docs/CSS.md`.
 
 ### Task 9: Cierre
-- [ ] Todos los gates verdes; reporte final; PR.
+- [x] Todos los gates verdes; reporte final; integración diferida (rama local).
