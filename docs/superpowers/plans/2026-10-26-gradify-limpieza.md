@@ -17,7 +17,7 @@
 - Duplicados de PDF con hash igual no pueden quedar en la referencia.
 - `verificar-institutos` no persiste datos: solo preview, sin confirm.
 - CSS: el orden de carga debe mantener el mismo resultado visual.
-- Parser dividido en módulos debe exponer exactamente `parseOfficialPlan` y `parseCorrelativas`.
+- Parser dividido en módulos debe exponer las cuatro funciones públicas (`parseOfficialPlan`, `parseAcademicHistory`, `parseCorrelativas`, `extractLines`).
 
 ---
 
@@ -53,7 +53,7 @@
 - [x] `frontend/src/styles/` con partials y `index.css` como único import en `main.tsx`.
 - [x] Mover `SplashScreen.css` y `AcademicMap.css` a `styles/`.
 - [x] Comentarios por sección; tokens para colores reutilizables.
-- [x] `lint`, `build`, y comparación visual light/dark contra baseline.
+- [x] `lint`, `build`, y paridad de reglas del CSS compilado; tests de orden y contraste.
 
 ### Task 8: Estructura y buenas prácticas
 - [x] Borrar código muerto confirmado (canvas del mapa, ColorDot).
