@@ -76,6 +76,27 @@ function normalizeDuration(value) {
   return durations[duration] || "CUATRIMESTRAL";
 }
 
+// El slug identifica la materia genérica dentro del plan: si el PDF repite
+// una fila (p. ej. ACA por año o una fila cortada), se conserva la primera.
+// Antes el confirm rechazaba el plan entero y la UI no podía guardarlo.
+function dedupeSubjectsBySlug(subjects) {
+  const seen = new Set();
+  const unique = [];
+  const dropped = [];
+
+  for (const subject of subjects) {
+    if (seen.has(subject.slug)) {
+      dropped.push(subject.name);
+      continue;
+    }
+
+    seen.add(subject.slug);
+    unique.push(subject);
+  }
+
+  return { unique, dropped };
+}
+
 function normalizeSubject(item, index) {
   if (!item || typeof item !== "object" || Array.isArray(item)) {
     throw httpError(`La materia ${index + 1} es inválida`);
@@ -182,19 +203,12 @@ async function confirmPlanImport(userId, data, { isAdmin = false } = {}) {
     );
   }
 
-  // Validar materias antes de escribir en MongoDB.
-  const subjects = data.subjects.map(normalizeSubject);
-
-  const seen = new Set();
-
-  for (const subject of subjects) {
-    if (seen.has(subject.slug)) {
-      throw httpError(
-        `La materia "${subject.name}" está repetida`
-      );
-    }
-    seen.add(subject.slug);
-  }
+  // Validar materias antes de escribir en MongoDB. Una fila repetida en el
+  // PDF no invalida el plan: se conserva la primera y se informa cuántas se
+  // descartaron (mismo criterio que seed-planes.js).
+  const normalized = data.subjects.map(normalizeSubject);
+  const { unique: subjects, dropped: duplicatesDropped } =
+    dedupeSubjectsBySlug(normalized);
 
   // No permitir importar un hash desconocido.
   const cache = await PdfExtractionCache.findOne({
@@ -377,6 +391,7 @@ async function confirmPlanImport(userId, data, { isAdmin = false } = {}) {
       name: studyPlan.name,
       status: studyPlan.status,
       saved: planSubjects.length,
+      duplicatesDropped: duplicatesDropped.length,
       prerequisitesResolved: resolved.reduce((a, u) => a + u.requires.length, 0),
       prerequisitesReview: review,
       prerequisitesDropped: dropped,
@@ -442,4 +457,5 @@ async function confirmPlanImport(userId, data, { isAdmin = false } = {}) {
 
 module.exports = {
   confirmPlanImport,
+  dedupeSubjectsBySlug,
 };

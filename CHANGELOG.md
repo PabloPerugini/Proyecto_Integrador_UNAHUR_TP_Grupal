@@ -12,7 +12,8 @@ El registro histórico de requisitos/alcance por versión se mantiene en [BRD.md
 - **Temporales:** se eliminaron los 19 scripts `backend/tmp-*`, los informes locales de `backend/scripts/informes/` y `frontend/dist/` (todos ignorados por git; no afectan el historial).
 - **Corpus:** se quitó el PDF duplicado de TUPAP (mismo SHA-256 que `Plan-de-estudios-TUPAP-2025.pdf`), su entrada en `planes-referencia.json` y su golden. Corpus actual: **56 PDFs = 43 en referencia + 13 excluidos con motivo**.
 - **Gate:** `check-cobertura.js` ahora falla si dos PDFs tienen el mismo contenido, imprime el resumen por instituto y exige al menos un par plan+correlativa por instituto.
-- **Verificación:** `test:cobertura` OK y `snapshot:planes -- --check` sin diferencias.
+- **Fix de importación:** `POST /plan-imports/confirm` deduplica por slug las filas repetidas del PDF (p. ej. ACA por año o una fila cortada) en lugar de rechazar el plan completo; la respuesta informa `duplicatesDropped`. Mismo criterio que usaba `seed-planes.js`, que ahora ya no necesita su deduplicación previa para poder guardar.
+- **Verificación:** `test:cobertura` OK, `snapshot:planes -- --check` sin diferencias, `test:institutos` con preview por instituto y E2E real de `preview + confirm + delete` en los cuatro institutos.
 
 ## [1.25] - 2026-10-22
 

@@ -25,6 +25,7 @@ const PLANES_DIR = resolvePlanesDir(REPO_ROOT_VALID);
 const ENGINES = {
   cobertura: "check-cobertura.js",
   masiva: "carga-masiva.test.js",
+  institutos: "verificar-institutos.test.js",
   salud: "verificar-salud.test.js",
   golden: "golden-snapshot.js",
 };
@@ -34,9 +35,10 @@ function help() {
 
   cobertura  control de corpus: cada PDF de files/ está en la referencia o excluido con motivo (sin API)
   masiva     carga E2E de planes por API real (necesita backend + Mongo + Redis)
+  institutos un plan + su correlativa por instituto, por API real (ALL_PAIRS=1 prueba todos)
   salud      control de correlativas de Salud + control negativo (idem API)
   golden     snapshot determinístico del parser (sin API; -- --check compara)
-  todo       cobertura, golden --check, luego salud y masiva (falla rápido)
+  todo       cobertura, golden --check, luego institutos, salud y masiva (falla rápido)
   --help     esta ayuda
 
 Ej.: node scripts/validaciones.js golden -- --check`);
@@ -63,6 +65,7 @@ async function main() {
     const steps = [
       ["cobertura", []],
       ["golden", ["--check"]],
+      ["institutos", []],
       ["salud", []],
       ["masiva", []],
     ];

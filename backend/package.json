@@ -10,8 +10,9 @@
   "scripts": {
     "dev": "nodemon src/main.js",
     "start": "node src/main.js",
-    "test": "node --test tests/unitarios.test.js tests/sugerencias.test.js tests/rn04.test.js tests/registro.test.js tests/seguridad.test.js tests/intermedio.test.js tests/estrategiaExtraccion.test.js tests/codes.test.js",
+    "test": "node --test tests/unitarios.test.js tests/sugerencias.test.js tests/rn04.test.js tests/registro.test.js tests/seguridad.test.js tests/intermedio.test.js tests/estrategiaExtraccion.test.js tests/codes.test.js tests/confirm.test.js",
     "test:planes": "node scripts/validaciones.js masiva",
+    "test:institutos": "node scripts/validaciones.js institutos",
     "test:salud": "node scripts/validaciones.js salud",
     "test:cobertura": "node scripts/validaciones.js cobertura",
     "snapshot:planes": "node scripts/validaciones.js golden",
