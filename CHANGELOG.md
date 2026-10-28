@@ -6,6 +6,14 @@ El registro histórico de requisitos/alcance por versión se mantiene en [BRD.md
 
 ---
 
+## [1.27] - 2026-10-28
+
+### Parser de PDFs dividido por responsabilidad
+- **Plan oficial:** `officialPlan.js` pasó de 1.635 a 67 líneas como orquestador; la lógica se repartió en `officialPlanRows`, `officialPlanMeta`, `officialPlanArea`, `officialPlanState`, `officialPlanWrapped`, `officialPlanAnchors`, `officialPlanGroups`, `officialPlanAttach`, `officialPlanPush` y `officialPlanFinalize` (todos ≤ 299 líneas).
+- **Correlatividades:** `correlativas.js` pasó de 705 a 39 líneas; se separó en `correlativasShared`, `correlativasTable`, `correlativasTwoCol`, `correlativasNumeric` y `correlativasResolve`.
+- **Sin cambios de salida:** la fachada `pdfParser.service.js` conserva sus cuatro exports; `snapshot:planes -- --check` da cero diferencias sobre los 43 PDFs de referencia.
+- **Verificación:** backend 45 unitarios + 24 Jest + lint 0 errores + cobertura OK + golden; frontend lint, build, `test:order` y `test:contrast`.
+
 ## [1.26] - 2026-10-27
 
 ### Limpieza de temporales y corpus sin duplicados

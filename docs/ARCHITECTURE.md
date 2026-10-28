@@ -67,13 +67,28 @@ const {
 
 La implementación vive en `src/services/pdf/` y se separa por tipo de documento:
 
-| Archivo               | Responsabilidad                                              |
-| --------------------- | ------------------------------------------------------------ |
-| `raw.js`              | Carga `pdfjs-dist` y extrae ítems con coordenadas.           |
-| `shared.js`           | Helpers de texto, filas, períodos y nombres compartidos.     |
-| `officialPlan.js`     | Plan oficial: tabla de estructura, horas, créditos e intermedio. |
-| `academicHistory.js`  | Historia académica / plan personal con estado y nota.        |
-| `correlativas.js`     | Planes de correlatividades (tres columnas, anexo y dos columnas). |
+| Archivo                    | Responsabilidad                                              |
+| -------------------------- | ------------------------------------------------------------ |
+| `raw.js`                   | Carga `pdfjs-dist` y extrae ítems con coordenadas.           |
+| `shared.js`                | Helpers de texto, filas, períodos y nombres compartidos.     |
+| `officialPlan.js`          | Orquestador del plan oficial.                                |
+| `officialPlanRows.js`      | Predicados y helpers de filas, columnas y duraciones.        |
+| `officialPlanMeta.js`      | Detección de columnas y del título intermedio.               |
+| `officialPlanArea.js`      | Tabla numerada Área / Asignatura / Horas / Correlatividades. |
+| `officialPlanState.js`     | Estado de año/cuatrimestre y empuje de materias.             |
+| `officialPlanWrapped.js`   | Nombres de materia partidos en varias líneas.                |
+| `officialPlanAnchors.js`   | Anclas y filas ACA de cada página.                           |
+| `officialPlanGroups.js`    | Agrupado de anclas y ventana vertical.                       |
+| `officialPlanAttach.js`    | Asignación de filas y consolidación de grupos.               |
+| `officialPlanPush.js`      | Marcadores de período y empuje final.                        |
+| `officialPlanFinalize.js`  | Cuatrimestre por posición y totales de créditos.             |
+| `academicHistory.js`       | Historia académica / plan personal con estado y nota.        |
+| `correlativas.js`          | Orquestador de correlatividades.                             |
+| `correlativasShared.js`    | Helpers y filtros de ruido compartidos.                      |
+| `correlativasTable.js`     | Anexo tabular Código / Materias / Cursada / Correlativas.    |
+| `correlativasTwoCol.js`    | Formato de dos columnas sin numeración.                      |
+| `correlativasNumeric.js`   | Formato con anclas numeradas.                                |
+| `correlativasResolve.js`   | Resolución de referencias y armado del payload.              |
 
 Reglas para tocarlo:
 
