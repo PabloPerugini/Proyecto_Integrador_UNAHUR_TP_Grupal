@@ -23,6 +23,9 @@ backend/scripts/tmp-debug-*.js
 # Estado del tooling de OpenCode (lo recrea la app; no va al repo)
 .opencode/
 
+# Planes de proceso de Superpowers (locales; no van al repo)
+docs/superpowers/
+
 # Sistema
 .DS_Store
 Thumbs.db

@@ -18,8 +18,8 @@ Abrir `ui-ux-20261019.html` con doble clic en Chrome, Edge o Firefox. Los archiv
 Los datos son ejemplos basados en la última información real disponible; no son datos persistidos ni una migración:
 
 - Preview de Biotecnología: **46 materias**, **393 créditos**, **19 materias / 108 créditos** del título intermedio; laboratorio OF017 con 6 cargas (4/64/40/0/61/125).
-- Última carga masiva (16/10/2026): **43 planes** — 27 OK, 1 OK-IA, 15 WARN, 0 FAIL; 1 fallback de IA.
-- Diagnóstico de IA y propuestas: `backend/scripts/informes/ia-planes-20261019.md`.
+- Última carga masiva (16/10/2026): **43 PDFs de referencia** — 27 OK, 1 OK-IA, 15 WARN, 0 FAIL; 1 fallback de IA.
+- Diagnóstico de IA: informe histórico del 19/10, no versionado (`backend/scripts/informes/` está ignorado por git).
 
 ## Estado
 
