@@ -12,9 +12,10 @@
    3. bootstrap       ajustes sobre Bootstrap
    4. layout          shell, sidebar, auth
    5. components      tarjetas, tabs, stats, theme toggle
-   6. pages           dropzone, select buscable, grafo
-   7. responsive      media queries generales
-   8. splash          pantalla de inicio (antes en su componente)
+   6. pages           dropzone, select buscable
+   7. graph           vista de correlativas (PlanGraph)
+   8. responsive      media queries generales
+   9. splash          pantalla de inicio (antes en su componente)
    ───────────────────────────────────────────────────────────── */
 @import "./tokens.css";
 @import "./base.css";
@@ -22,5 +23,6 @@
 @import "./layout.css";
 @import "./components.css";
 @import "./pages.css";
+@import "./graph.css";
 @import "./responsive.css";
 @import "./splash.css";

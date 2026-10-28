@@ -1,0 +1,294 @@
+/* ─────────────────────────────────────────────────────────────
+   Grafo de correlatividades (PlanGraph): encabezado, tarjetas,
+   estados, ícono de acción, paneles de cuatrimestre y leyenda.
+   Restaurado/adaptado de src/components/AcademicMap.css (a2dd8b5)
+   para el look de referencia: tarjetas claras con acentos de
+   estado y líneas suaves.
+
+   Orden de cascada de .plan-node (prioridad de borde, replica el
+   nodeBorder() viejo): base → status → in-progress →
+   highlighted-next → unlocked → selected → critical → optimal.
+   ───────────────────────────────────────────────────────────── */
+
+/* ── Header y toolbar ─────────────────────────────────────── */
+
+.plan-map-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  flex-shrink: 0;
+  padding: 18px 32px 12px;
+  background: linear-gradient(110deg, #f2f7fe80, #f8fbff40);
+  border-radius: 20px 20px 0 0;
+}
+
+.plan-map-heading {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.plan-map-heading__title {
+  font-size: clamp(1.5rem, 2.4vw, 1.875rem);
+  font-weight: 700;
+  color: #10215b;
+  line-height: 1.2;
+  letter-spacing: -0.5px;
+  margin: 0;
+}
+
+.plan-map-heading__subtitle {
+  font-size: 1rem;
+  font-weight: 400;
+  color: #637da5;
+  line-height: 1.5;
+  margin: 3px 0 0;
+}
+
+.plan-map-header__select {
+  width: 280px;
+  max-width: 100%;
+  min-height: 32px;
+  padding-left: 12px;
+  border: 1px solid #e2ebf7;
+  border-radius: 9px;
+  color: #142655;
+  background-color: #ffffffed;
+  box-shadow: 0 2px 6px #1d437c05;
+  font-size: 12px;
+  text-overflow: ellipsis;
+}
+
+.plan-map-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  padding: 4px 32px 12px;
+}
+
+/* ── Leyenda de estados ───────────────────────────────────── */
+
+.plan-state-count {
+  min-width: 1.5em;
+  padding: 1px 5px;
+  border-radius: 6px;
+  background: var(--bs-tertiary-bg);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Tarjeta base ─────────────────────────────────────────── */
+
+.plan-graph .react-flow__node-plan {
+  cursor: default;
+}
+
+.plan-node {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 220px;
+  min-height: 90px;
+  padding: 16px 18px 14px;
+  box-sizing: border-box;
+  text-align: left;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  color: #23395d;
+  box-shadow: 0 4px 12px rgba(30, 51, 80, .08), 0 1px 3px rgba(30, 51, 80, .04);
+}
+
+/* ── Estados ──────────────────────────────────────────────── */
+
+.plan-node--status-aprobada { background: #f0fdf4; border-color: #258b43; }
+.plan-node--status-regular  { background: #F5F3FF; border-color: #8b7cf6; }
+.plan-node--status-cursando { background: #e5f0fe; border-color: #0561e5; }
+.plan-node--status-disponible { background: #ffffff; border-color: #3B82F6; }
+.plan-node--status-bloqueada { background: #ffffff; border-color: #d7dee8; color: #64748b; }
+
+/* ── Glow "en curso" (vars del contenedor .plan-graph) ────── */
+
+.plan-node--in-progress {
+  box-shadow:
+    0 3px 10px color-mix(in srgb, var(--plan-in-progress-color) 16%, transparent),
+    0 0 12px color-mix(in srgb, var(--plan-in-progress-color) 12%, transparent);
+}
+
+/* ── Estados activos (después de los estados: mandan ellos) ─ */
+
+.plan-node--highlighted-next {
+  border-color: #0D9488;
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--plan-highlight-color) 15%, transparent),
+    0 0 14px 2px color-mix(in srgb, var(--plan-highlight-color) 30%, transparent);
+}
+
+.plan-node--unlocked {
+  --plan-highlight-color: #0561e5;
+  border-color: #0561e5;
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--plan-highlight-color) 15%, transparent),
+    0 0 14px 2px color-mix(in srgb, var(--plan-highlight-color) 30%, transparent);
+}
+
+.plan-node--selected {
+  border-color: #2563EB;
+  outline: 2px solid #2563EB;
+  outline-offset: 3px;
+}
+
+.plan-node--critical {
+  background: #fd7e14;
+  border-color: #fd7e14;
+  color: #211407;
+}
+
+.plan-node--optimal {
+  background: #d9870b;
+  border-color: #d9870b;
+  color: #211407;
+}
+
+/* ── Internos de la tarjeta ───────────────────────────────── */
+
+.plan-node__name {
+  padding-right: 28px;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.4;
+  overflow-wrap: break-word;
+}
+
+.plan-node__period,
+.plan-node__meta {
+  font-size: 12px;
+  line-height: 1.4;
+  color: #64748b;
+}
+
+.plan-node--optimal .plan-node__period,
+.plan-node--optimal .plan-node__meta,
+.plan-node--critical .plan-node__period,
+.plan-node--critical .plan-node__meta {
+  color: #211407;
+  opacity: .8;
+}
+
+.plan-node__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  font-size: 10px;
+}
+
+/* ── Ícono de estado y acción de progreso ─────────────────── */
+
+.plan-node__status-icon {
+  position: absolute;
+  right: 10px;
+  top: 12px;
+  padding: 1px;
+  width: 18px;
+  height: 18px;
+  box-sizing: content-box;
+  object-fit: contain;
+  user-select: none;
+}
+
+.plan-status-action {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+}
+.plan-status-action span { grid-area: 1 / 1; display: flex; width: 100%; height: 100%; }
+.plan-status-action img { width: 100%; height: 100%; }
+.plan-status-action .plan-status-action__next { display: none; }
+.plan-status-action--advance:not(:disabled):is(:hover, :focus-visible) .plan-status-action__current { display: none; }
+.plan-status-action--advance:not(:disabled):is(:hover, :focus-visible) .plan-status-action__next { display: flex; }
+.plan-status-action:focus-visible { outline: 2px solid #2563eb; outline-offset: 4px; }
+.plan-status-action:disabled { cursor: default; opacity: .6; }
+
+/* ── Panel y conteo por cuatrimestre ──────────────────────── */
+
+.plan-semester-panel {
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  border: 1px solid #e5edf680;
+  border-radius: 16px;
+  background: linear-gradient(145deg, #eaf1f980, #eef3f85c);
+}
+
+.plan-semester-count {
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 400;
+  color: #7b91af;
+}
+
+/* ── Tarjeta del tablero ──────────────────────────────────── */
+
+.plan-node--tablero {
+  width: auto;
+  min-width: 200px;
+  min-height: 0;
+  padding: 10px 14px;
+  gap: 3px;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.plan-node--tablero .plan-node__name {
+  padding-right: 0;
+  font-size: 13px;
+}
+
+/* ── Modo oscuro ──────────────────────────────────────────── */
+
+[data-bs-theme="dark"] .plan-map-header { background: linear-gradient(110deg, #16243a80, #16243a00); }
+[data-bs-theme="dark"] .plan-map-heading__title { color: #f1f5ff; }
+[data-bs-theme="dark"] .plan-map-heading__subtitle { color: #9db1d1; }
+[data-bs-theme="dark"] .plan-map-header__select {
+  background-color: #192638;
+  border-color: #30415a;
+  color: #e1eaff;
+}
+[data-bs-theme="dark"] .plan-state-count { background: #273850; color: #acc1e1; }
+
+[data-bs-theme="dark"] .plan-node {
+  background: #182434;
+  border-color: #2b394b;
+  color: #e1eaff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .35), 0 1px 3px rgba(0, 0, 0, .25);
+}
+[data-bs-theme="dark"] .plan-node--status-aprobada { background: #13291d; border-color: #2f9e5e; }
+[data-bs-theme="dark"] .plan-node--status-regular  { background: #211d38; border-color: #8b7cf6; }
+[data-bs-theme="dark"] .plan-node--status-cursando { background: #14253c; border-color: #3B82F6; }
+[data-bs-theme="dark"] .plan-node--status-disponible { background: #182434; border-color: #3B82F6; }
+[data-bs-theme="dark"] .plan-node--status-bloqueada { background: #182434; border-color: #3a4759; color: #9db1d1; }
+[data-bs-theme="dark"] .plan-node--highlighted-next { border-color: #2dd4bf; }
+[data-bs-theme="dark"] .plan-node--unlocked { border-color: #60a5fa; }
+[data-bs-theme="dark"] .plan-node--selected { border-color: #60a5fa; outline-color: #60a5fa; }
+[data-bs-theme="dark"] .plan-node__period,
+[data-bs-theme="dark"] .plan-node__meta { color: #9db1d1; }
+[data-bs-theme="dark"] .plan-semester-panel {
+  border-color: #35465c70;
+  background: linear-gradient(145deg, #20304790, #1a273b60);
+}
+[data-bs-theme="dark"] .plan-semester-count { color: #9dacc0; }
+
+/* ── Mobile ───────────────────────────────────────────────── */
+
+@media (max-width: 767px) {
+  .plan-map-header { flex-direction: column; align-items: stretch; gap: 14px; padding: 16px 16px 12px; }
+  .plan-map-header__select { width: 100%; }
+  .plan-map-toolbar { padding: 4px 16px 12px; }
+}
