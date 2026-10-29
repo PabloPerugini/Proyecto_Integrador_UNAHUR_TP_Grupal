@@ -61,8 +61,8 @@ const EDGE_WIDTH = {
 };
 
 const ARROW_SIZE = {
-  width: 40,
-  height: 40,
+  width: 18,
+  height: 18,
 };
 
 function YearLabel({ data }: NodeProps<Node<Record<string, unknown>>>) {
@@ -769,7 +769,6 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
         source: e.source,
         target: e.target,
         type: 'academic',
-        data: { sections: layout?.routes[e.id] },
         animated: onOptimal || onCritical,
 
         // Estilo de la línea
@@ -792,7 +791,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
         },
       };
     });
-  }, [displayGraph, fastPath, criticalPath, activeMode, selectedCode, highlightedNextCodes, selectedNode, layout, unlockHighlight, newlyUnlockedCodes, byCodeMap]);
+  }, [displayGraph, fastPath, criticalPath, activeMode, selectedCode, highlightedNextCodes, selectedNode, unlockHighlight, newlyUnlockedCodes, byCodeMap]);
 
 
   const boardGroups = useMemo(() => {
