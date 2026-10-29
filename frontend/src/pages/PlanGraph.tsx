@@ -28,8 +28,7 @@ import { getStudyPath } from '../utils/studyPaths';
 import PlanNode, { toPlanNodeData, StatusBadges, type PlanNodeData } from '../components/PlanNodeCard';
 import SubjectStatusIcon from '../components/SubjectStatusIcon';
 import AcademicEdge from '../components/AcademicEdge';
-import { useAcademicEdgeLayout } from '../hooks/useAcademicEdgeLayout';
-import type { AcademicLayout } from '../utils/academicEdgeLayout';
+import { useNodeSizes } from '../hooks/useNodeSizes';
 import { orderColumnsForCrossings } from '../utils/academicOrdering';
 import { BLOCKED_FAINT_OPACITY, periodLabel, planCardClasses } from '../utils/planCard';
 
@@ -127,15 +126,16 @@ function IntermediateBanner({ intermediate }: { intermediate: IntermediateProgre
 
 const nodeTypes = { plan: PlanNode, yearLabel: YearLabel };
 const edgeTypes = { academic: AcademicEdge };
-const EMPTY_EDGES: GraphData['edges'] = [];
 
-function LayoutViewport({ layout }: { layout: AcademicLayout | undefined }) {
+// Centra el viewport al cargar el plan o cambiar de tab (clave estructural);
+// al guardar progreso la clave no cambia y el mapa no se recoloca.
+function LayoutViewport({ fitKey }: { fitKey: string }) {
   const { fitView } = useReactFlow();
   useEffect(() => {
-    if (!layout) return;
+    if (!fitKey) return;
     const frame = requestAnimationFrame(() => { void fitView({ padding: 0.2 }); });
     return () => cancelAnimationFrame(frame);
-  }, [layout, fitView]);
+  }, [fitKey, fitView]);
   return null;
 }
 
@@ -578,14 +578,16 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
     return nodes;
   }, [displayGraph]);
 
-  const { layout, layoutError, onNodesChange, nodeSizes } = useAcademicEdgeLayout(baseNodes, displayGraph?.edges ?? EMPTY_EDGES);
+  const { nodeSizes, onNodesChange } = useNodeSizes();
+  // React Flow guarda el handler en data; el objeto resultante pasa por render
+  // pero onAdvance solo se invoca desde el clic del ícono (evento).
+  // eslint-disable-next-line react-hooks/refs
   const flowNodes: Node[] = useMemo(() => baseNodes.map(node => {
     const related = node.id === selectedCode || highlightedNextCodes.has(node.id) || newlyUnlockedCodes.has(node.id);
     const dimmed = node.type === 'plan' && (activePath ? !activePath.set.has(node.id) : selectedNode && !related);
     const blocked = node.type === 'plan' && (node.data as Partial<PlanNodeData>).status === 'Bloqueada';
     return {
       ...node,
-      position: layout?.positions[node.id] ?? node.position,
       style: { opacity: (dimmed ? DIMMED_OPACITY : 1) * (blocked ? BLOCKED_FAINT_OPACITY : 1) },
       data: node.type === 'plan' ? {
         ...node.data,
@@ -594,16 +596,11 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
         highlightedNext: !activeMode && highlightedNextCodes.has(node.id),
         newlyUnlocked: !activeMode && newlyUnlockedCodes.has(node.id),
         selectedSubject: node.id === selectedCode,
-        // React Flow stores this handler in data; only the icon's click invokes it.
-        // eslint-disable-next-line react-hooks/refs
         onAdvance: graph?.userStudyPlanId ? advanceSubject : undefined,
         progressSaving,
-      } : {
-        ...node.data,
-        width: layout?.yearWidths[node.id] ?? node.data.width,
-      },
+      } : node.data,
     };
-  }), [baseNodes, layout, fastPath.set, criticalPath.set, activeMode, activePath, highlightedNextCodes, selectedCode, selectedNode, graph?.userStudyPlanId, advanceSubject, progressSaving, newlyUnlockedCodes]);
+  }), [baseNodes, fastPath.set, criticalPath.set, activeMode, activePath, highlightedNextCodes, selectedCode, selectedNode, graph?.userStudyPlanId, advanceSubject, progressSaving, newlyUnlockedCodes]);
 
   const MAP_MARGINS = {
     left: 700,    // Espacio a la izquierda
@@ -666,8 +663,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
   }, [flowNodes, nodeSizes]);
 
   const semesterPanels = useMemo(() => {
-    const getPosition = (node: Node) =>
-      layout?.positions[node.id] ?? node.position;
+    const getPosition = (node: Node) => node.position;
 
     // Agrupar materias según su encabezado de cuatrimestre
     const groups: {
@@ -733,7 +729,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
         height,
       };
     });
-  }, [baseNodes, layout, nodeSizes]);
+  }, [baseNodes, nodeSizes]);
 
 
   const flowEdges: Edge[] = useMemo(() => {
@@ -1011,7 +1007,6 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
             </span>
           )}
         </div>
-        {view === 'grafo' && layoutError && <Alert variant="warning" className="mx-3">No se pudieron optimizar las flechas. Se muestran conexiones ortogonales simples. {layoutError}</Alert>}
         {id && !selectedPlan && plans.length > 0 && <Alert variant="warning" className="mx-3">Seleccioná un plan válido. Los enlaces antiguos de carrera ya no corresponden al grafo.</Alert>}
         {displayGraph && displayGraph.edges.length === 0 && <Alert variant="info" className="mx-3 py-1 small">No hay correlatividades vinculadas todavía. Podés agregarlas desde Administrar plan.</Alert>}
         {graph?.intermediate && graph.intermediate.total > 0 && (
@@ -1114,7 +1109,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
                   bgColor={graphBackground.color}
                 />
                 <Controls position="bottom-left" />
-                <LayoutViewport layout={layout} />
+                <LayoutViewport fitKey={`${id ?? ''}|${tab}|${baseNodes.length}`} />
               </ReactFlow>
             )}
 
