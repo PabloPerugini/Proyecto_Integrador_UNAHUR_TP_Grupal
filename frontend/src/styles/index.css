@@ -13,7 +13,7 @@
    4. layout          shell, sidebar, auth
    5. components      tarjetas, tabs, stats, theme toggle
    6. pages           dropzone, select buscable
-   7. graph           vista de correlativas (PlanGraph)
+   7. graph           vista de correlativas (PlanGraph), claro y oscuro
    8. responsive      media queries generales
    9. splash          pantalla de inicio (antes en su componente)
    ───────────────────────────────────────────────────────────── */
@@ -24,5 +24,6 @@
 @import "./components.css";
 @import "./pages.css";
 @import "./graph.css";
+@import "./graph-dark.css";
 @import "./responsive.css";
 @import "./splash.css";

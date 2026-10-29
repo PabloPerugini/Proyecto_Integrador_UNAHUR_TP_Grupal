@@ -30,7 +30,7 @@ import SubjectStatusIcon from '../components/SubjectStatusIcon';
 import AcademicEdge from '../components/AcademicEdge';
 import { useNodeSizes } from '../hooks/useNodeSizes';
 import { orderColumnsForCrossings } from '../utils/academicOrdering';
-import { BLOCKED_FAINT_OPACITY, periodLabel, planCardClasses } from '../utils/planCard';
+import { BLOCKED_FAINT_OPACITY, blockedFaintApplies, periodLabel, planCardClasses } from '../utils/planCard';
 
 const DIMMED_OPACITY = 0.55;
 const IN_PROGRESS_COLOR = '#0561e5';
@@ -585,14 +585,19 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
   const flowNodes: Node[] = useMemo(() => baseNodes.map(node => {
     const related = node.id === selectedCode || highlightedNextCodes.has(node.id) || newlyUnlockedCodes.has(node.id);
     const dimmed = node.type === 'plan' && (activePath ? !activePath.set.has(node.id) : selectedNode && !related);
-    const blocked = node.type === 'plan' && (node.data as Partial<PlanNodeData>).status === 'Bloqueada';
+    const critical = node.type === 'plan' && activeMode === 'critical' && criticalPath.set.has(node.id);
+    const optimal = node.type === 'plan' && activeMode === 'optimal' && fastPath.set.has(node.id);
+    // Bloqueadas al 75%, salvo que la tarjeta forme parte del camino destacado
+    // (con fondo naranja/ámbar el texto al 75% bajaría de 4.5:1).
+    const faint = node.type === 'plan'
+      && blockedFaintApplies({ blocked: (node.data as Partial<PlanNodeData>).status === 'Bloqueada', critical, optimal });
     return {
       ...node,
-      style: { opacity: (dimmed ? DIMMED_OPACITY : 1) * (blocked ? BLOCKED_FAINT_OPACITY : 1) },
+      style: { opacity: (dimmed ? DIMMED_OPACITY : 1) * (faint ? BLOCKED_FAINT_OPACITY : 1) },
       data: node.type === 'plan' ? {
         ...node.data,
-        optimal: activeMode === 'optimal' && fastPath.set.has(node.id),
-        critical: activeMode === 'critical' && criticalPath.set.has(node.id),
+        optimal,
+        critical,
         highlightedNext: !activeMode && highlightedNextCodes.has(node.id),
         newlyUnlocked: !activeMode && newlyUnlockedCodes.has(node.id),
         selectedSubject: node.id === selectedCode,

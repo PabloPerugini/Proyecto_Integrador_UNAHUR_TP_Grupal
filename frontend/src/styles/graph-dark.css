@@ -1,0 +1,62 @@
+/* ─────────────────────────────────────────────────────────────
+   Grafo de correlatividades — tema oscuro.
+   Contrapartes [data-bs-theme="dark"] de styles/graph.css; se
+   importa después de ese archivo para ganar en igual
+   especificidad (incluye la re-declaración de los glows que la
+   base oscura pisaría).
+   ───────────────────────────────────────────────────────────── */
+
+/* ── Modo oscuro ──────────────────────────────────────────── */
+
+[data-bs-theme="dark"] .plan-map-header { background: linear-gradient(110deg, #16243a80, #16243a00); }
+[data-bs-theme="dark"] .plan-map-heading__title { color: #f1f5ff; }
+[data-bs-theme="dark"] .plan-map-heading__subtitle { color: #9db1d1; }
+[data-bs-theme="dark"] .plan-map-header__select {
+  background-color: #192638;
+  border-color: #30415a;
+  color: #e1eaff;
+}
+[data-bs-theme="dark"] .plan-state-count { background: #273850; color: #acc1e1; }
+
+[data-bs-theme="dark"] .plan-node {
+  background: #182434;
+  border-color: #2b394b;
+  color: #e1eaff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .35), 0 1px 3px rgba(0, 0, 0, .25);
+}
+[data-bs-theme="dark"] .plan-node--status-aprobada { background: #13291d; border-color: #2f9e5e; }
+[data-bs-theme="dark"] .plan-node--status-regular  { background: #211d38; border-color: #8b7cf6; }
+[data-bs-theme="dark"] .plan-node--status-cursando { background: #14253c; border-color: #3B82F6; }
+[data-bs-theme="dark"] .plan-node--status-disponible { background: #182434; border-color: #3B82F6; }
+[data-bs-theme="dark"] .plan-node--status-bloqueada { background: #182434; border-color: #3a4759; color: #9db1d1; }
+/* La base oscura (0,2,0) pisa los glows claros (0,1,0): se re-declaran acá. */
+[data-bs-theme="dark"] .plan-node--in-progress {
+  box-shadow:
+    0 3px 10px color-mix(in srgb, var(--plan-in-progress-color) 16%, transparent),
+    0 0 12px color-mix(in srgb, var(--plan-in-progress-color) 12%, transparent);
+}
+[data-bs-theme="dark"] .plan-node--highlighted-next {
+  border-color: #2dd4bf;
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--plan-highlight-color) 15%, transparent),
+    0 0 14px 2px color-mix(in srgb, var(--plan-highlight-color) 30%, transparent);
+}
+[data-bs-theme="dark"] .plan-node--unlocked {
+  border-color: #60a5fa;
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--plan-highlight-color) 15%, transparent),
+    0 0 14px 2px color-mix(in srgb, var(--plan-highlight-color) 30%, transparent);
+}
+[data-bs-theme="dark"] .plan-node--selected { border-color: #60a5fa; outline-color: #60a5fa; }
+/* Supresión del glow en camino crítico/óptimo, en tema oscuro. */
+[data-bs-theme="dark"] .plan-node--optimal.plan-node--in-progress,
+[data-bs-theme="dark"] .plan-node--critical.plan-node--in-progress {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .35), 0 1px 3px rgba(0, 0, 0, .25);
+}
+[data-bs-theme="dark"] .plan-node__period,
+[data-bs-theme="dark"] .plan-node__meta { color: #9db1d1; }
+[data-bs-theme="dark"] .plan-semester-panel {
+  border-color: #35465c70;
+  background: linear-gradient(145deg, #20304790, #1a273b60);
+}
+[data-bs-theme="dark"] .plan-semester-count { color: #9dacc0; }

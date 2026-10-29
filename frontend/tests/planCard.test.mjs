@@ -1,8 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { planCardClasses, periodLabel, BLOCKED_FAINT_OPACITY } from '../src/utils/planCard.ts';
-import { STATUS_TEXT_COLOR } from '../src/utils/status.ts';
+import { planCardClasses, periodLabel, blockedFaintApplies } from '../src/utils/planCard.ts';
 
 const base = { status: 'Aprobada', critical: false, optimal: false, highlightedNext: false, selectedSubject: false };
 
@@ -43,16 +42,9 @@ test('periodLabel cubre anual, cuatrimestres y sin período', () => {
   assert.equal(periodLabel({ cuatrimestre: null }), 'Cuatrimestral');
 });
 
-test('el atenuado de bloqueadas mantiene contraste >= 4.5:1 sobre blanco', () => {
-  const blend = (hex) => {
-    const v = hex.replace('#', '');
-    return [0, 2, 4].map(i =>
-      Math.round(BLOCKED_FAINT_OPACITY * parseInt(v.slice(i, i + 2), 16) + (1 - BLOCKED_FAINT_OPACITY) * 255),
-    );
-  };
-  const [r, g, b] = blend(STATUS_TEXT_COLOR);
-  const channel = (c) => { const n = c / 255; return n <= 0.03928 ? n / 12.92 : ((n + 0.055) / 1.055) ** 2.4; };
-  const luminance = 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
-  const ratio = 1.05 / (luminance + 0.05);
-  assert.ok(ratio >= 4.5, `contraste ${ratio.toFixed(2)}:1`);
+test('el atenuado de bloqueadas no aplica a las tarjetas destacadas de camino', () => {
+  assert.equal(blockedFaintApplies({ blocked: true, critical: false, optimal: false }), true);
+  assert.equal(blockedFaintApplies({ blocked: true, critical: true, optimal: false }), false);
+  assert.equal(blockedFaintApplies({ blocked: true, critical: false, optimal: true }), false);
+  assert.equal(blockedFaintApplies({ blocked: false, critical: false, optimal: false }), false);
 });

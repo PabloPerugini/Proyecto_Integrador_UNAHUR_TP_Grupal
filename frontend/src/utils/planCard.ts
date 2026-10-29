@@ -10,11 +10,22 @@ export interface PlanCardState {
 }
 
 /**
- * Atenuado de las materias bloqueadas en el grafo. A 0.75 el texto
- * STATUS_TEXT_COLOR sobre fondo blanco mantiene contraste ≥ 4.5:1
- * (verificado en tests/planCard.test.mjs); a 0.55 quedaría por debajo.
+ * Atenuado de las materias bloqueadas en el grafo. A 0.75 el color de texto
+ * de la tarjeta (styles/graph.css) sobre fondo blanco mantiene contraste
+ * ≥ 4.5:1 (verificado en tests/statusContrast.test.mjs); a 0.55 quedaría por
+ * debajo.
  */
 export const BLOCKED_FAINT_OPACITY = 0.75;
+
+/**
+ * El atenuado de bloqueadas nunca baja la opacidad de las tarjetas
+ * destacadas del camino crítico/óptimo: con el fondo naranja/ámbar, el texto
+ * mezclado al 75% caería por debajo de 4.5:1 y el camino debe lucir a plena
+ * opacidad.
+ */
+export function blockedFaintApplies(b: { blocked: boolean; critical: boolean; optimal: boolean }): boolean {
+  return b.blocked && !b.critical && !b.optimal;
+}
 
 /**
  * Clases CSS de una tarjeta del grafo/tablero, en orden fijo. La prioridad
