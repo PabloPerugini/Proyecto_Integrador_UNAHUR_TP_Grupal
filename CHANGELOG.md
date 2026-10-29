@@ -6,6 +6,17 @@ El registro histórico de requisitos/alcance por versión se mantiene en [BRD.md
 
 ---
 
+## [1.28] - 2026-10-28
+
+### Look del grafo de correlatividades
+- **Tarjetas:** nuevo estilo de la captura de referencia (fondo claro, borde por estado, ícono de acción arriba a la derecha, subtítulo "Año N · 1° cuatri") en grafo y tablero; clases en `utils/planCard.ts` y CSS en `styles/graph.css` (claro/oscuro).
+- **Flechas:** smoothstep con radio 24 y puntas de 18 en lugar de rutas ortogonales; se conservan colores y opacidades de caminos/resaltados.
+- **Sin elkjs:** se quitaron `elkjs`, `academicEdgeLayout.ts` y `useAcademicEdgeLayout.ts`; queda `useNodeSizes` para medición de tarjetas y fitView por clave estructural (no salta al guardar progreso).
+- **CSS restaurado:** selectores de header, toolbar, leyenda, paneles de cuatrimestre y estados de tarjeta que se habían perdido al borrar `AcademicMap.css`.
+- **Verificación:** frontend lint, `npm test` (plan-card, order, contrast), build y checklist visual claro/oscuro.
+
+---
+
 ## [1.27] - 2026-10-28
 
 ### Parser de PDFs dividido por responsabilidad
