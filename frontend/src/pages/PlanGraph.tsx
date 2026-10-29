@@ -7,8 +7,6 @@ import {
   BackgroundVariant,
   ViewportPortal,
   Controls,
-  Handle,
-  Position,
   MarkerType,
   type Node,
   type Edge,
@@ -23,40 +21,21 @@ import type { GraphData, IntermediateProgress, SubjectStatus } from '../types';
 import { useCareerSelection } from '../context/CareerContext';
 import { useTheme } from '../hooks/useTheme';
 import { yearLabel } from '../utils/subjects';
-import { STATUS_BADGE, STATUS_TEXT_COLOR, statusColor, statusLabel, resolveNodeStatus } from '../utils/status';
+import { STATUS_BADGE, statusLabel } from '../utils/status';
 import { instituteColor, instituteGradientTec } from '../utils/instituteColors';
-import { getDirectSuccessorCodes, HIGHLIGHT_COLOR } from '../utils/graphHighlight';
+import { getDirectSuccessorCodes, HIGHLIGHT_COLOR, UNLOCK_COLOR } from '../utils/graphHighlight';
 import { getStudyPath } from '../utils/studyPaths';
-import SubjectStatusAction from '../components/SubjectStatusAction';
+import PlanNode, { toPlanNodeData, StatusBadges, type PlanNodeData } from '../components/PlanNodeCard';
 import SubjectStatusIcon from '../components/SubjectStatusIcon';
 import AcademicEdge from '../components/AcademicEdge';
 import { useAcademicEdgeLayout } from '../hooks/useAcademicEdgeLayout';
 import type { AcademicLayout } from '../utils/academicEdgeLayout';
 import { orderColumnsForCrossings } from '../utils/academicOrdering';
+import { BLOCKED_FAINT_OPACITY, periodLabel, planCardClasses } from '../utils/planCard';
 
-interface PlanNodeData {
-  onAdvance?: (code: string, backwards?: boolean) => void;
-  progressSaving?: boolean;
-  code: string;
-  name: string;
-  year: number | null;
-  cuatrimestre?: number | null;
-  duration?: string | null;
-  status: SubjectStatus;
-  available: boolean;
-  critical: boolean;
-  optimal: boolean;
-  highlightedNext: boolean;
-  newlyUnlocked?: boolean;
-  selectedSubject: boolean;
-  credits: number;
-}
-
-const BORDER_WIDTH = 2;
 const DIMMED_OPACITY = 0.55;
-const AVAILABLE_COLOR = '#3B82F6';
 const IN_PROGRESS_COLOR = '#0561e5';
-const UNLOCK_COLOR = IN_PROGRESS_COLOR;
+const AVAILABLE_COLOR = '#3B82F6';
 const UNLOCK_HIGHLIGHT_MS = 5000;
 const GRAPH_BACKGROUND = {
   color: '#f8fbff',
@@ -85,132 +64,6 @@ const ARROW_SIZE = {
   width: 40,
   height: 40,
 };
-function nodeBorder(
-  d: Pick<PlanNodeData, 'optimal' | 'critical' | 'available' | 'status' | 'highlightedNext' | 'newlyUnlocked'>,
-  selected = false
-): string {
-  const width = `${BORDER_WIDTH}px solid`;
-
-  if (d.optimal) return `${width} ${EDGE_COLORS.optimal}`;
-  if (d.critical) return `${width} ${EDGE_COLORS.critical}`;
-  if (selected) return `${width} #2563EB`;
-  if (d.newlyUnlocked) return `${width} ${UNLOCK_COLOR}`;
-  if (d.highlightedNext) return `${width} ${HIGHLIGHT_COLOR}`;
-  if (d.status === 'Aprobada') return `${width} #258b43`;
-  if (d.status === 'Cursando') return `${width} ${IN_PROGRESS_COLOR}`;
-  if (d.available) return `${width} ${AVAILABLE_COLOR}`;
-
-  return `${width} #CBD5E1`;
-}
-
-function StatusBadges({ d }: { d: Pick<PlanNodeData, 'available' | 'optimal' | 'critical'> }) {
-  return (
-    <>
-      {d.available && <span className="badge text-bg-warning" style={{ fontSize: 9 }}>disponible</span>}
-      {d.optimal && <span className="badge" style={{ fontSize: 9, background: '#d9870b', color: '#211407' }}>óptima</span>}
-      {d.critical && <span className="badge text-bg-dark" style={{ fontSize: 9 }}>crítico</span>}
-    </>
-  );
-}
-
-function toPlanNodeData(
-  n: { code: string; name: string; year: number | null; cuatrimestre: number | null; duration?: string | null; status: PlanNodeData['status']; credits: number },
-  availableSet: Set<string>,
-  criticalSet: Set<string>,
-  fastSet: Set<string>,
-): PlanNodeData {
-  const status = resolveNodeStatus(n.status, availableSet.has(n.code));
-  return {
-    code: n.code,
-    name: n.name,
-    year: n.year,
-    cuatrimestre: n.cuatrimestre,
-    duration: n.duration ?? null,
-    status,
-    available: status === 'Disponible',
-    critical: criticalSet.has(n.code),
-    optimal: fastSet.has(n.code),
-    highlightedNext: false,
-    selectedSubject: false,
-    credits: n.credits,
-  };
-}
-
-
-
-
-
-function PlanNode({ data }: NodeProps<Node<Record<string, unknown>>>) {
-  const d = data as unknown as PlanNodeData;
-  const pathColor = d.optimal ? EDGE_COLORS.optimal : d.critical ? EDGE_COLORS.critical : undefined;
-  const color = pathColor ?? statusColor(d.status);
-  const border = nodeBorder(d, d.selectedSubject);
-
-  return (
-    <div
-      className={`plan-node${!pathColor && d.status === 'Cursando' ? ' plan-node--in-progress' : ''}${d.highlightedNext || d.newlyUnlocked ? ' plan-node--highlighted-next' : ''}`}
-      style={{
-        ...(d.newlyUnlocked ? { '--plan-highlight-color': UNLOCK_COLOR } : {}),
-        background: color,
-        color: pathColor ? '#211407' : STATUS_TEXT_COLOR,
-        outline: pathColor && d.selectedSubject ? '2px solid #23395d' : undefined,
-        outlineOffset: 3,
-        borderRadius: 12,
-
-        width: 220,
-        height: 'auto',
-        minHeight: 90,
-
-        boxSizing: 'border-box',
-        border,
-
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        alignItems: 'flex-start',
-        textAlign: 'left',
-        gap: 10,
-      }}
-    >
-      <SubjectStatusAction
-        status={d.status}
-        name={d.name}
-        onAdvance={d.onAdvance ? () => d.onAdvance?.(d.code) : undefined}
-        onRevert={d.onAdvance ? () => d.onAdvance?.(d.code, true) : undefined}
-        disabled={d.progressSaving}
-        highlightColor={d.newlyUnlocked ? UNLOCK_COLOR : d.highlightedNext ? HIGHLIGHT_COLOR : undefined}
-      />
-      <Handle
-        type="target"
-        position={Position.Left}
-        style={{ opacity: 0 }}
-      />
-
-      {/* Nombre de la materia */}
-      <div
-        style={{
-          fontWeight: 700,
-          fontSize: 15,
-          lineHeight: 1.4,
-          width: '100%',
-          overflowWrap: 'break-word',
-          paddingRight: 16,
-        }}
-      >
-        {d.name}
-      </div>
-
-      <Handle
-        type="source"
-        position={Position.Right}
-        style={{ opacity: 0 }}
-      />
-    </div>
-  );
-}
-
-
-
 
 function YearLabel({ data }: NodeProps<Node<Record<string, unknown>>>) {
   const { label, width, isYear, subjectCount } = data as { label: string; width: number; isYear: boolean; subjectCount?: number };
@@ -728,10 +581,12 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
   const { layout, layoutError, onNodesChange, nodeSizes } = useAcademicEdgeLayout(baseNodes, displayGraph?.edges ?? EMPTY_EDGES);
   const flowNodes: Node[] = useMemo(() => baseNodes.map(node => {
     const related = node.id === selectedCode || highlightedNextCodes.has(node.id) || newlyUnlockedCodes.has(node.id);
+    const dimmed = node.type === 'plan' && (activePath ? !activePath.set.has(node.id) : selectedNode && !related);
+    const blocked = node.type === 'plan' && (node.data as Partial<PlanNodeData>).status === 'Bloqueada';
     return {
       ...node,
       position: layout?.positions[node.id] ?? node.position,
-      style: { opacity: node.type === 'plan' && (activePath ? !activePath.set.has(node.id) : selectedNode && !related) ? DIMMED_OPACITY : 1 },
+      style: { opacity: (dimmed ? DIMMED_OPACITY : 1) * (blocked ? BLOCKED_FAINT_OPACITY : 1) },
       data: node.type === 'plan' ? {
         ...node.data,
         optimal: activeMode === 'optimal' && fastPath.set.has(node.id),
@@ -1003,55 +858,20 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
     return <Alert variant="danger" className="mt-3">{err}</Alert>;
   }
 
-  const renderCard = (d: PlanNodeData, selected: boolean) => {
-    const border = nodeBorder(d, selected);
-    const pathColor = d.optimal ? EDGE_COLORS.optimal : d.critical ? EDGE_COLORS.critical : undefined;
-    return (
-      <button
-        key={d.code}
-        className={!pathColor && d.status === 'Cursando' ? 'plan-node--in-progress' : undefined}
-        onClick={() => setPinnedCode((prev) => (prev === d.code ? null : d.code))}
-        style={{
-          background: pathColor ?? statusColor(d.status),
-          color: pathColor ? '#211407' : STATUS_TEXT_COLOR,
-          opacity: activePath && !activePath.set.has(d.code) ? DIMMED_OPACITY : 1,
-          outline: pathColor && selected ? '2px solid #23395d' : undefined,
-          outlineOffset: 3,
-          border,
-          borderRadius: 10,
-          padding: '8px 12px',
-          minWidth: 200,
-          maxWidth: 240,
-          flex: '1 1 200px',
-          textAlign: 'left',
-          boxShadow: d.status === 'Cursando' ? undefined : '0 2px 6px rgba(0,0,0,.2)',
-          cursor: 'pointer',
-        }}
-      >
-        <div className="d-flex justify-content-between align-items-start gap-2">
-          <span style={{ fontWeight: 700, fontSize: 12, lineHeight: 1.25 }}>{d.name}</span>
-          <span
-            className="badge"
-            style={{
-              background: 'rgba(35,57,93,.08)',
-              color: pathColor ? '#211407' : STATUS_TEXT_COLOR,
-              fontSize: 9,
-              flexShrink: 0,
-              border: '1px solid rgba(35,57,93,.22)',
-            }}
-          >
-            {d.cuatrimestre === 1 ? '1C' : d.cuatrimestre === 2 ? '2C' : d.duration === 'A' || d.duration === 'TF' ? 'Anual' : 'Cuatrimestral'}
-          </span>
-        </div>
-        <div style={{ fontSize: 11, opacity: 0.92, marginTop: 3 }}>
-          {d.code} · {d.credits} cr · {statusLabel(d.status)}
-        </div>
-        <div style={{ fontSize: 10, opacity: 0.95, marginTop: 3 }}>
-          <StatusBadges d={d} />
-        </div>
-      </button>
-    );
-  };
+  const renderCard = (d: PlanNodeData, selected: boolean) => (
+    <button
+      key={d.code}
+      className={`${planCardClasses({ ...d, selectedSubject: selected })} plan-node--tablero`}
+      onClick={() => setPinnedCode((prev) => (prev === d.code ? null : d.code))}
+      style={{ opacity: activePath && !activePath.set.has(d.code) ? DIMMED_OPACITY : 1 }}
+    >
+      <SubjectStatusIcon status={d.status} className="plan-node__status-icon" />
+      <span className="plan-node__name">{d.name}</span>
+      <span className="plan-node__meta">{d.code} · {d.credits} cr · {statusLabel(d.status)}</span>
+      <span className="plan-node__period">{periodLabel(d)}</span>
+      <StatusBadges d={d} />
+    </button>
+  );
 
   return (
     <ReactFlowProvider>

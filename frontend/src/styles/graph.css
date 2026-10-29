@@ -153,6 +153,13 @@
   color: #211407;
 }
 
+/* Cursando sobre el camino crítico/óptimo: el glow de "en curso" competiría
+   con el fondo del camino (el viejo lo excluía con pathColor). Se suprime. */
+.plan-node--optimal.plan-node--in-progress,
+.plan-node--critical.plan-node--in-progress {
+  box-shadow: 0 4px 12px rgba(30, 51, 80, .08), 0 1px 3px rgba(30, 51, 80, .04);
+}
+
 /* ── Internos de la tarjeta ───────────────────────────────── */
 
 .plan-node__name {
@@ -238,7 +245,9 @@
 .plan-node--tablero {
   width: auto;
   min-width: 200px;
+  max-width: 240px;
   min-height: 0;
+  flex: 1 1 200px;
   padding: 10px 14px;
   gap: 3px;
   text-align: left;
@@ -274,9 +283,30 @@
 [data-bs-theme="dark"] .plan-node--status-cursando { background: #14253c; border-color: #3B82F6; }
 [data-bs-theme="dark"] .plan-node--status-disponible { background: #182434; border-color: #3B82F6; }
 [data-bs-theme="dark"] .plan-node--status-bloqueada { background: #182434; border-color: #3a4759; color: #9db1d1; }
-[data-bs-theme="dark"] .plan-node--highlighted-next { border-color: #2dd4bf; }
-[data-bs-theme="dark"] .plan-node--unlocked { border-color: #60a5fa; }
+/* La base oscura (0,2,0) pisa los glows claros (0,1,0): se re-declaran acá. */
+[data-bs-theme="dark"] .plan-node--in-progress {
+  box-shadow:
+    0 3px 10px color-mix(in srgb, var(--plan-in-progress-color) 16%, transparent),
+    0 0 12px color-mix(in srgb, var(--plan-in-progress-color) 12%, transparent);
+}
+[data-bs-theme="dark"] .plan-node--highlighted-next {
+  border-color: #2dd4bf;
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--plan-highlight-color) 15%, transparent),
+    0 0 14px 2px color-mix(in srgb, var(--plan-highlight-color) 30%, transparent);
+}
+[data-bs-theme="dark"] .plan-node--unlocked {
+  border-color: #60a5fa;
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--plan-highlight-color) 15%, transparent),
+    0 0 14px 2px color-mix(in srgb, var(--plan-highlight-color) 30%, transparent);
+}
 [data-bs-theme="dark"] .plan-node--selected { border-color: #60a5fa; outline-color: #60a5fa; }
+/* Supresión del glow en camino crítico/óptimo, en tema oscuro. */
+[data-bs-theme="dark"] .plan-node--optimal.plan-node--in-progress,
+[data-bs-theme="dark"] .plan-node--critical.plan-node--in-progress {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .35), 0 1px 3px rgba(0, 0, 0, .25);
+}
 [data-bs-theme="dark"] .plan-node__period,
 [data-bs-theme="dark"] .plan-node__meta { color: #9db1d1; }
 [data-bs-theme="dark"] .plan-semester-panel {

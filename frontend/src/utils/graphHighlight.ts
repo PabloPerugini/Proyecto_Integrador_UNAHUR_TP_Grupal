@@ -1,6 +1,7 @@
 import type { GraphEdge } from '../types';
 
 export const HIGHLIGHT_COLOR = '#0D9488';
+export const UNLOCK_COLOR = '#0561e5';
 
 export function getDirectSuccessorCodes(edges: readonly GraphEdge[], selectedCode: string | null): Set<string> {
   return new Set(edges
