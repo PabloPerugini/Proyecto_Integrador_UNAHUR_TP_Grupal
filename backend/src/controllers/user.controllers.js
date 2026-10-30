@@ -160,7 +160,12 @@ const loginUser = async (req, res) => {
   try {
     const { nickName, password } = req.body;
 
-    if (!nickName || !password) {
+    if (
+      typeof nickName !== "string" ||
+      typeof password !== "string" ||
+      !nickName.trim() ||
+      !password
+    ) {
       return res.status(400).json({
         message: "NickName y contraseña son obligatorios",
       });

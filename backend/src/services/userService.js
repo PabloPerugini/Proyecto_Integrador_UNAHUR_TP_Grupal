@@ -1,12 +1,18 @@
 const User = require("../models/user");
 
+// Solo se consulta con texto: evita que un objeto ({ $ne: null }) llegue
+// como filtro de Mongoose desde un body no validado.
+const isText = (value) => typeof value === "string" && value.length > 0;
+
 // Buscar usuario por email
 const findUserByEmail = async (email) => {
+  if (!isText(email)) return null;
   return User.findOne({ email });
 };
 
 // Buscar usuario por NickName
 const findUserByNickName = async (nickName) => {
+  if (!isText(nickName)) return null;
   return User.findOne({ nickName });
 };
 
