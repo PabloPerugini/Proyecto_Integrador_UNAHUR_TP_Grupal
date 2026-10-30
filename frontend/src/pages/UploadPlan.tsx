@@ -7,6 +7,10 @@ import { careerNameFromFilename } from '../utils/careerName';
 
 import { useCareers } from '../hooks/useCareers';
 import { useFlashMessage } from '../hooks/useFlashMessage';
+import { useAuth } from '../hooks/useAuth';
+
+import { makeJobId } from '../utils/importJobs';
+import { buildConfirmPayload } from '../utils/planImport';
 
 import PdfDropzone from '../components/PdfDropzone';
 import MessageBanner from '../components/MessageBanner';
@@ -15,8 +19,6 @@ import ImportJobList from '../components/ImportJobList';
 import AdminCatalog from '../components/AdminCatalog';
 import SearchSelect from '../components/SearchSelect';
 import SavedPlansPanel from '../components/SavedPlansPanel';
-
-import { makeJobId } from '../utils/importJobs';
 
 import type { ImportJob } from '../components/ImportJobList';
 
@@ -84,6 +86,7 @@ interface PreviewEntry {
 
   planName: string;
   careerId: string;
+  official: boolean;
 
   saving: boolean;
   saved?: ConfirmResponse;
@@ -118,6 +121,8 @@ function normalizeName(value: string): string {
 export default function UploadPlan() {
 
   const { careers, reload } = useCareers();
+  const { user } = useAuth();
+  const isAdmin = user?.rol === 'ADMIN';
 
   const {
     msg,
@@ -222,6 +227,7 @@ export default function UploadPlan() {
           planName: 'Plan de estudios',
 
           careerId: '',
+          official: false,
           saving: false,
         },
       }));
@@ -389,27 +395,30 @@ export default function UploadPlan() {
         '/plan-imports/confirm',
         {
           method: 'POST',
-          body: JSON.stringify({
-            fileHash: preview.result.fileHash,
-            fileName: preview.fileName,
+          body: JSON.stringify(
+            buildConfirmPayload({
+              fileHash: preview.result.fileHash,
+              fileName: preview.fileName,
 
-            // Carrera seleccionada automáticamente
-            // o elegida por el administrador.
-            careerId,
+              // Carrera seleccionada automáticamente
+              // o elegida por el administrador.
+              careerId,
 
-            name: preview.planName.trim(),
+              name: preview.planName.trim(),
 
-            subjects: preview.subjects,
+              subjects: preview.subjects,
 
-            creditsFinal:
-              preview.result.creditsFinal ?? 0,
+              creditsFinal: preview.result.creditsFinal,
 
-            creditsIntermediate:
-              preview.result.creditsIntermediate ?? 0,
+              creditsIntermediate:
+                preview.result.creditsIntermediate,
 
-            intermediateTitle:
-              preview.result.intermediateTitle ?? null,
-          }),
+              intermediateTitle:
+                preview.result.intermediateTitle,
+
+              official: preview.official,
+            })
+          ),
         }
       );
 
@@ -744,8 +753,11 @@ export default function UploadPlan() {
                   </strong>
 
                   <div>
-                    {preview.saved.saved} materias
-                    guardadas como borrador.
+                    {preview.saved.saved} materias guardadas
+                    como{' '}
+                    {preview.saved.status === 'published'
+                      ? 'plan oficial.'
+                      : 'borrador.'}
                   </div>
 
                   <small>
@@ -764,8 +776,8 @@ export default function UploadPlan() {
                       Guardar plan
                     </h5>
 
-                    <span className="badge bg-secondary">
-                      Borrador
+                    <span className={`badge ${preview.official ? 'bg-success' : 'bg-secondary'}`}>
+                      {preview.official ? 'Oficial' : 'Borrador'}
                     </span>
                   </div>
 
@@ -787,6 +799,33 @@ export default function UploadPlan() {
                       }
                     />
                   </Form.Group>
+
+                  {/* PLAN OFICIAL (solo ADMIN) */}
+
+                  {isAdmin && (
+                    <Form.Group
+                      className="mb-3"
+                      controlId={`official-${id}`}
+                    >
+                      <Form.Check
+                        type="checkbox"
+                        label="Plan oficial"
+                        checked={preview.official}
+                        disabled={preview.saving}
+                        onChange={(event) =>
+                          updatePreview(id, {
+                            official: event.target.checked,
+                          })
+                        }
+                      />
+
+                      <Form.Text className="text-muted">
+                        Visible para todos los usuarios. Si lo
+                        dejás desmarcado, queda como borrador
+                        personal.
+                      </Form.Text>
+                    </Form.Group>
+                  )}
 
                   {/* SIN CARRERAS */}
 
@@ -846,11 +885,11 @@ export default function UploadPlan() {
                   )}
 
                   <p className="text-muted small">
-                    Las materias se guardarán como
-                    borrador personal. Las
-                    correlatividades detectadas
-                    todavía no se vincularán
-                    automáticamente en el grafo.
+                    {preview.official
+                      ? 'El plan quedará publicado como oficial, visible para todos los usuarios.'
+                      : 'Las materias se guardarán como borrador personal.'}
+                    {' '}Las correlatividades detectadas todavía no se
+                    vincularán automáticamente en el grafo.
                   </p>
 
                   {/* BOTÓN GUARDAR */}
