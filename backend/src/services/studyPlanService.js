@@ -46,7 +46,7 @@ const findStudyPlanById = async (id, user) => {
     .populate("createdBy");
 };
 
-// Crear un plan personal
+// Crear un plan oficial (sin dueño, publicado) o personal.
 const createStudyPlan = async (studyPlanData) => {
   const careerExists = await Career.findById(
     studyPlanData.career
@@ -56,7 +56,11 @@ const createStudyPlan = async (studyPlanData) => {
     throw new Error("La carrera no existe");
   }
 
-  if (!studyPlanData.createdBy) {
+  const isOfficial =
+    studyPlanData.createdBy == null &&
+    studyPlanData.status === "published";
+
+  if (!isOfficial && !studyPlanData.createdBy) {
     throw new Error(
       "El usuario creador del plan es obligatorio"
     );
@@ -70,8 +74,8 @@ const createStudyPlan = async (studyPlanData) => {
     creditsFinal: studyPlanData.creditsFinal,
     creditsIntermediate: studyPlanData.creditsIntermediate,
     intermediateTitle: studyPlanData.intermediateTitle,
-    status: studyPlanData.status || "draft",
-    createdBy: studyPlanData.createdBy,
+    status: isOfficial ? "published" : studyPlanData.status || "draft",
+    createdBy: isOfficial ? null : studyPlanData.createdBy,
   });
 };
 

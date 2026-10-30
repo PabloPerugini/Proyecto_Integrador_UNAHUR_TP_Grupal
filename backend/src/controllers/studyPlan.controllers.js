@@ -9,9 +9,18 @@ const {
 // Crear un plan de estudio
 const createStudyPlan = async (req, res) => {
   try {
+    // Los planes que crea un ADMIN son oficiales: sin dueño y publicados.
+    // El body no puede fijar createdBy ni status.
     const studyPlanData = {
-      ...req.body,
-      createdBy: req.user._id,
+      name: req.body.name,
+      career: req.body.career,
+      resolution: req.body.resolution,
+      durationYears: req.body.durationYears,
+      creditsFinal: req.body.creditsFinal,
+      creditsIntermediate: req.body.creditsIntermediate,
+      intermediateTitle: req.body.intermediateTitle,
+      status: "published",
+      createdBy: null,
     };
 
     const newStudyPlan =
