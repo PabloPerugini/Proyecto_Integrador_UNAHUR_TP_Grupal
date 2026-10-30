@@ -8,6 +8,7 @@ const {
   bestDbMatch,
   cleanRequiresList,
   findCycle,
+  buildPrerequisites,
 } = require("./correlativas.service");
 
 function httpError(message, statusCode = 400) {
@@ -121,21 +122,17 @@ async function saveCorrelativas(studyPlanId, updates) {
   let saved = 0;
   if (resolved.length) {
     const idByCode = new Map(items.map((s) => [s.code, s._id]));
+    const byCode = new Map(items.map((s) => [s.code, s]));
     await PlanSubject.bulkWrite(
       resolved.map((u) => ({
         updateOne: {
           filter: { studyPlan: studyPlanId, code: u.code },
           update: {
             $set: {
-              prerequisites: u.requires
-                .map((rc) => idByCode.get(rc))
-                .filter(Boolean)
-                .map((refId) => ({
-                  planSubject: refId,
-                  // Alcanza regularizada para avanzar (editable luego en
-                  // Administrar planes, materia por materia).
-                  requiredStatus: "REGULARIZADA",
-                })),
+              prerequisites: buildPrerequisites(
+                u.requires.map((rc) => idByCode.get(rc)).filter(Boolean),
+                byCode.get(u.code)?.prerequisites || [],
+              ),
             },
           },
         },

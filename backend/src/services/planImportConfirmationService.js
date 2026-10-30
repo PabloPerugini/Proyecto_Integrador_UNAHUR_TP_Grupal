@@ -10,6 +10,7 @@ const PdfExtractionCache = require("../models/pdfExtractionCache");
 const {
   resolvePrerequisites,
   findCycle,
+  buildPrerequisites,
 } = require("./correlativas.service");
 
 function httpError(message, statusCode = 400) {
@@ -362,14 +363,9 @@ async function confirmPlanImport(userId, data, { isAdmin = false } = {}) {
             filter: { studyPlan: studyPlan._id, code: u.code },
             update: {
               $set: {
-                prerequisites: u.requires
-                  .map((rc) => idByCode.get(rc))
-                  .filter(Boolean)
-                  .map((refId) => ({
-                    planSubject: refId,
-                    // Alcanza regularizada para avanzar (default UNAHUR).
-                    requiredStatus: "REGULARIZADA",
-                  })),
+                prerequisites: buildPrerequisites(
+                  u.requires.map((rc) => idByCode.get(rc)).filter(Boolean),
+                ),
               },
             },
           },

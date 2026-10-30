@@ -154,6 +154,26 @@ function findCycle(allRequires, updates) {
   return null;
 }
 
+// Arma las correlativas de una materia conservando el requiredStatus que ya
+// tenía cada requisito. Los nuevos usan el default (regularizada).
+function buildPrerequisites(refIds, existing = [], defaultStatus = "REGULARIZADA") {
+  const statusByRef = new Map();
+  for (const p of existing) {
+    const ref = p?.planSubject;
+    const id = ref && typeof ref === "object" ? ref._id : ref;
+    if (
+      id &&
+      (p.requiredStatus === "APROBADA" || p.requiredStatus === "REGULARIZADA")
+    ) {
+      statusByRef.set(String(id), p.requiredStatus);
+    }
+  }
+  return refIds.map((refId) => ({
+    planSubject: refId,
+    requiredStatus: statusByRef.get(String(refId)) || defaultStatus,
+  }));
+}
+
 function escapeRegExp(s) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -238,5 +258,6 @@ module.exports = {
   bestDbMatch,
   cleanRequiresList,
   findCycle,
+  buildPrerequisites,
   resolvePrerequisites,
 };
