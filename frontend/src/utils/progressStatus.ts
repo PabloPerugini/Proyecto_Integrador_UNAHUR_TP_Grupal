@@ -45,3 +45,10 @@ export function resolveProgressStatuses(
       : 'DISPONIBLE'];
   }));
 }
+
+// Retroceso desde el grafo: solo estados que el backend acepta y registra.
+export function previousProgressStatus(status: string | undefined): ProgressStatus | null {
+  if (status === 'Aprobada') return 'CURSANDO';
+  if (status === 'Cursando') return 'PENDIENTE';
+  return null;
+}

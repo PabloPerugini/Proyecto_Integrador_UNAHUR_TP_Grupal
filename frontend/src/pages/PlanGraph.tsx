@@ -25,6 +25,7 @@ import { STATUS_BADGE, statusLabel } from '../utils/status';
 import { instituteColor, instituteGradientTec } from '../utils/instituteColors';
 import { getDirectSuccessorCodes, HIGHLIGHT_COLOR, UNLOCK_COLOR } from '../utils/graphHighlight';
 import { getStudyPath } from '../utils/studyPaths';
+import { previousProgressStatus } from '../utils/progressStatus';
 import PlanNode, { toPlanNodeData, StatusBadges, type PlanNodeData } from '../components/PlanNodeCard';
 import SubjectStatusIcon from '../components/SubjectStatusIcon';
 import AcademicEdge from '../components/AcademicEdge';
@@ -325,7 +326,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
   const advanceSubject = useCallback(async (code: string, backwards = false) => {
     const subject = graph?.nodes.find(node => node.code === code);
     const status = backwards
-      ? subject?.status === 'Aprobada' ? 'CURSANDO' : subject?.status === 'Cursando' ? 'DISPONIBLE' : null
+      ? previousProgressStatus(subject?.status)
       : subject?.status === 'Disponible' ? 'CURSANDO' : subject?.status === 'Cursando' ? 'APROBADA' : null;
     if (!status || !subject?.planSubjectId || !graph?.userStudyPlanId || !selectedPlan || progressOperation.current) return;
     const operation = Symbol();
