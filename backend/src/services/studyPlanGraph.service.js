@@ -16,6 +16,16 @@ const STATUS_ES = {
   PENDIENTE: "Pendiente",
 };
 
+// El nombre editado en el plan manda sobre el nombre del catálogo.
+function subjectDisplayName(planSubject) {
+  return (
+    planSubject.nameOverride?.trim() ||
+    planSubject.subject?.name?.trim() ||
+    planSubject.code?.trim() ||
+    "Materia sin nombre"
+  );
+}
+
 async function loadPlanData(studyPlanId, userId) {
   const items = await PlanSubject.find({ studyPlan: studyPlanId })
     .populate("subject", "name")
@@ -25,7 +35,7 @@ async function loadPlanData(studyPlanId, userId) {
   const codeById = uniqueSubjectCodes(items.map((ps) => ({ _id: ps._id, code: ps.code })));
   const subjects = items.map((ps) => ({
     code: codeById.get(String(ps._id)),
-    name: ps.subject?.name?.trim() || ps.code?.trim() || "Materia sin nombre",
+    name: subjectDisplayName(ps),
     year: ps.year ?? null,
     cuatrimestre: ps.period ?? null,
     duration: ps.duration || "CUATRIMESTRAL",
@@ -66,4 +76,9 @@ async function getSugerenciasData(studyPlanId, userId) {
   return buildSugerencias({ subjects, progress });
 }
 
-module.exports = { loadPlanData, getGraphData, getSugerenciasData };
+module.exports = {
+  loadPlanData,
+  getGraphData,
+  getSugerenciasData,
+  subjectDisplayName,
+};
