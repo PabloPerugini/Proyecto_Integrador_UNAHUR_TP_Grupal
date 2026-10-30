@@ -166,8 +166,10 @@ function longestPendingPath(nodes, edges, approved) {
   }
 
   const criticalPath = [];
+  const visited = new Set();
   let cur = start;
-  while (cur) {
+  while (cur && !visited.has(cur)) {
+    visited.add(cur);
     criticalPath.push(cur);
     const next = (g.get(cur) || [])
       .filter((v) => !approved.has(v))
