@@ -8,6 +8,11 @@ const PdfExtractionCache = require("../models/pdfExtractionCache");
 // v5: parser v7d (E1/E4/E5, NFC, merge de nombres partidos, duración Bimestral).
 const PARSER_VERSION = "v5";
 
+// Un proceso que muere deja el registro en PROCESANDO para siempre. Pasado
+// este tiempo el lock se considera vencido y otra petición puede reclamarlo.
+const PROCESSING_LOCK_MS =
+  Number(process.env.PDF_EXTRACTION_LOCK_MS) || 10 * 60 * 1000;
+
 // Calcular la huella digital del PDF
 const getFileHash = (buffer) => {
   if (
@@ -22,6 +27,17 @@ const getFileHash = (buffer) => {
     .createHash("sha256")
     .update(buffer)
     .digest("hex");
+};
+
+// Un lock viejo (o sin fecha) ya no representa un proceso vivo.
+const isStaleProcessing = (entry, now = Date.now()) => {
+  if (entry?.status !== "PROCESANDO") return false;
+
+  const updated = entry.updatedAt
+    ? new Date(entry.updatedAt).getTime()
+    : NaN;
+
+  return !Number.isFinite(updated) || now - updated > PROCESSING_LOCK_MS;
 };
 
 // Interpretar una entrada ya existente
@@ -63,6 +79,44 @@ const preparePdfExtraction = async (buffer) => {
   const existing = await PdfExtractionCache.findOne(filter);
 
   if (existing) {
+    // Lock vencido: reclamarlo de forma atómica antes de reprocesar. Si otro
+    // request lo reclamó primero, se vuelve a evaluar el registro actual.
+    if (isStaleProcessing(existing)) {
+      const staleFilter = { ...filter, status: "PROCESANDO" };
+      const updated = existing.updatedAt
+        ? new Date(existing.updatedAt).getTime()
+        : NaN;
+
+      if (Number.isFinite(updated)) {
+        staleFilter.updatedAt = {
+          $lt: new Date(Date.now() - PROCESSING_LOCK_MS),
+        };
+      }
+
+      const claimed = await PdfExtractionCache.findOneAndUpdate(
+        staleFilter,
+        {
+          $set: {
+            status: "PROCESANDO",
+            result: null,
+            errorMessage: null,
+          },
+        },
+        { new: true }
+      );
+
+      if (claimed) {
+        return { action: "PARSE", fileHash };
+      }
+
+      const current = await PdfExtractionCache.findOne(filter);
+      if (!current) {
+        throw new Error("No se encontró la extracción");
+      }
+
+      return getCacheState(current, fileHash);
+    }
+
     // Si falló anteriormente, permitir un nuevo intento
     if (existing.status === "ERROR") {
       const retry = await PdfExtractionCache.findOneAndUpdate(

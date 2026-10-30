@@ -3,15 +3,19 @@
 // distinto sale a Groq/Gemini con decenas de miles de caracteres, así que
 // sin cota un cliente anónimo puede consumir las claves del proyecto.
 //
-// Diseño (plan 1.7 + corrección por regresión de tests):
-//  * Clave = x-user-id si el cliente lo manda (UI), si no la IP.
+// Diseño:
+//  * Clave = usuario autenticado (req.user._id). El header x-user-id se ignora:
+//    es falsificable y permitía evadir el límite cambiándolo en cada request.
+//  * Sin usuario (rutas públicas) la clave es la IP normalizada.
 //  * Loopback y redes privadas quedan exentas POR DEFECTO: ahí corren los
 //    tests masivos (43 PDFs) y la UI en docker/LAN. Un atacante desde
 //    Internet no llega como 127.x / 10.x / 172.16-31.x / 192.168.x.
 //    AI_RATE_PRIVATE_EXEMPT=false lo desactiva si el backend queda expuesto
 //    a una red de confianza que no es tuya.
+//  * Detrás de un proxy, configurar TRUST_PROXY en app.js para que req.ip sea
+//    la IP real y no la del proxy.
 //  * AI_RATE_MAX=0 desactiva el límite (corridas de tests contra un backend
-//    remoto), AI_RATE_MAX/VIEN AI_RATE_WINDOW_MS lo ajustan.
+//    remoto), AI_RATE_MAX/AI_RATE_WINDOW_MS lo ajustan.
 const { rateLimit, ipKeyGenerator } = require("express-rate-limit");
 
 const PRIVATE_EXEMPT = String(process.env.AI_RATE_PRIVATE_EXEMPT ?? "true") !== "false";
@@ -29,6 +33,15 @@ const isPrivateOrLoopback = (ip) => {
   return !!m && Number(m[1]) >= 16 && Number(m[1]) <= 31;
 };
 
+// El prefijo evita que un id de usuario colisione con una IP.
+function aiRateLimitKey(req) {
+  const userId = req.user?._id;
+  if (userId) return `user:${String(userId)}`;
+  // ipKeyGenerator normaliza IPv6 (evita ERR_ERL_KEY_GEN_IPV6: sin esto,
+  // un mismo cliente IPv6 cambia de prefijo y evade el límite).
+  return ipKeyGenerator(req.ip);
+}
+
 const aiRateLimit =
   MAX > 0
     ? rateLimit({
@@ -36,9 +49,7 @@ const aiRateLimit =
         limit: MAX,
         standardHeaders: "draft-7",
         legacyHeaders: false,
-        // ipKeyGenerator normaliza IPv6 (evita ERR_ERL_KEY_GEN_IPV6: sin esto,
-        // un mismo cliente IPv6 cambia de prefijo y evade el límite).
-        keyGenerator: (req) => req.headers["x-user-id"] || ipKeyGenerator(req.ip),
+        keyGenerator: aiRateLimitKey,
         skip: (req) => isPrivateOrLoopback(req.ip),
         message: {
           message:
@@ -47,4 +58,4 @@ const aiRateLimit =
       })
     : (_req, _res, next) => next(); // AI_RATE_MAX=0 => sin límite
 
-module.exports = { aiRateLimit, isPrivateOrLoopback };
+module.exports = { aiRateLimit, aiRateLimitKey, isPrivateOrLoopback };

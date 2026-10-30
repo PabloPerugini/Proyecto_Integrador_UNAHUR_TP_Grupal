@@ -9,6 +9,7 @@ const swaggerUi = require("swagger-ui-express");
 const YAML = require("yamljs");
 const routes = require("./routes");
 const errorHandler = require("./middlewares/errorHandler");
+const { parseTrustProxy } = require("./config/trustProxy");
 let limiterGeneral;
 let limiterLogin;
 let limiterRegister;
@@ -21,6 +22,13 @@ try {
 }
 
 const app = express();
+
+// Detrás de un proxy (Docker, Nginx, Render) req.ip debe ser la del cliente:
+// si no, el rate limit por IP agrupa a todos o confía en headers falsos.
+const trustProxy = parseTrustProxy(process.env.TRUST_PROXY);
+if (trustProxy !== null) {
+  app.set("trust proxy", trustProxy);
+}
 
 const fs = require("fs");
 const swaggerFile = path.join(__dirname, "../docs/swagger.yaml");

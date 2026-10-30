@@ -61,6 +61,9 @@ async function loadPlanData(studyPlanId, userId) {
       subjectCode: codeById.get(String(r.planSubject)) || String(r.planSubject),
       status: STATUS_ES[r.status] || "Pendiente",
       nota: r.grade ?? null,
+      // sugerencias.service.js usa fecha/createdAt para actividad reciente y R5.
+      fecha: r.academicDate ?? null,
+      createdAt: r.createdAt ?? null,
     }));
   }
   return { subjects, progress };

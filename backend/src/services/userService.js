@@ -93,10 +93,17 @@ const updateUser = async (nickName, userData) => {
     "rol",
   ];
 
+  const passwordChanged = userData.password !== undefined;
+
   for (const field of allowedFields) {
     if (userData[field] !== undefined) {
       user[field] = userData[field];
     }
+  }
+
+  // Cambiar la contraseña invalida los JWT emitidos con la versión anterior.
+  if (passwordChanged) {
+    user.tokenVersion = (user.tokenVersion ?? 0) + 1;
   }
 
   await user.save();
