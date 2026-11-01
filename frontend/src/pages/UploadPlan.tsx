@@ -390,8 +390,10 @@ export default function UploadPlan() {
       },
     }));
 
+    let saved: ConfirmResponse;
+
     try {
-      const saved = await request<ConfirmResponse>(
+      saved = await request<ConfirmResponse>(
         '/plan-imports/confirm',
         {
           method: 'POST',
@@ -435,9 +437,6 @@ export default function UploadPlan() {
         'success',
         `Plan guardado correctamente con ${saved.saved} materias.`
       );
-
-      await reload();
-      setSavedPlansVersion(v => v + 1);
     } catch (error) {
       setPreviews((previous) => ({
         ...previous,
@@ -450,6 +449,18 @@ export default function UploadPlan() {
       flashFromError(
         error,
         'No se pudo guardar el plan'
+      );
+      return;
+    }
+
+    // Refresco separado: si falla, el plan ya quedó guardado.
+    try {
+      await reload();
+      setSavedPlansVersion(v => v + 1);
+    } catch {
+      flash(
+        'warning',
+        'El plan se guardó, pero no se pudo refrescar el catálogo.'
       );
     }
   };

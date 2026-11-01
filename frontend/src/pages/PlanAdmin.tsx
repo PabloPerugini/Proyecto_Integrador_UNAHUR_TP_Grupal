@@ -152,17 +152,42 @@ export default function PlanAdmin() {
       }
     }
 
+    // Validar todos los campos antes del primer PUT: si una materia tiene
+    // datos inválidos, no se guarda ninguna a medias.
+    let updates: Array<{
+      id: string;
+      data: Parameters<typeof studyPlansApi.updateSubject>[2];
+    }>;
+    try {
+      updates = pending.map(subject => {
+        const edit = draft[subject._id];
+        return {
+          id: subject._id,
+          data: {
+            nameOverride: edit.name.trim(),
+            code: edit.code.trim(),
+            year: validNum(edit.year, 'Año', 1, 20),
+            period: validNum(edit.period, 'Período', 1, 12),
+            credits: validNum(edit.credits, 'Créditos', 0, 1000) ?? 0,
+            optional: edit.optional,
+            intermediate: edit.intermediate,
+            prerequisites: edit.prerequisites.map(p => ({
+              planSubject: prerequisiteId(p) || '',
+              requiredStatus: p.requiredStatus,
+            })),
+          },
+        };
+      });
+    } catch (e) {
+      flashFromError(e, 'Revisá los datos de las materias antes de guardar');
+      return;
+    }
+
     setWorking(true);
     let saved = 0;
     try {
-      for (const subject of pending) {
-        const edit = draft[subject._id];
-        if (!edit) continue;
-        await studyPlansApi.updateSubject(plan._id, subject._id, {
-          nameOverride: edit.name.trim(), code: edit.code.trim(), year: validNum(edit.year, 'Año', 1, 20), period: validNum(edit.period, 'Período', 1, 12),
-          credits: validNum(edit.credits, 'Créditos', 0, 1000) ?? 0, optional: edit.optional, intermediate: edit.intermediate,
-          prerequisites: edit.prerequisites.map(p => ({ planSubject: prerequisiteId(p) || '', requiredStatus: p.requiredStatus })),
-        });
+      for (const { id, data } of updates) {
+        await studyPlansApi.updateSubject(plan._id, id, data);
         saved += 1;
       }
       await reloadSubjects(plan._id);
@@ -212,18 +237,27 @@ export default function PlanAdmin() {
   };
   const setAllRequiredStatus = async (requiredStatus: 'REGULARIZADA' | 'APROBADA') => {
     if (!plan || working) return;
+    const label = requiredStatus === 'APROBADA' ? 'deben estar aprobadas' : 'alcanza regularizada';
+    const hasUnsavedPrerequisites = subjects.some(s => {
+      const edit = draft[s._id];
+      return edit && prerequisiteSignature(edit.prerequisites) !== prerequisiteSignature(s.prerequisites ?? []);
+    });
+    if (hasUnsavedPrerequisites) {
+      flash('warning', 'Guardá los cambios de correlativas antes de aplicar el estado a todo el plan.');
+      return;
+    }
     const targets = subjects.filter(s => (s.prerequisites ?? []).length > 0);
     if (!targets.length) { flash('danger', 'El plan no tiene correlativas cargadas.'); return; }
-    const label = requiredStatus === 'APROBADA' ? 'deben estar aprobadas' : 'alcanza regularizada';
     if (!window.confirm(`¿Marcar las correlativas de ${targets.length} materia(s) como «${label}»?`)) return;
     setWorking(true);
     let saved = 0;
     try {
       for (const subject of targets) {
-        const edit = draft[subject._id];
-        if (!edit) continue;
         await studyPlansApi.updateSubject(plan._id, subject._id, {
-          prerequisites: edit.prerequisites.map(p => ({ planSubject: prerequisiteId(p) || '', requiredStatus })),
+          prerequisites: (subject.prerequisites ?? []).map(p => ({
+            planSubject: prerequisiteId(p) || '',
+            requiredStatus,
+          })),
         });
         saved += 1;
       }

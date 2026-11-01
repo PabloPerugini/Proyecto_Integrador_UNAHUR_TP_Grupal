@@ -403,7 +403,13 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
         () => { if (active) setInterCodes(null); },
       );
     }
-    getPlanGraph(selectedPlan).then(g => { if (active) setGraph(g); }).catch(e => {
+    getPlanGraph(selectedPlan).then(g => {
+      if (!active) return;
+      setGraph(g);
+      if (g.progressLoadFailed) {
+        setProgressError('No se pudo cargar tu progreso guardado. Los estados pueden no reflejar tus materias aprobadas.');
+      }
+    }).catch(e => {
       if (active) setErr(e instanceof Error ? e.message : 'No se pudo cargar el plan');
     });
     return () => { active = false; };

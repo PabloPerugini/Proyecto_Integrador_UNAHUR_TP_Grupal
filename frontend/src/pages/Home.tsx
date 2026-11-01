@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button, Form } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 
@@ -383,7 +383,17 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const openMine = async (enrolls: UserStudyPlan[]) => {
+  // Descarta respuestas viejas si el usuario cambia de pantalla mientras
+  // una carga anterior sigue en vuelo.
+  const loadSeq = useRef(0);
+  const startLoad = useCallback(() => {
+    loadSeq.current += 1;
+    return loadSeq.current;
+  }, []);
+  const isCurrentLoad = useCallback((token: number) => loadSeq.current === token, []);
+
+  const openMine = useCallback(async (enrolls: UserStudyPlan[]) => {
+    const token = startLoad();
     setLoading(true);
     setError(null);
     try {
@@ -401,23 +411,26 @@ export default function Home() {
           return { plan, subjects };
         }),
       );
+      if (!isCurrentLoad(token)) return;
       setEntries(pairs);
       setSelectedUnit(null);
       setSelectedCareer(null);
       setStep('mine');
       setError(null);
     } catch (err) {
+      if (!isCurrentLoad(token)) return;
       setError(err instanceof Error ? err.message : 'No se pudieron cargar tus inscripciones');
       setEntries([]);
     } finally {
-      setLoading(false);
+      if (isCurrentLoad(token)) setLoading(false);
     }
-  };
+  }, [isCurrentLoad, startLoad]);
 
   // Inicio: institutos + inscripciones. Si hay inscripciones,
   // se aterriza en "Mis inscripciones" (mi carrera recordada).
   useEffect(() => {
     let active = true;
+    const token = startLoad();
 
     const load = async () => {
       try {
@@ -425,7 +438,7 @@ export default function Home() {
           academicUnitsApi.getAll(true),
           studyPlansApi.getMine(),
         ]);
-        if (!active) return;
+        if (!active || !isCurrentLoad(token)) return;
         setUnits(Array.isArray(list) ? list : []);
         const enrolls = Array.isArray(mine) ? mine : [];
         setEnrollments(enrolls);
@@ -436,18 +449,22 @@ export default function Home() {
           return;
         }
       } catch (err) {
-        if (!active) return;
+        if (!active || !isCurrentLoad(token)) return;
         setError(err instanceof Error ? err.message : 'No se pudieron cargar los institutos');
       } finally {
-        if (active) setLoading(false);
+        if (active && isCurrentLoad(token)) setLoading(false);
       }
     };
 
     void load();
-    return () => { active = false; };
-  }, []);
+    return () => {
+      active = false;
+      loadSeq.current += 1;
+    };
+  }, [isCurrentLoad, openMine, startLoad]);
 
   const openUnit = async (unit: AcademicUnit) => {
+    const token = startLoad();
     setSelectedUnit(unit);
     setSelectedCareer(null);
     setStep('careers');
@@ -460,6 +477,7 @@ export default function Home() {
         careersApi.getAll(unit._id),
         studyPlansApi.getAll(),
       ]);
+      if (!isCurrentLoad(token)) return;
 
       const withPlans = new Set(
         plans
@@ -473,14 +491,16 @@ export default function Home() {
         ),
       );
     } catch (err) {
+      if (!isCurrentLoad(token)) return;
       setError(err instanceof Error ? err.message : 'No se pudieron cargar las carreras');
       setCareers([]);
     } finally {
-      setLoading(false);
+      if (isCurrentLoad(token)) setLoading(false);
     }
   };
 
   const openCareer = async (career: Career) => {
+    const token = startLoad();
     setSelectedCareer(career);
     setStep('plans');
     setLoading(true);
@@ -491,6 +511,7 @@ export default function Home() {
         studyPlansApi.getAll(career._id),
         studyPlansApi.getMine(),
       ]);
+      if (!isCurrentLoad(token)) return;
 
       const visible = plans.filter((p) => p.status === 'published' || isAdmin);
       setEnrollments(Array.isArray(mine) ? mine : []);
@@ -498,6 +519,7 @@ export default function Home() {
       const results = await Promise.allSettled(
         visible.map((plan) => studyPlansApi.getSubjects(plan._id)),
       );
+      if (!isCurrentLoad(token)) return;
 
       setEntries(
         visible.map((plan, index) => {
@@ -513,10 +535,11 @@ export default function Home() {
       );
       setError(null);
     } catch (err) {
+      if (!isCurrentLoad(token)) return;
       setError(err instanceof Error ? err.message : 'No se pudieron cargar los planes');
       setEntries([]);
     } finally {
-      setLoading(false);
+      if (isCurrentLoad(token)) setLoading(false);
     }
   };
 
@@ -530,9 +553,14 @@ export default function Home() {
   };
 
   const handleEnroll = async (planId: string) => {
-    await studyPlansApi.enroll(planId);
-    const mine = await studyPlansApi.getMine();
-    setEnrollments(Array.isArray(mine) ? mine : []);
+    setActionError(null);
+    try {
+      await studyPlansApi.enroll(planId);
+      const mine = await studyPlansApi.getMine();
+      setEnrollments(Array.isArray(mine) ? mine : []);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'No se pudo inscribir en el plan');
+    }
   };
 
   const handleRemove = async (planId: string) => {

@@ -214,6 +214,17 @@ export default function AdminCatalog({
     );
   };
 
+  // El refresco va aparte de la mutación: si falla, el cambio ya se guardó
+  // y no debe reportarse como error de la operación.
+  const refreshCareers = async () => {
+    try {
+      await loadCareers();
+      await onCareerCreated();
+    } catch {
+      notify('warning', 'El cambio se guardó, pero no se pudo refrescar la lista.');
+    }
+  };
+
   useEffect(() => {
     let active = true;
     Promise.all([
@@ -416,17 +427,17 @@ export default function AdminCatalog({
       setCareerName('');
       setCareerDescription('');
       setCareerType('');
-      await loadCareers();
-      await onCareerCreated();
       notify('success', `Carrera "${savedName}" creada correctamente.`);
     } catch (err) {
       notify(
         'danger',
         err instanceof Error ? err.message : 'No se pudo crear la carrera',
       );
+      return;
     } finally {
       setWorking(false);
     }
+    await refreshCareers();
   };
 
   const openCareerEdit = (career: Career) => {
@@ -456,8 +467,6 @@ export default function AdminCatalog({
         careerType: editCareerType || null,
         description: editCareerDescription.trim(),
       });
-      await loadCareers();
-      await onCareerCreated();
       setEditingCareer(null);
       notify('success', 'Carrera actualizada correctamente.');
     } catch (err) {
@@ -467,9 +476,11 @@ export default function AdminCatalog({
           ? err.message
           : 'No se pudo actualizar la carrera',
       );
+      return;
     } finally {
       setWorking(false);
     }
+    await refreshCareers();
   };
 
   const archiveCareer = async (career: Career) => {
@@ -483,8 +494,6 @@ export default function AdminCatalog({
     setWorking(true);
     try {
       await careersApi.update(career._id, { isArchived: true });
-      await loadCareers();
-      await onCareerCreated();
       notify(
         'success',
         'Carrera archivada. La encontrás en "Ver archivadas".',
@@ -494,9 +503,11 @@ export default function AdminCatalog({
         'danger',
         err instanceof Error ? err.message : 'No se pudo archivar la carrera',
       );
+      return;
     } finally {
       setWorking(false);
     }
+    await refreshCareers();
   };
 
   const restoreCareer = async (career: Career) => {
@@ -504,17 +515,17 @@ export default function AdminCatalog({
     setWorking(true);
     try {
       await careersApi.update(career._id, { isArchived: false });
-      await loadCareers();
-      await onCareerCreated();
       notify('success', `Carrera "${career.name}" restaurada.`);
     } catch (err) {
       notify(
         'danger',
         err instanceof Error ? err.message : 'No se pudo restaurar la carrera',
       );
+      return;
     } finally {
       setWorking(false);
     }
+    await refreshCareers();
   };
 
   const removeCareer = async (career: Career) => {
@@ -528,8 +539,6 @@ export default function AdminCatalog({
     setWorking(true);
     try {
       await careersApi.deleteCareer(career._id);
-      await loadCareers();
-      await onCareerCreated();
       notify('success', `Carrera "${career.name}" eliminada.`);
     } catch (err) {
       notify(
@@ -538,9 +547,11 @@ export default function AdminCatalog({
           ? err.message
           : 'No se pudo eliminar la carrera. Si tiene planes de estudio, archivala.',
       );
+      return;
     } finally {
       setWorking(false);
     }
+    await refreshCareers();
   };
 
   const activeCareers = useMemo(
@@ -603,7 +614,6 @@ export default function AdminCatalog({
         continuesIn: articChecked,
         careerType: articCareerType || null,
       });
-      await loadCareers();
       notify('success', 'Articulación guardada correctamente.');
     } catch (err) {
       notify(
@@ -612,9 +622,11 @@ export default function AdminCatalog({
           ? err.message
           : 'No se pudo guardar la articulación',
       );
+      return;
     } finally {
       setSavingArtic(false);
     }
+    await refreshCareers();
   };
 
   const editCareerUnitOptions = useMemo(

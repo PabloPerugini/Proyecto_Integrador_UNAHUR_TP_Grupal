@@ -10,7 +10,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "test": "node --experimental-strip-types --test tests/planCard.test.mjs tests/academicOrdering.test.mjs tests/statusContrast.test.mjs tests/subjectName.test.mjs tests/progressStatus.test.mjs tests/planImport.test.mjs",
+    "test": "node --experimental-strip-types --test tests/planCard.test.mjs tests/academicOrdering.test.mjs tests/statusContrast.test.mjs tests/subjectName.test.mjs tests/progressStatus.test.mjs tests/planImport.test.mjs tests/csv.test.mjs tests/progressDraft.test.mjs",
     "test:order": "node --experimental-strip-types --test tests/academicOrdering.test.mjs",
     "test:contrast": "node --experimental-strip-types --test tests/statusContrast.test.mjs",
     "preview": "vite preview"

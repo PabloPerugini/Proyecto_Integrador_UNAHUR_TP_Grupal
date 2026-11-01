@@ -7,12 +7,13 @@ function toLabel(status: ProgressStatus | undefined): SubjectStatus {
   return status === 'APROBADA' ? 'Aprobada' : status === 'REGULARIZADA' ? 'Regular' : status === 'CURSANDO' ? 'Cursando' : status === 'DISPONIBLE' ? 'Disponible' : 'Bloqueada';
 }
 export async function getPlanGraph(plan: StudyPlan, strictProgress = false): Promise<GraphData> {
+  let progressLoadFailed = false;
   const [items, enrollments] = await Promise.all([
     studyPlansApi.getSubjects(plan._id),
-    studyPlansApi.getMine().catch(error => { if (strictProgress) throw error; return []; }),
+    studyPlansApi.getMine().catch(error => { if (strictProgress) throw error; progressLoadFailed = true; return []; }),
   ]);
   const enrollment = enrollments.find(p => (typeof p.studyPlan === 'string' ? p.studyPlan : p.studyPlan?._id) === plan._id);
-  const savedProgress = enrollment ? await studyPlansApi.getProgress(enrollment._id).catch(error => { if (strictProgress) throw error; return []; }) : [];
+  const savedProgress = enrollment ? await studyPlansApi.getProgress(enrollment._id).catch(error => { if (strictProgress) throw error; progressLoadFailed = true; return []; }) : [];
   const statusById = resolveProgressStatuses(items, new Map(savedProgress.map(p => [
     typeof p.planSubject === 'string' ? p.planSubject : p.planSubject?._id ?? '', p.status,
   ])));
@@ -56,6 +57,7 @@ export async function getPlanGraph(plan: StudyPlan, strictProgress = false): Pro
   return {
     title: `${careerName(plan)} · ${plan.name}`,
     userStudyPlanId: enrollment?._id,
+    progressLoadFailed,
     color: typeof plan.career === 'object' && plan.career ? getCareerColor({ name: plan.career.name || '', color: plan.career.color, academicUnit: plan.career.academicUnit ?? null }) : '#238a42',
     nodes, edges, availableNow, criticalPath: [], hasCycle: false, topologicalOrder: [],
     stats: {

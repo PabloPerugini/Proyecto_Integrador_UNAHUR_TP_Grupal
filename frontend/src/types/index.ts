@@ -161,6 +161,7 @@ export interface IntermediateProgress {
 export interface GraphData {
   title: string;
   userStudyPlanId?: string;
+  progressLoadFailed?: boolean;
   color?: string;
   nodes: GraphNode[];
   edges: GraphEdge[];

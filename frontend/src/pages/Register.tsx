@@ -103,11 +103,18 @@ export default function Register() {
         email: email.trim().toLowerCase(),
         password,
       });
-      await login(nickName.trim(), password);
-      navigate('/', { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo crear el usuario.');
-    } finally {
+      setLoading(false);
+      return;
+    }
+
+    // La cuenta ya existe: un fallo de login no debe sugerir que el alta falló.
+    try {
+      await login(nickName.trim(), password);
+      navigate('/', { replace: true });
+    } catch {
+      setError('Tu cuenta se creó, pero no pudimos iniciar sesión. Probá desde Ingresar.');
       setLoading(false);
     }
   };

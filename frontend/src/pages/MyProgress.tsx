@@ -9,12 +9,19 @@ import MessageBanner from '../components/MessageBanner';
 import PdfDropzone from '../components/PdfDropzone';
 import { IconBoard, IconCheck, IconCoins } from '../components/icons';
 import { instituteColor, instituteGradientTec } from '../utils/instituteColors';
+import { resolveProgressStatuses, hasStarted } from '../utils/progressStatus';
+import { parseGrades } from '../utils/progressDraft';
+import { toCsv } from '../utils/csv';
 
 // La tabla solo permite elegir estados registrables; DISPONIBLE/BLOQUEADA son
 // estados derivados que calcula el plan (no se guardan).
 type SelectableStatus = Extract<ProgressStatus, 'PENDIENTE' | 'CURSANDO' | 'REGULARIZADA' | 'APROBADA'>;
 const STATUS: Record<SelectableStatus, string> = {
   PENDIENTE: 'Pendiente', CURSANDO: 'Cursando', REGULARIZADA: 'Regularizada', APROBADA: 'Aprobada',
+};
+const EFFECTIVE_LABEL: Record<ProgressStatus, string> = {
+  PENDIENTE: 'Pendiente', CURSANDO: 'Cursando', REGULARIZADA: 'Regularizada', APROBADA: 'Aprobada',
+  DISPONIBLE: 'Disponible', BLOQUEADA: 'Bloqueada',
 };
 interface Draft { status: ProgressStatus; grade: string }
 interface HistorySubject { code?: string; name?: string; status?: string; nota?: number | null }
@@ -52,6 +59,15 @@ export default function MyProgress() {
   const [tab, setTab] = useState<'lic' | 'tec'>('lic');
   const enrollment = enrollments.find(x => getId(x.studyPlan) === selectedId);
   const selectedPlan = plans.find(p => p._id === selectedId);
+  // Misma resolución de estados que el grafo: una materia sin sustento no
+  // cuenta como aprobada aunque tenga ese estado guardado.
+  const effective = useMemo(
+    () => resolveProgressStatuses(
+      subjects,
+      new Map(Object.entries(draft).map(([id, value]) => [id, value.status])),
+    ),
+    [subjects, draft],
+  );
 
   useEffect(() => {
     let active = true;
@@ -107,6 +123,23 @@ export default function MyProgress() {
   const dirty = subjects.filter(s => draft[s._id] && (draft[s._id].status !== original[s._id]?.status || draft[s._id].grade !== original[s._id]?.grade));
   const saveAll = async () => {
     if (!enrollment || working || dirty.length === 0) return;
+    // Validar todas las notas antes del primer PUT: si una falla, no se
+    // guarda ninguna materia a medias.
+    let prepared: Array<{ item: PlanSubject; value: Draft; grade: number | null }>;
+    try {
+      const grades = parseGrades(dirty.map(item => ({
+        id: item._id,
+        name: subjectName(item),
+        grade: draft[item._id]?.grade ?? '',
+      })));
+      prepared = dirty.flatMap(item => {
+        const value = draft[item._id];
+        return value ? [{ item, value, grade: grades.get(item._id) ?? null }] : [];
+      });
+    } catch (e) {
+      flashFromError(e, 'Revisá las notas antes de guardar');
+      return;
+    }
     // Pre-chequeo local de correlativas (el back revalida y es la fuente).
     const byId = new Map(subjects.map(s => [s._id, s]));
     const blocked: string[] = [];
@@ -116,7 +149,7 @@ export default function MyProgress() {
       for (const p of item.prerequisites ?? []) {
         const refId = prerequisiteId(p);
         const ref = refId ? byId.get(refId) : undefined;
-        const state = ref ? draft[ref._id]?.status ?? 'PENDIENTE' : 'PENDIENTE';
+        const state = ref ? effective.get(ref._id) ?? 'PENDIENTE' : 'PENDIENTE';
         const ok = p.requiredStatus === 'APROBADA'
           ? state === 'APROBADA'
           : state === 'REGULARIZADA' || state === 'APROBADA';
@@ -130,10 +163,7 @@ export default function MyProgress() {
     setWorking(true);
     let saved = 0;
     try {
-      for (const item of dirty) {
-        const value = draft[item._id];
-        const grade = value.grade.trim() === '' ? null : Number(value.grade);
-        if (grade !== null && (!Number.isFinite(grade) || grade < 0 || grade > 10)) throw new Error(`La nota de ${subjectName(item)} debe estar entre 0 y 10`);
+      for (const { item, value, grade } of prepared) {
         await studyPlansApi.saveProgress(enrollment._id, item._id, { status: value.status, grade });
         saved++;
       }
@@ -191,9 +221,7 @@ export default function MyProgress() {
         s.credits ?? 0,
       ]),
     ];
-    const csv = rows
-      .map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(';'))
-      .join('\r\n');
+    const csv = toCsv(rows);
     const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -203,7 +231,7 @@ export default function MyProgress() {
     URL.revokeObjectURL(url);
   };
 
-  const approved = subjects.filter(s => draft[s._id]?.status === 'APROBADA');
+  const approved = subjects.filter(s => effective.get(s._id) === 'APROBADA');
   const baseColor = (() => {
     const c = selectedPlan?.career;
     if (c && typeof c === 'object') {
@@ -231,11 +259,11 @@ export default function MyProgress() {
       const year = item.year ?? 0;
       const group = map.get(year) || { total: 0, approved: 0 };
       group.total++;
-      if (draft[item._id]?.status === 'APROBADA') group.approved++;
+      if (effective.get(item._id) === 'APROBADA') group.approved++;
       map.set(year, group);
     }
     return [...map.entries()].sort((a,b) => a[0] - b[0]);
-  }, [subjects, draft]);
+  }, [subjects, effective]);
   return <div>
     <PageHeader title="Mi progreso" sub="Marcá las materias que cursaste y seguí cuánto te falta para recibirte." />
     <MessageBanner message={msg} onClose={clear} />
@@ -271,7 +299,8 @@ export default function MyProgress() {
       <div className="card mb-4"><div className="card-header d-flex justify-content-between align-items-center gap-2 flex-wrap"><span className="d-flex align-items-center gap-2"><IconCoins size={16} /> Estado por materia</span><span className="d-flex flex-wrap gap-2">{selectedPlan?.intermediateTitle && <><Button size="sm" variant={tab === 'lic' ? 'primary' : 'outline-primary'} onClick={() => setTab('lic')}>Licenciatura</Button><Button size="sm" variant={tab === 'tec' ? 'primary' : 'outline-primary'} style={tab === 'tec' ? { background: instituteGradientTec(baseColor), borderColor: 'transparent' } : undefined} onClick={() => setTab('tec')}>Tecnicatura</Button></>}{enrollment && <Button size="sm" variant="outline-secondary" onClick={() => exportCsv()}>Exportar CSV</Button>}{enrollment && <Button size="sm" disabled={working || dirty.length === 0} onClick={() => void saveAll()}>{working ? 'Guardando…' : `Guardar cambios (${dirty.length})`}</Button>}</span></div>
         <div className="card-body">{tab === 'tec' && <p className="small text-muted">Vista de tecnicatura{selectedPlan?.intermediateTitle ? `: ${selectedPlan.intermediateTitle}` : ''}: lo que cargues acá cuenta para ambas titulaciones.</p>}<Table size="sm" responsive striped hover><thead><tr><th>Materia</th><th>Año</th><th>Estado</th><th>Nota</th><th>Créditos</th></tr></thead><tbody>
           {visibleSubjects.map(s => <tr key={s._id}><td><strong>{subjectName(s)}</strong><div className="text-muted small">{s.code || 'Sin código'}</div></td><td>{s.year ?? '—'}{s.period != null ? ` · ${s.period}º` : ''}</td>
-            <td><Form.Select size="sm" disabled={!enrollment || working} value={draft[s._id]?.status ?? 'PENDIENTE'} onChange={e => update(s._id, { status: e.target.value as ProgressStatus })}>{(Object.keys(STATUS) as SelectableStatus[]).map(k => <option key={k} value={k}>{STATUS[k]}</option>)}</Form.Select></td>
+            <td><Form.Select size="sm" disabled={!enrollment || working} value={draft[s._id]?.status ?? 'PENDIENTE'} onChange={e => update(s._id, { status: e.target.value as ProgressStatus })}>{(Object.keys(STATUS) as SelectableStatus[]).map(k => <option key={k} value={k}>{STATUS[k]}</option>)}</Form.Select>
+              {hasStarted(draft[s._id]?.status) && effective.get(s._id) !== draft[s._id]?.status && <div className="text-muted small">Efectiva: {EFFECTIVE_LABEL[effective.get(s._id)!]}</div>}</td>
             <td><Form.Control size="sm" type="number" min={0} max={10} style={{ width: 86 }} disabled={!enrollment || working} value={draft[s._id]?.grade ?? ''} onChange={e => update(s._id, { grade: e.target.value })} /></td><td>{s.credits ?? 0}</td></tr>)}
         </tbody></Table>
         {!visibleSubjects.length && <p className="text-muted">{tab === 'tec' && subjects.length > 0 ? 'La tecnicatura todavía no tiene materias marcadas.' : 'Este plan todavía no tiene materias.'}</p>}
