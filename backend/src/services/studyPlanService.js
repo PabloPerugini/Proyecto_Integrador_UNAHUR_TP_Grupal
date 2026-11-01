@@ -5,6 +5,7 @@ const PlanSubject = require("../models/planSubject");
 const UserStudyPlan = require("../models/userStudyPlan");
 const SubjectProgress = require("../models/subjectProgress");
 const PlanImport = require("../models/planImport");
+const { planVisibilityFilter } = require("./planVisibility");
 
 // Carreras con unidad populada (para colores por instituto en el front).
 const populateCareer = {
@@ -12,36 +13,18 @@ const populateCareer = {
   populate: { path: "academicUnit", select: "name" },
 };
 
-// Visibilidad: ADMIN ve todo; el resto ve oficiales publicados + propios.
-// (También filtra isActive salvo admin; ver F4.)
-const visibleTo = (user) =>
-  user.rol === "ADMIN"
-    ? {}
-    : {
-        isActive: { $ne: false },
-        $or: [
-          {
-            createdBy: null,
-            status: "published",
-          },
-          {
-            createdBy: user._id,
-          },
-        ],
-      };
-
 // Obtener todos los planes accesibles (filtro F1 ?career=).
 const getAllStudyPlans = async (user, { career } = {}) => {
   const careerFilter = career ? { career } : {};
 
-  return StudyPlan.find({ ...careerFilter, ...visibleTo(user) })
+  return StudyPlan.find({ ...careerFilter, ...planVisibilityFilter(user) })
     .populate(populateCareer)
     .populate("createdBy");
 };
 
 // Obtener un plan por ID
 const findStudyPlanById = async (id, user) => {
-  return StudyPlan.findOne({ _id: id, ...visibleTo(user) })
+  return StudyPlan.findOne({ _id: id, ...planVisibilityFilter(user) })
     .populate(populateCareer)
     .populate("createdBy");
 };
@@ -156,6 +139,15 @@ const deleteStudyPlan = async (id, user) => {
 
   if (!studyPlan) return null;
 
+  // Defensa en profundidad: el middleware ya valida, pero el servicio no
+  // debe confiar en que siempre se lo llamó desde esa ruta.
+  const isAdmin = user?.rol === "ADMIN";
+  const isOwner =
+    studyPlan.createdBy != null &&
+    String(studyPlan.createdBy) === String(user?._id);
+
+  if (!isAdmin && !isOwner) return null;
+
   const enrollments = await UserStudyPlan.find({ studyPlan: id }).select("user");
   const otherEnrollments = enrollments.filter(
     (e) => String(e.user) !== String(user?._id),
@@ -170,6 +162,9 @@ const deleteStudyPlan = async (id, user) => {
     await PlanSubject.find({ studyPlan: id }).select("_id")
   ).map((s) => s._id);
 
+  // Sin transacciones (el proyecto puede correr sobre Mongo standalone):
+  // se borran primero los hijos y el plan al final. Si un paso falla, los
+  // deleteMany son idempotentes y el plan sigue existiendo para reintentar.
   const [progress, removedEnrollments, subjects, imports] = await Promise.all([
     subjectIds.length
       ? SubjectProgress.deleteMany({ planSubject: { $in: subjectIds } })

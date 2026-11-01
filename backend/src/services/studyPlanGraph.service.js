@@ -8,6 +8,7 @@ const SubjectProgress = require("../models/subjectProgress");
 const { buildGraph } = require("./graph.service");
 const { buildSugerencias } = require("./sugerencias.service");
 const { uniqueSubjectCodes } = require("./codes.service");
+const { ACTIVE_ENROLLMENT_FILTER } = require("./planVisibility");
 
 const STATUS_ES = {
   APROBADA: "Aprobada",
@@ -52,6 +53,7 @@ async function loadPlanData(studyPlanId, userId) {
   const enrollment = await UserStudyPlan.findOne({
     user: userId,
     studyPlan: studyPlanId,
+    ...ACTIVE_ENROLLMENT_FILTER,
   });
   if (enrollment) {
     const rows = await SubjectProgress.find({

@@ -307,10 +307,10 @@ paths:
         - StudyPlans
       summary: Marca/desmarca en lote el título intermedio (dueño o ADMIN)
       description: >
-        Aplica el flag `intermediate` a las materias del plan. Si se envían
-        `ids` solo afecta a esas materias; si no, a todo el plan (opcionalmente
-        acotado por `year` y/o `period`). `matched` cuenta las materias
-        alcanzadas por el filtro y `modified` solo las que cambian de valor.
+        Aplica el flag `intermediate` a las materias indicadas en `ids`.
+        Es obligatorio enviar al menos un id: el endpoint nunca modifica todo
+        el plan por defecto. `matched` cuenta las materias alcanzadas y
+        `modified` solo las que cambian de valor.
       parameters:
         - $ref: "#/components/parameters/id"
       requestBody:
@@ -319,18 +319,15 @@ paths:
           application/json:
             schema:
               type: object
-              required: [intermediate]
+              required: [intermediate, ids]
               properties:
                 intermediate:
                   type: boolean
                 ids:
                   type: array
+                  minItems: 1
                   items:
                     type: string
-                year:
-                  type: number
-                period:
-                  type: number
       responses:
         "200":
           description: Materias alcanzadas y modificadas

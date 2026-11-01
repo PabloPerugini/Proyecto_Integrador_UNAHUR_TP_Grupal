@@ -197,11 +197,13 @@ export default function PlanAdmin() {
   };
   const applyBulkIntermediate = async (intermediate: boolean) => {
     if (!plan || working) return;
+    const targets = subjects.filter(s => !bulkYear || String(s.year) === bulkYear);
+    if (!targets.length) { flash('danger', 'No hay materias en el alcance elegido.'); return; }
     setWorking(true);
     try {
       const result = await studyPlansApi.bulkIntermediate(plan._id, {
         intermediate,
-        ...(bulkYear ? { year: Number(bulkYear) } : {}),
+        ids: targets.map(s => s._id),
       });
       await reloadSubjects(plan._id);
       flash('success', `${intermediate ? 'Marcadas' : 'Desmarcadas'} ${result.modified} materia(s)${bulkYear ? ` de ${bulkYear}º año` : ''}.`);

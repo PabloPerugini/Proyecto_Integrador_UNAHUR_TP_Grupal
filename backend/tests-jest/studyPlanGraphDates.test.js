@@ -82,4 +82,18 @@ describe("loadPlanData: fechas de progreso", () => {
     expect(progress[0].fecha).toBeNull();
     expect(progress[0].createdAt).toBe(createdAt);
   });
+
+  test("ignora inscripciones archivadas al cargar progreso", async () => {
+    UserStudyPlan.findOne.mockResolvedValue(null);
+
+    const { progress } = await loadPlanData("plan1", "user1");
+
+    expect(UserStudyPlan.findOne).toHaveBeenCalledWith({
+      user: "user1",
+      studyPlan: "plan1",
+      archivedAt: null,
+    });
+    expect(progress).toEqual([]);
+    expect(SubjectProgress.find).not.toHaveBeenCalled();
+  });
 });

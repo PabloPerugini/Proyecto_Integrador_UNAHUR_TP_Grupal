@@ -1,4 +1,9 @@
 const User = require("../models/user");
+const StudyPlan = require("../models/studyPlan");
+const UserStudyPlan = require("../models/userStudyPlan");
+const PlanSubject = require("../models/planSubject");
+const SubjectProgress = require("../models/subjectProgress");
+const PlanImport = require("../models/planImport");
 
 // Solo se consulta con texto: evita que un objeto ({ $ne: null }) llegue
 // como filtro de Mongoose desde un body no validado.
@@ -111,9 +116,56 @@ const updateUser = async (nickName, userData) => {
   return user;
 };
 
-// Eliminar usuario
+// Eliminar usuario con cascada de sus datos académicos.
+// Sin transacciones (Mongo standalone): se borran primero los hijos y el
+// usuario al final. Los deleteMany son idempotentes, así que si un paso
+// falla se puede reintentar sin dejar basura adicional.
 const deleteUser = async (nickName) => {
-  return User.findOneAndDelete({ nickName });
+  const user = await findUserByNickName(nickName);
+
+  if (!user) return null;
+
+  const [enrollments, ownedPlans] = await Promise.all([
+    UserStudyPlan.find({ user: user._id }).select("_id"),
+    StudyPlan.find({ createdBy: user._id }).select("_id"),
+  ]);
+
+  const enrollmentIds = enrollments.map((enrollment) => enrollment._id);
+  const ownedPlanIds = ownedPlans.map((plan) => plan._id);
+
+  const ownedSubjects = ownedPlanIds.length
+    ? await PlanSubject.find({
+        studyPlan: { $in: ownedPlanIds },
+      }).select("_id")
+    : [];
+
+  const ownedSubjectIds = ownedSubjects.map((subject) => subject._id);
+
+  await SubjectProgress.deleteMany({
+    $or: [
+      { userStudyPlan: { $in: enrollmentIds } },
+      { planSubject: { $in: ownedSubjectIds } },
+    ],
+  });
+
+  await UserStudyPlan.deleteMany({
+    $or: [
+      { user: user._id },
+      { studyPlan: { $in: ownedPlanIds } },
+    ],
+  });
+
+  await PlanImport.deleteMany({
+    $or: [
+      { user: user._id },
+      { studyPlan: { $in: ownedPlanIds } },
+    ],
+  });
+
+  await PlanSubject.deleteMany({ studyPlan: { $in: ownedPlanIds } });
+  await StudyPlan.deleteMany({ createdBy: user._id });
+
+  return User.findOneAndDelete({ _id: user._id });
 };
 
 // Invalidar el JWT vigente de un usuario (logout): sube tokenVersion.

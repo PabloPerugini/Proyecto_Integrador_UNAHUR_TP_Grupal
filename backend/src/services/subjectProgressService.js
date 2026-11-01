@@ -1,14 +1,31 @@
 const SubjectProgress = require("../models/subjectProgress");
 const UserStudyPlan = require("../models/userStudyPlan");
 const PlanSubject = require("../models/planSubject");
+const StudyPlan = require("../models/studyPlan");
+const {
+    ACTIVE_ENROLLMENT_FILTER,
+    planAccessFilter,
+} = require("./planVisibility");
 
 const validateUserStudyPlan = async (userId, userStudyPlanId) => {
     const userStudyPlan = await UserStudyPlan.findOne({
         _id: userStudyPlanId,
         user: userId,
+        ...ACTIVE_ENROLLMENT_FILTER,
     });
 
     if (!userStudyPlan) {
+        throw new Error("El usuario no tiene acceso a este plan");
+    }
+
+    // La inscripción no alcanza: el plan también debe seguir visible
+    // (activo y oficial publicado o propio) para cargar progreso.
+    const studyPlan = await StudyPlan.findOne({
+        _id: userStudyPlan.studyPlan,
+        ...planAccessFilter(userId),
+    }).select("_id");
+
+    if (!studyPlan) {
         throw new Error("El usuario no tiene acceso a este plan");
     }
     

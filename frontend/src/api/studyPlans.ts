@@ -173,7 +173,7 @@ export const studyPlansApi = {
     const result = await request<{ planSubject: PlanSubject }>(`/study-plans/${planId}/subjects/${subjectId}`, { method: 'PATCH', body: JSON.stringify(data) });
     return result.planSubject;
   },
-  bulkIntermediate: (planId: string, data: { intermediate: boolean; ids?: string[]; year?: number; period?: number }) =>
+  bulkIntermediate: (planId: string, data: { intermediate: boolean; ids: string[] }) =>
     request<{ matched: number; modified: number }>(`/study-plans/${planId}/subjects/intermediate`, { method: 'PATCH', body: JSON.stringify(data) }),
   deleteSubject: (planId: string, subjectId: string) => request<unknown>(`/study-plans/${planId}/subjects/${subjectId}`, { method: 'DELETE' }),
   deletePlan: (planId: string) => request<{

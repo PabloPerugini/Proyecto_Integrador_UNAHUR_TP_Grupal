@@ -1,41 +1,20 @@
 
 const StudyPlan = require("../models/studyPlan");
+const { planVisibilityFilter } = require("../services/planVisibility");
 
 const authStudyPlanViewer = async (req, res, next) => {
   try {
     const studyPlanId =
       req.params.studyPlanId || req.params.id;
 
-    const studyPlan = await StudyPlan.findById(studyPlanId);
+    // ADMIN consulta sin filtro; el resto solo ve oficiales publicados,
+    // propios y planes vigentes.
+    const studyPlan = await StudyPlan.findOne({
+      _id: studyPlanId,
+      ...planVisibilityFilter(req.user),
+    }).select("_id");
 
     if (!studyPlan) {
-      return res.status(404).json({
-        message: "Plan de estudio no encontrado",
-      });
-    }
-
-    // ADMIN puede ver cualquier plan
-    if (req.user.rol === "ADMIN") {
-      return next();
-    }
-
-    // Plan oficial: solamente visible si está publicado
-    if (!studyPlan.createdBy) {
-      if (studyPlan.status === "published") {
-        return next();
-      }
-
-      return res.status(404).json({
-        message: "Plan de estudio no encontrado",
-      });
-    }
-
-    // Plan privado: solamente puede verlo su propietario
-    const isOwner =
-      studyPlan.createdBy.toString() ===
-      req.user._id.toString();
-
-    if (!isOwner) {
       return res.status(404).json({
         message: "Plan de estudio no encontrado",
       });

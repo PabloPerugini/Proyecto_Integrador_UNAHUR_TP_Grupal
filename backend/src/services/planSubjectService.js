@@ -306,33 +306,29 @@ const updatePlanSubject = async (studyPlanId, id, data) => {
 };
 
 // Marcar/desmarcar en lote el flag `intermediate` (título intermedio).
-// Si se pasan `ids`, aplica solo a esas materias; si no, a todo el plan,
-// opcionalmente acotado por year y/o period.
+// Exige ids explícitos: nunca aplica a todo el plan por defecto.
 const bulkSetIntermediate = async (
   studyPlanId,
-  { ids, year, period, intermediate } = {}
+  { ids, intermediate } = {}
 ) => {
   if (typeof intermediate !== "boolean") {
     throw new Error("El valor de 'intermediate' debe ser booleano");
   }
 
-  const query = { studyPlan: studyPlanId };
+  if (!Array.isArray(ids) || ids.length === 0) {
+    throw new Error("Elegí al menos una materia");
+  }
 
-  if (Array.isArray(ids) && ids.length) {
-    for (const id of ids) {
-      if (!mongoose.isValidObjectId(id)) {
-        throw new Error("Hay un ID de materia inválido");
-      }
-    }
-    query._id = { $in: ids };
-  } else {
-    if (year !== undefined && year !== null && year !== "") {
-      query.year = Number(year);
-    }
-    if (period !== undefined && period !== null && period !== "") {
-      query.period = Number(period);
+  for (const id of ids) {
+    if (!mongoose.isValidObjectId(id)) {
+      throw new Error("Hay un ID de materia inválido");
     }
   }
+
+  const query = {
+    studyPlan: studyPlanId,
+    _id: { $in: ids },
+  };
 
   // `matchedCount` cuenta todos los que cumplen el filtro. Como Mongoose
   // actualiza `updatedAt` en cada documento alcanzado, `modifiedCount` daría

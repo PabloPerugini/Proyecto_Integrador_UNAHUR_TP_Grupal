@@ -4,6 +4,10 @@ const mongoose = require("mongoose");
 const UserStudyPlan = require("../models/userStudyPlan");
 const StudyPlan = require("../models/studyPlan");
 const SubjectProgress = require("../models/subjectProgress");
+const {
+  ACTIVE_ENROLLMENT_FILTER,
+  planAccessFilter,
+} = require("./planVisibility");
 
 // Crear un error con código HTTP
 const createError = (statusCode, message) => {
@@ -16,19 +20,11 @@ const createError = (statusCode, message) => {
 const getUserStudyPlans = async (userId) => {
   const plans = await UserStudyPlan.find({
     user: userId,
-    archivedAt: null,
+    ...ACTIVE_ENROLLMENT_FILTER,
   })
     .populate({
       path: "studyPlan",
-      match: {
-        $or: [
-          { createdBy: userId },
-          {
-            createdBy: null,
-            status: "published",
-          },
-        ],
-      },
+      match: planAccessFilter(userId),
     })
     .sort({ createdAt: -1 });
 
@@ -43,13 +39,7 @@ const addUserStudyPlan = async (userId, studyPlanId) => {
 
   const studyPlan = await StudyPlan.findOne({
     _id: studyPlanId,
-    $or: [
-      { createdBy: userId },
-      {
-        createdBy: null,
-        status: "published",
-      },
-    ],
+    ...planAccessFilter(userId),
   });
 
   if (!studyPlan) {
