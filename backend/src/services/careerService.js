@@ -5,6 +5,15 @@ const AcademicUnit = require("../models/academicUnit");
 const StudyPlan = require("../models/studyPlan");
 const mongoose = require("mongoose");
 
+// Error de dominio: el mensaje es apto para el usuario y el controller
+// puede exponerlo con el status correcto.
+const domainError = (message, statusCode = 400) => {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  error.expose = true;
+  return error;
+};
+
 // Validar universidad y unidad académica
 const validateCareerRelations = async (
   universityId,
@@ -13,7 +22,7 @@ const validateCareerRelations = async (
   const university = await University.findById(universityId);
 
   if (!university) {
-    throw new Error("La universidad no existe");
+    throw domainError("La universidad no existe");
   }
 
   if (academicUnitId) {
@@ -22,14 +31,14 @@ const validateCareerRelations = async (
     );
 
     if (!academicUnit) {
-      throw new Error("La unidad académica no existe");
+      throw domainError("La unidad académica no existe");
     }
 
     if (
       academicUnit.university.toString() !==
       university._id.toString()
     ) {
-      throw new Error(
+      throw domainError(
         "La unidad académica no pertenece a esa universidad"
       );
     }
@@ -152,19 +161,19 @@ const updateCareer = async (id, careerData) => {
   // Articulación (admin): valida IDs existentes y evita auto-referencia.
   if (careerData.continuesIn !== undefined) {
     if (!Array.isArray(careerData.continuesIn)) {
-      throw new Error("continuesIn debe ser una lista de carreras");
+      throw domainError("continuesIn debe ser una lista de carreras");
     }
     const ids = careerData.continuesIn.filter((v) => v);
     for (const otherId of ids) {
       if (!mongoose.isValidObjectId(otherId)) {
-        throw new Error("Hay un ID de carrera inválido en continuesIn");
+        throw domainError("Hay un ID de carrera inválido en continuesIn");
       }
       if (String(otherId) === String(id)) {
-        throw new Error("Una carrera no puede continuar en sí misma");
+        throw domainError("Una carrera no puede continuar en sí misma");
       }
       const exists = await Career.exists({ _id: otherId });
       if (!exists) {
-        throw new Error("Una carrera de continuesIn no existe");
+        throw domainError("Una carrera de continuesIn no existe");
       }
     }
     updateData.continuesIn = ids;
@@ -185,11 +194,14 @@ const updateCareer = async (id, careerData) => {
 // Eliminar una carrera
 const deleteCareer = async (id) => {
   if (await StudyPlan.exists({ career: id })) {
-    const error = new Error("No se puede borrar una carrera que tiene planes de estudio");
-    error.statusCode = 409;
-    throw error;
+    throw domainError(
+      "No se puede borrar una carrera que tiene planes de estudio",
+      409,
+    );
   }
-  return Career.findByIdAndDelete(id);
+
+  // El hook pre(/^find/) oculta archivadas; para borrar hay que incluirlas.
+  return Career.findByIdAndDelete(id).setOptions({ includeArchived: true });
 };
 
 module.exports = {

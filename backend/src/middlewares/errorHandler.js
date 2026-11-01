@@ -15,9 +15,9 @@ const errorHandler = (err, req, res, next) => {
   }
 
   if (err instanceof AppError) {
-    return res
-      .status(err.status)
-      .json({ message: err.message, ...(err.details ? { error: err.details } : {}) });
+    // El mensaje de un AppError es explícito y apto para el usuario; los
+    // detalles internos nunca se serializan.
+    return res.status(err.status).json({ message: err.message });
   }
 
   if (err && err.message === "Solo se aceptan archivos PDF") {
@@ -31,18 +31,31 @@ const errorHandler = (err, req, res, next) => {
 
   // ID de Mongo inválido (p. ej. /careers/abc)
   if (err instanceof mongoose.Error.CastError) {
-    return res.status(400).json({ message: "ID inválido", error: err.message });
+    return res.status(400).json({ message: "ID inválido" });
   }
 
   // Falla de validación del esquema de Mongoose
   if (err instanceof mongoose.Error.ValidationError) {
-    const messages = Object.values(err.errors).map((e) => e.message);
-    return res.status(400).json({ message: "Datos inválidos", error: messages.join("; ") });
+    return res.status(400).json({ message: "Datos inválidos" });
   }
 
   // Índice único duplicado
   if (err && err.code === 11000) {
     return res.status(409).json({ message: "Ya existe un registro con esos datos" });
+  }
+
+  // Errores con status propio (body-parser, límites de tamaño, etc.):
+  // se conserva el código, pero nunca el mensaje crudo.
+  const status = err.status || err.statusCode;
+
+  if (status === 413) {
+    return res.status(413).json({
+      message: "El cuerpo de la solicitud es demasiado grande",
+    });
+  }
+
+  if (status >= 400 && status < 500) {
+    return res.status(status).json({ message: "Error en la solicitud" });
   }
 
   console.error(err);

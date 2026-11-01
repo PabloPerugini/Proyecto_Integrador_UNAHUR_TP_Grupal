@@ -13,11 +13,10 @@ const parseHistory = async (req, res, next) => {
     let parsed;
     try {
       parsed = await parseAcademicHistory(req.file.buffer);
-    } catch (error) {
+    } catch {
       throw new AppError(
         400,
         "No se pudo leer el PDF. Asegurate de que sea un PDF con texto (no escaneado).",
-        error.message,
       );
     }
     res.status(200).json({
@@ -46,7 +45,6 @@ const saveProgress = async (req, res, next) => {
     if (invalid) {
       return res.status(400).json({
         message: "Cada entrada debe tener subjectCode y un estado válido",
-        error: `subjectCode=${invalid.subjectCode ?? "(vacío)"} status=${invalid.status ?? "(vacío)"}`,
       });
     }
 

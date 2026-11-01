@@ -58,7 +58,9 @@ app.use(limiterGeneral);
 // Rate-limit en auth (compat: limiterLogin centralizado + ref.antiguo).
 app.use("/users/login", limiterLogin);
 app.use("/users/register", limiterRegister);
-app.use(express.json());
+// 1 MB: el preview de un plan puede traer cientos de materias y superar el
+// límite por defecto de 100 KB.
+app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
 
 // CSRF ligero en mutaciones con cookie (ver middlewares/checkOrigin.js).

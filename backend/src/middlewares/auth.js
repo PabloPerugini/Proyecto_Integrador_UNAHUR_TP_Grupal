@@ -26,7 +26,16 @@ function clearAuthCookie(res) {
 }
 
 function getUserId(req) {
-  const token = req.cookies?.[COOKIE_NAME];
+  // El header Bearer tiene prioridad (API / pruebas); la cookie httpOnly
+  // sigue siendo la vía del navegador.
+  const authHeader = req.headers?.authorization;
+  let token = null;
+
+  if (typeof authHeader === "string" && authHeader.startsWith("Bearer ")) {
+    token = authHeader.slice("Bearer ".length).trim() || null;
+  }
+
+  if (!token) token = req.cookies?.[COOKIE_NAME];
   if (!token) return null;
   try {
     const payload = jwt.verify(token, JWT_SECRET);
