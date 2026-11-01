@@ -1,101 +1,210 @@
-// Construye el grafo de correlatividades para el frontend (React Flow).
-// nodes: {id, code, name, year, cuatrimestre, duration, credits, status, kind, position}
-// edges: {id, source, target} con las correlatividades resueltas a códigos conocidos.
+// Construye el grafo de correlatividades para el frontend.
+// Nodos: estado guardado (status/savedStatus) y estado efectivo derivado.
+// Aristas: correlatividades resueltas a códigos conocidos.
 
-function buildGraph({ subjects, progress = [], title = "" }) {
-  const byCode = new Map();
-  for (const s of subjects) byCode.set(s.code, s);
+const {
+  computeTargetPath,
+  longestPendingPath,
+} = require("./graphPaths.service");
 
-  const statusByCode = new Map();
-  for (const p of progress) statusByCode.set(p.subjectCode, p.status || "Pendiente");
-  for (const s of subjects) {
-    if (!statusByCode.has(s.code)) statusByCode.set(s.code, "Pendiente");
+const STATUS_ES = {
+  APROBADA: "Aprobada",
+  REGULARIZADA: "Regular",
+  CURSANDO: "Cursando",
+  PENDIENTE: "Pendiente",
+};
+
+function normalizeStatus(value) {
+  const upper = String(value ?? "").trim().toUpperCase();
+  if (upper === "APROBADA") return "APROBADA";
+  if (upper === "REGULARIZADA" || upper === "REGULAR") return "REGULARIZADA";
+  if (upper === "CURSANDO") return "CURSANDO";
+  return "PENDIENTE";
+}
+
+// `requirements` trae el requiredStatus por correlativa. `requires` es el
+// formato viejo (solo códigos) y se conserva para sugerencias: exige aprobada.
+function requirementsOf(subject) {
+  if (Array.isArray(subject.requirements)) {
+    return subject.requirements
+      .map((requirement) =>
+        typeof requirement === "string"
+          ? { code: requirement, requiredStatus: "APROBADA" }
+          : {
+              code: requirement.code,
+              requiredStatus:
+                requirement.requiredStatus === "REGULARIZADA"
+                  ? "REGULARIZADA"
+                  : "APROBADA",
+            },
+      )
+      .filter((requirement) => requirement.code);
+  }
+
+  return (subject.requires || []).map((code) => ({
+    code,
+    requiredStatus: "APROBADA",
+  }));
+}
+
+function buildGraph({
+  subjects,
+  progress = [],
+  title = "",
+  color = null,
+  intermediateTitle = null,
+  userStudyPlanId = null,
+  target = null,
+}) {
+  const byCode = new Map(subjects.map((subject) => [subject.code, subject]));
+  const requirementsByCode = new Map(
+    subjects.map((subject) => [subject.code, requirementsOf(subject)]),
+  );
+
+  const savedByCode = new Map(
+    subjects.map((subject) => [subject.code, "PENDIENTE"]),
+  );
+  for (const item of progress) {
+    savedByCode.set(item.subjectCode, normalizeStatus(item.status));
+  }
+
+  const grounded = new Set();
+  const meets = (code) =>
+    (requirementsByCode.get(code) || []).every((requirement) => {
+      if (!byCode.has(requirement.code)) return true;
+      if (!grounded.has(requirement.code)) return false;
+      const state = savedByCode.get(requirement.code);
+      return (
+        state === "APROBADA" ||
+        (requirement.requiredStatus === "REGULARIZADA" && state === "REGULARIZADA")
+      );
+    });
+
+  // Punto fijo: solo una aprobada/regularizada con sustento habilita a otras.
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const subject of subjects) {
+      if (grounded.has(subject.code)) continue;
+      const saved = savedByCode.get(subject.code);
+      if (saved !== "APROBADA" && saved !== "REGULARIZADA") continue;
+      if (meets(subject.code)) {
+        grounded.add(subject.code);
+        changed = true;
+      }
+    }
+  }
+
+  const effectiveByCode = new Map();
+  for (const subject of subjects) {
+    const saved = savedByCode.get(subject.code);
+    let effective;
+    if (saved === "APROBADA" || saved === "REGULARIZADA") {
+      effective = grounded.has(subject.code) ? STATUS_ES[saved] : "Bloqueada";
+    } else if (saved === "CURSANDO") {
+      effective = meets(subject.code) ? "Cursando" : "Bloqueada";
+    } else {
+      effective = meets(subject.code) ? "Disponible" : "Bloqueada";
+    }
+    effectiveByCode.set(subject.code, effective);
   }
 
   const nodes = [];
   const edges = [];
   const edgeIds = new Set();
 
-  for (const s of subjects) {
+  for (const subject of subjects) {
     nodes.push({
-      id: s.code,
-      code: s.code,
-      name: s.name,
-      year: s.year,
-      cuatrimestre: s.cuatrimestre,
-      duration: s.duration,
-      credits: s.credits,
-      kind: s.kind,
-      optional: s.optional,
-      intermediate: !!s.intermediate,
-      status: statusByCode.get(s.code),
+      id: subject.code,
+      planSubjectId: subject.planSubjectId ? String(subject.planSubjectId) : null,
+      code: subject.code,
+      name: subject.name,
+      year: subject.year,
+      cuatrimestre: subject.cuatrimestre,
+      duration: subject.duration,
+      credits: subject.credits,
+      kind: subject.kind,
+      optional: subject.optional,
+      intermediate: !!subject.intermediate,
+      status: STATUS_ES[savedByCode.get(subject.code)],
+      savedStatus: STATUS_ES[savedByCode.get(subject.code)],
+      effectiveStatus: effectiveByCode.get(subject.code),
       position: { x: 0, y: 0 },
     });
-    for (const req of s.requires || []) {
-      if (!byCode.has(req)) continue;
-      const id = `${req}->${s.code}`;
+
+    for (const requirement of requirementsByCode.get(subject.code) || []) {
+      if (!byCode.has(requirement.code)) continue;
+      const id = `${requirement.code}->${subject.code}`;
       if (edgeIds.has(id)) continue;
       edgeIds.add(id);
-      edges.push({ id, source: req, target: s.code });
+      edges.push({ id, source: requirement.code, target: subject.code });
     }
   }
 
   layoutNodes(nodes);
 
-  const approved = new Set();
-  for (const [code, st] of statusByCode) {
-    if (st === "Aprobada") approved.add(code);
-  }
+  const approved = new Set(
+    nodes.filter((node) => node.effectiveStatus === "Aprobada").map((node) => node.code),
+  );
+  const countEffective = (status) =>
+    nodes.filter((node) => node.effectiveStatus === status).length;
 
-  // RN04: la aprobación EFECTIVA exige sustento transitivo — una materia
-  // aprobada cuyo requisito no está efectivamente aprobado pierde sustento
-  // (p. ej. al desmarcar un requisito). No se toca el estado guardado, solo
-  // el cómputo de disponibilidad/camino crítico. Punto fijo sobre cadenas.
-  const grounded = new Set();
-  let changed = true;
-  while (changed) {
-    changed = false;
-    for (const code of approved) {
-      if (grounded.has(code)) continue;
-      const subj = byCode.get(code);
-      const reqs = (subj?.requires || []).filter((req) => byCode.has(req));
-      if (reqs.every((req) => grounded.has(req))) {
-        grounded.add(code);
-        changed = true;
+  const path = longestPendingPath(nodes, edges, approved);
+  const targetPath = computeTargetPath(nodes, edges, target);
+
+  const intermediateNodes = nodes.filter((node) => node.intermediate);
+  const intermediate = intermediateNodes.length
+    ? {
+        title: intermediateTitle,
+        total: intermediateNodes.length,
+        aprobadas: intermediateNodes.filter((node) => node.effectiveStatus === "Aprobada").length,
+        credits: intermediateNodes.reduce((total, node) => total + (node.credits || 0), 0),
+        creditsAprob: intermediateNodes
+          .filter((node) => node.effectiveStatus === "Aprobada")
+          .reduce((total, node) => total + (node.credits || 0), 0),
       }
-    }
-  }
+    : undefined;
 
-  const availableNow = nodes
-    .filter((n) => !grounded.has(n.id))
-    .filter((n) => {
-      const subj = byCode.get(n.id);
-      return (subj.requires || []).every((req) => grounded.has(req) || !byCode.has(req));
-    })
-    .map((n) => n.id);
-
-  const { criticalPath, hasCycle, topologicalOrder } = longestPendingPath(nodes, edges, grounded);
-
-  const stats = {
-    total: nodes.length,
-    aprobadas: approved.size,
-    disponibles: availableNow.length,
-    pendientes: nodes.length - approved.size,
-    enCurso: nodes.filter((n) => n.status === "Cursando").length,
-    regulares: nodes.filter((n) => n.status === "Regular").length,
-    creditsTotal: subjects.reduce((a, s) => a + (s.credits || 0), 0),
-    creditsAprobados: subjects.reduce((a, s) => a + (approved.has(s.code) ? s.credits || 0 : 0), 0),
+  return {
+    title,
+    color,
+    ...(userStudyPlanId ? { userStudyPlanId } : {}),
+    nodes,
+    edges,
+    availableNow: nodes
+      .filter((node) => node.effectiveStatus === "Disponible")
+      .map((node) => node.code),
+    criticalPath: path.criticalPath,
+    criticalPathCosts: path.criticalPathCosts,
+    criticalPathCost: path.criticalPathCost,
+    criticalPathEdges: path.criticalPathEdges,
+    hasCycle: path.hasCycle,
+    topologicalOrder: path.topologicalOrder,
+    targetPath,
+    stats: {
+      total: nodes.length,
+      aprobadas: approved.size,
+      pendientes: nodes.length - approved.size,
+      disponibles: countEffective("Disponible"),
+      bloqueadas: countEffective("Bloqueada"),
+      enCurso: countEffective("Cursando"),
+      regulares: countEffective("Regular"),
+      creditsTotal: subjects.reduce((total, subject) => total + (subject.credits || 0), 0),
+      creditsAprobados: subjects.reduce(
+        (total, subject) => total + (approved.has(subject.code) ? subject.credits || 0 : 0),
+        0,
+      ),
+    },
+    intermediate,
   };
-
-  return { title, nodes, edges, availableNow, criticalPath, hasCycle, topologicalOrder, stats };
 }
 
 function layoutNodes(nodes) {
   const byYear = new Map();
-  for (const n of nodes) {
-    const y = n.year ?? 99; // materias sin año van al final
-    if (!byYear.has(y)) byYear.set(y, []);
-    byYear.get(y).push(n);
+  for (const node of nodes) {
+    const year = node.year ?? 99; // materias sin año van al final
+    if (!byYear.has(year)) byYear.set(year, []);
+    byYear.get(year).push(node);
   }
   const years = [...byYear.keys()].sort((a, b) => a - b);
   const colW = 300;
@@ -103,82 +212,25 @@ function layoutNodes(nodes) {
   const maxRows = 8;
 
   let colCursor = 0;
-  for (const y of years) {
+  for (const year of years) {
     const list = byYear
-      .get(y)
+      .get(year)
       .slice()
       .sort(
-        (a, b) => (a.cuatrimestre ?? 0) - (b.cuatrimestre ?? 0) || a.name.localeCompare(b.name),
+        (a, b) =>
+          (a.cuatrimestre ?? 0) - (b.cuatrimestre ?? 0) ||
+          a.name.localeCompare(b.name),
       );
     const cols = Math.max(1, Math.ceil(list.length / maxRows));
-    list.forEach((n, i) => {
-      const k = Math.floor(i / maxRows);
-      n.position = { x: (colCursor + k) * colW + 40, y: 40 + (i % maxRows) * rowH };
+    list.forEach((node, index) => {
+      const column = Math.floor(index / maxRows);
+      node.position = {
+        x: (colCursor + column) * colW + 40,
+        y: 40 + (index % maxRows) * rowH,
+      };
     });
     colCursor += cols;
   }
-}
-
-function longestPendingPath(nodes, edges, approved) {
-  // g: prerequisito -> sucesores (flecha de correlatividad)
-  const g = new Map();
-  for (const n of nodes) {
-    if (!approved.has(n.id)) g.set(n.id, []);
-  }
-  const inDeg = new Map();
-  for (const n of nodes) {
-    if (!approved.has(n.id)) inDeg.set(n.id, 0);
-  }
-  for (const e of edges) {
-    const skip = approved.has(e.source) || approved.has(e.target);
-    if (skip) continue;
-    if (!g.has(e.source) || !g.has(e.target)) continue;
-    g.get(e.source).push(e.target);
-    inDeg.set(e.target, (inDeg.get(e.target) || 0) + 1);
-  }
-
-  // Kahn: ciclo solo entre materias sin aprobar
-  const queue = [...inDeg.keys()].filter((k) => inDeg.get(k) === 0);
-  const topo = [];
-  while (queue.length) {
-    const u = queue.shift();
-    topo.push(u);
-    for (const v of g.get(u) || []) {
-      inDeg.set(v, inDeg.get(v) - 1);
-      if (inDeg.get(v) === 0) queue.push(v);
-    }
-  }
-  const pendingCount = nodes.filter((n) => !approved.has(n.id)).length;
-  const hasCycle = topo.length < pendingCount;
-
-  // DP: dp[u] = 1 + max(dp[v]) sobre sucesores pendientes
-  const dp = new Map();
-  for (const n of nodes) dp.set(n.id, approved.has(n.id) ? 0 : 1);
-  for (const u of [...topo].reverse()) {
-    const best = (g.get(u) || []).reduce((m, v) => Math.max(m, dp.get(v) ?? 0), 0);
-    dp.set(u, 1 + best);
-  }
-
-  // nodo de arranque: el de mayor dp
-  let start = topo[0];
-  for (const u of topo) {
-    if ((dp.get(u) ?? 0) > (dp.get(start) ?? 0)) start = u;
-  }
-
-  const criticalPath = [];
-  const visited = new Set();
-  let cur = start;
-  while (cur && !visited.has(cur)) {
-    visited.add(cur);
-    criticalPath.push(cur);
-    const next = (g.get(cur) || [])
-      .filter((v) => !approved.has(v))
-      .sort((a, b) => (dp.get(b) ?? 0) - (dp.get(a) ?? 0) || a.localeCompare(b))[0];
-    const d = dp.get(next) ?? 0;
-    cur = d >= 1 ? next : null;
-  }
-
-  return { criticalPath, hasCycle, topologicalOrder: topo };
 }
 
 module.exports = { buildGraph };

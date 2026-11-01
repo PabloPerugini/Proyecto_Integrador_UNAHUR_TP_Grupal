@@ -33,7 +33,7 @@ test("RN04: desmarcar M1 quita sustento a M2 y M3", () => {
   assert.ok(!g.availableNow.includes("M2"));
 });
 
-test("RN04: estado guardado intacto, stats conservan aprobadas", () => {
+test("RN04: estado guardado intacto, stats reflejan el estado efectivo", () => {
   const g = buildGraph({
     subjects,
     progress: [
@@ -41,9 +41,8 @@ test("RN04: estado guardado intacto, stats conservan aprobadas", () => {
       { subjectCode: "M2", status: "Aprobada" },
     ],
   });
-  assert.equal(g.stats.aprobadas, 1);
-  assert.equal(
-    g.nodes.find((n) => n.id === "M2").status,
-    "Aprobada",
-  );
+  assert.equal(g.stats.aprobadas, 0);
+  const m2 = g.nodes.find((n) => n.id === "M2");
+  assert.equal(m2.savedStatus, "Aprobada");
+  assert.equal(m2.effectiveStatus, "Bloqueada");
 });

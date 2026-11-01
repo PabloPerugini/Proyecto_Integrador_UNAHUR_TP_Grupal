@@ -5,6 +5,7 @@
 const PlanSubject = require("../models/planSubject");
 const UserStudyPlan = require("../models/userStudyPlan");
 const SubjectProgress = require("../models/subjectProgress");
+const StudyPlan = require("../models/studyPlan");
 const { buildGraph } = require("./graph.service");
 const { buildSugerencias } = require("./sugerencias.service");
 const { uniqueSubjectCodes } = require("./codes.service");
@@ -34,28 +35,39 @@ async function loadPlanData(studyPlanId, userId) {
   // Sin códigos únicos, dos 'ACA' repetidos generan dos nodos con el mismo id
   // y rompen el consumidor del grafo (React Flow exige ids únicos).
   const codeById = uniqueSubjectCodes(items.map((ps) => ({ _id: ps._id, code: ps.code })));
-  const subjects = items.map((ps) => ({
-    code: codeById.get(String(ps._id)),
-    name: subjectDisplayName(ps),
-    year: ps.year ?? null,
-    cuatrimestre: ps.period ?? null,
-    duration: ps.duration || "CUATRIMESTRAL",
-    credits: ps.credits ?? 0,
-    kind: ps.kind || "Materia",
-    optional: !!ps.optional,
-    intermediate: !!ps.intermediate,
-    requires: (ps.prerequisites || [])
-      .map((p) => codeById.get(String(p.planSubject)))
-      .filter(Boolean),
-  }));
+  const subjects = items.map((ps) => {
+    const requirements = (ps.prerequisites || [])
+      .map((p) => ({
+        code: codeById.get(String(p.planSubject)),
+        requiredStatus: p.requiredStatus || "REGULARIZADA",
+      }))
+      .filter((requirement) => requirement.code);
+    return {
+      planSubjectId: ps._id,
+      code: codeById.get(String(ps._id)),
+      name: subjectDisplayName(ps),
+      year: ps.year ?? null,
+      cuatrimestre: ps.period ?? null,
+      duration: ps.duration || "CUATRIMESTRAL",
+      credits: ps.credits ?? 0,
+      kind: ps.kind || "Materia",
+      optional: !!ps.optional,
+      intermediate: !!ps.intermediate,
+      requirements,
+      // Compatibilidad con sugerencias.service.js (solo códigos).
+      requires: requirements.map((requirement) => requirement.code),
+    };
+  });
 
   let progress = [];
+  let userStudyPlanId = null;
   const enrollment = await UserStudyPlan.findOne({
     user: userId,
     studyPlan: studyPlanId,
     ...ACTIVE_ENROLLMENT_FILTER,
   });
   if (enrollment) {
+    userStudyPlanId = enrollment._id;
     const rows = await SubjectProgress.find({
       userStudyPlan: enrollment._id,
     }).lean();
@@ -68,12 +80,42 @@ async function loadPlanData(studyPlanId, userId) {
       createdAt: r.createdAt ?? null,
     }));
   }
-  return { subjects, progress };
+  return { subjects, progress, userStudyPlanId };
 }
 
-async function getGraphData(studyPlanId, userId, title = "") {
-  const { subjects, progress } = await loadPlanData(studyPlanId, userId);
-  return buildGraph({ subjects, progress, title });
+// Título, color e intermedia salen del plan y su carrera (fuente única).
+async function loadPlanMeta(studyPlanId) {
+  const plan = await StudyPlan.findById(studyPlanId)
+    .populate({
+      path: "career",
+      select: "name color academicUnit",
+      populate: { path: "academicUnit", select: "name color" },
+    })
+    .lean();
+
+  if (!plan) return { title: "", color: null, intermediateTitle: null };
+
+  const career = plan.career;
+  const careerName = career?.name?.trim();
+  return {
+    title: careerName ? `${careerName} · ${plan.name}` : plan.name,
+    color: career?.color || career?.academicUnit?.color || null,
+    intermediateTitle: plan.intermediateTitle ?? null,
+  };
+}
+
+async function getGraphData(studyPlanId, userId, { target = null } = {}) {
+  const [planData, meta] = await Promise.all([
+    loadPlanData(studyPlanId, userId),
+    loadPlanMeta(studyPlanId),
+  ]);
+  return buildGraph({
+    subjects: planData.subjects,
+    progress: planData.progress,
+    userStudyPlanId: planData.userStudyPlanId,
+    target,
+    ...meta,
+  });
 }
 
 async function getSugerenciasData(studyPlanId, userId) {

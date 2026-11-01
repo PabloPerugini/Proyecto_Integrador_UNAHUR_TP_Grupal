@@ -192,7 +192,12 @@ const getGraph = async (req, res) => {
       });
     }
 
-    const graph = await getGraphData(id, req.user._id);
+    const target =
+      typeof req.query.target === "string" && req.query.target.trim()
+        ? req.query.target.trim()
+        : null;
+
+    const graph = await getGraphData(id, req.user._id, { target });
 
     return res.status(200).json(graph);
 
