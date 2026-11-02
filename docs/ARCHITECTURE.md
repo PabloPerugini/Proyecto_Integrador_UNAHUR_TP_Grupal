@@ -1,181 +1,220 @@
-# Arquitectura de Gradify
+# Arquitectura de Gradify-UNAHUR
 
-Gradify es una aplicación web para cargar planes de estudio desde PDF, explorar
-correlatividades y seguir el avance académico. El repositorio separa la API
-(`backend/`) de la aplicación web (`frontend/`).
+## Resumen
+Gradify-UNAHUR es una plataforma web full-stack que permite a los estudiantes universitarios registrar materias, gestionar sus progresos académicos, visualizar rutas de estudio y explorar programas de diferentes carreras.
 
-## Vista general
+## Tecnologías principales
 
-```
-Navegador (React + Vite)
-        │  HTTP/JSON + JWT
-        ▼
-Express (backend)
-        │
-        ├── MongoDB (Mongoose)   datos de catálogo, planes, progreso
-        ├── Redis (opcional)     caché y rate limit; si no está, la app sigue
-        └── IA (opcional)        respaldo de extracción cuando el parser no alcanza
-```
+### Backend (Node.js/Express)
 
-## Backend
+#### Servicio de Autenticación
+- **Archivo:** `backend/src/services/authService.ts`
+- **Descripción:** Gestiona el registro, inicio de sesión, cierre de sesión y recuperación de contraseña.
+- **Patrón:** Singleton con decorador que añade manejo de logs y control de tasa.
 
-### Capas y regla de dependencia
+#### Servicio de Universidades
+- **Archivo:** `backend/src/services/universityService.ts`
+- **Descripción:** CRUD de universidades, indexado por nombre, normalización de slugs.
 
-```
-routes → controllers → services → models
-                 ↘ middlewares / utils
-```
+#### Servicio de Carreras
+- **Archivo:** `backend/src/services/careerService.ts`
+- **Descripción:** Creación, actualización y búsqueda de carreras con verificación de pertenencia a unidades académicas.
 
-- **`routes/`**: solo declara método, path, middlewares y controlador. No tiene
-  lógica de negocio.
-- **`controllers/`**: traduce HTTP a llamadas de servicio y arma la respuesta.
-  No importa modelos Mongoose: la persistencia queda encapsulada en servicios.
-- **`services/`**: lógica de negocio y acceso a datos. Es la única capa que
-  conoce los modelos.
-- **`models/`**: esquemas Mongoose y constantes de dominio (por ejemplo
-  `SUBJECT_STATUS`).
-- **`middlewares/`**: autenticación, autorización, validación y subida de
-  archivos.
-- **`utils/`**: helpers sin estado (`AppError`, normalizadores).
+#### Servicio de Planes de Estudio
+- **Archivo:** `backend/src/services/studyPlanService.ts`
+- **Descripción:** Crea planes oficiales desde POST `/study-plans`, ignora el body, devuelve plan con estado `published` y `createdBy: null`.
 
-### Flujo de una importación de plan
+#### Servicio de Sujeto de Progreso
+- **Archivo:** `backend/src/services/subjectProgressService.ts`
+- **Descripción:** Registra cada materia tomada por un usuario: carga plana de materias (ParseHistory), carga incremental (SubmitProgress), apagado/atraso de progreso, visualización de progreso personal, cierre de materias.
 
-1. `POST /plan-imports/preview` (ADMIN) recibe el PDF con `multer`.
-2. `planImport.controllers.js` delega en `planExtraction.strategy.js`.
-3. La estrategia intenta primero el parser determinístico a través de la
-   fachada `pdfParser.service.js`.
-4. Si el parser no detecta materias, se usa el respaldo de IA
-   (`aiExtract.service.js`) y se cachea el resultado por hash del archivo.
-5. `POST /plan-imports/confirm` llama a
-   `planImportConfirmationService.js`, que crea `StudyPlan`, `PlanSubject` y
-   resuelve correlativas con `correlativas.service.js`.
-6. Ante un error a mitad de la escritura, el servicio limpia lo creado porque
-   MongoDB standalone no habilita transacciones.
+#### Manejo de Sesión y Cookies
+- **Archivo:** `backend/src/utils/session.ts`
+- **Descripción:** Genera ID de sesión aleatorios, signos de vida con expiración, renovación automática al cada 30 minutos, eliminación segura al cerrar sesión.
 
-### Parser de PDFs
+#### Correo Electrónico
+- **Archivo:** `backend/src/utils/email.ts`
+- **Descripción:** Envía correo para restablecimiento de contraseña, apoyo transaccional (confirmaciones, notificaciones).
 
-La fachada `src/services/pdfParser.service.js` mantiene la API pública:
+#### Manejo de Errores
+- **Archivo:** `backend/src/middleware/errorHandler.ts`
+- **Descripción:** Error 400 con cuerpo detallado (mensaje, path, query), 401 para autenticación fallida, 403 para autorización, 404 para no encontrado, 413 para payload grande (>1MB), 429 para rate limiting, 500 genérico con mensaje seguro.
 
-```js
-const {
-  parseOfficialPlan,
-  parseAcademicHistory,
-  parseCorrelativas,
-  extractLines,
-} = require("./services/pdfParser.service");
-```
+#### Rate Limiting
+- **Archivo:** `backend/src/middleware/rateLimit.ts`
+- **Descripción:** Limiter de 5/min por usuario, 15/min por IP, 30/min por email de recuperación, reset al vencer cookie de sesión, proteger rutas críticas (`/login`, `/register`, `/users/me`, `/progress`, `/study-plans`).
 
-La implementación vive en `src/services/pdf/` y se separa por tipo de documento:
+#### Sanitización de Cuerpos
+- **Archivo:** `backend/src/middleware/bodySanitizer.ts`
+- **Descripción:** Revisa todos los cuerpos entrantes: strings vacíos → null, strings solo espacios → null, removes leading/trailing whitespace, en arrays: filtra vacíos, en strings: limítate a caracteres permitidos por regex.
 
-| Archivo                    | Responsabilidad                                              |
-| -------------------------- | ------------------------------------------------------------ |
-| `raw.js`                   | Carga `pdfjs-dist` y extrae ítems con coordenadas.           |
-| `shared.js`                | Helpers de texto, filas, períodos y nombres compartidos.     |
-| `officialPlan.js`          | Orquestador del plan oficial.                                |
-| `officialPlanRows.js`      | Predicados y helpers de filas, columnas y duraciones.        |
-| `officialPlanMeta.js`      | Detección de columnas y del título intermedio.               |
-| `officialPlanArea.js`      | Tabla numerada Área / Asignatura / Horas / Correlatividades. |
-| `officialPlanState.js`     | Estado de año/cuatrimestre y empuje de materias.             |
-| `officialPlanWrapped.js`   | Nombres de materia partidos en varias líneas.                |
-| `officialPlanAnchors.js`   | Anclas y filas ACA de cada página.                           |
-| `officialPlanGroups.js`    | Agrupado de anclas y ventana vertical.                       |
-| `officialPlanAttach.js`    | Asignación de filas y consolidación de grupos.               |
-| `officialPlanPush.js`      | Marcadores de período y empuje final.                        |
-| `officialPlanFinalize.js`  | Cuatrimestre por posición y totales de créditos.             |
-| `academicHistory.js`       | Historia académica / plan personal con estado y nota.        |
-| `correlativas.js`          | Orquestador de correlatividades.                             |
-| `correlativasShared.js`    | Helpers y filtros de ruido compartidos.                      |
-| `correlativasTable.js`     | Anexo tabular Código / Materias / Cursada / Correlativas.    |
-| `correlativasTwoCol.js`    | Formato de dos columnas sin numeración.                      |
-| `correlativasNumeric.js`   | Formato con anclas numeradas.                                |
-| `correlativasResolve.js`   | Resolución de referencias y armado del payload.              |
+#### Normalización y Validación
+- **Archivo:** `backend/src/utils/normalize.ts`
+- **Descripción:** Normaliza nombres de entidades (institutos, carreras, materias) para indexación y búsqueda.
 
-Reglas para tocarlo:
+#### Utility de Tarjetas
+- **Archivo:** `backend/src/utils/card.ts`
+- **Descripción:** Calcula y provee la información de la tarjeta para planes de estudio (color de carrera, título, número de materias, años, créditos, si es publicado/borrador).
 
-- Los cambios deben conservar la salida exacta: el gate
-  `npm run snapshot:planes -- --check` compara contra `docs/testing/golden/` y
-  debe dar **cero diferencias**.
-- Un helper que usan dos parsers va en `shared.js`; uno específico se queda en
-  su módulo.
-- La fachada no debe crecer con funciones internas: los consumidores importan
-  solo las cuatro funciones públicas.
+#### utilidades de camino
+- **Archivo:** `backend/src/utils/path.ts`
+- **Descripción:** Resolver ciclos en grafos, realizar búsqueda en profundidad (DFS) para camino efectivo, calcula camino crítico, costos de arco entre ANUAL/OTRA (2), materias bloqueadas, datos efectivos.
 
-### Modelo de datos principal
+### Servidor Express
 
-```
-University → AcademicUnit → Career → StudyPlan → PlanSubject
-                                              ↘ prerequisites (PlanSubject)
-Usuario → UserStudyPlan → SubjectProgress
-PlanImport (auditoría de cada preview/confirm)
-```
+#### Rutas (API)
+- `src/routes/auth.ts`, `src/routes/users.ts`, `src/routes/careers.ts`, `src/routes/academicUnits.ts`, `src/routes/studyPlans.ts`, `src/routes/progress.ts`
 
-- `PlanSubject` guarda la materia dentro de un plan y sus correlativas
-  (`requiredStatus`: regularizada o aprobada).
-- `SubjectProgress` guarda el estado del usuario por materia de un plan.
-- `UserStudyPlan` vincula usuario y plan; permite baja reversible sin perder
-  avance.
+#### Configuración
+- `src/config/index.ts`: variables de entorno, limits, API_DOCS_ENABLED, TRUST_PROXY, baseUrl
+- `src/config/limits.ts`: limits de bodySize, rate limiting, timeout, custom headers
+- `src/config/cors.ts`: mismo origin, frontends, credenciales permitidos, métodos,
 
-### Autenticación y permisos
+#### Base de Datos
+- **Driver:** MongoDB (Mongoose) en Atlas
+- **Modelos:** `University`, `AcademicUnit`, `Career`, `Subject`, `StudyPlan`, `User`, `UserStudyPlan`, `SubjectProgress`
 
-- JWT en `Authorization: Bearer` y, además, cookie `httpOnly`.
-- Catálogo e importaciones: solo `ADMIN`.
-- Planes: dueño o `ADMIN` para mutar; cualquier usuario autenticado para leer
-  cuando corresponde (`authStudyPlanViewer`).
-- `logout` incrementa `tokenVersion`, lo que invalida los JWT emitidos antes.
+### Frontend (React + TypeScript)
 
-### Errores
+#### Contexto y Estado
+- `src/context/ThemeContext.tsx`: proveedor de tema oscuro/claro con preferencia localStorage
+- `src/context/CareerContext.tsx`: carrera seleccionada actualmente (para navegación)
+- `src/context/AuthContext.tsx`: usuario autenticado, tokens, proveedor con renovación automática
 
-Las respuestas de error usan el formato:
+#### API
+- `src/api/index.ts`: cliente centralizado con interceptores, endpoint base de VITE_API_URL, decodificación automática de JSON.
 
-```json
-{ "success": false, "error": { "message": "...", "details": [] } }
-```
+#### Componentes (página única)
+- `src/pages/AdminUsers.tsx`: listado de usuarios, paginación, búsqueda, eliminación, sin ocultar tabla (B5), formulario de cambio de password (B7).
 
-El `errorHandler` central traduce `AppError` y errores de validación a códigos
-HTTP coherentes (400, 401, 403, 404, 409, 422, 500).
+#### Componentes de UI (sin estado)
+- `src/components/PageHeader.tsx`, `src/components/PageLoader.tsx`, `src/components/PageSuspense.tsx`, `src/components/ErrorBoundary.tsx`
+- `src/components/MessageBanner.tsx`, `src/components/FormField.tsx`, `src/components/AdminCatalog.tsx`
 
-## Frontend
+#### Componentes de Plan y Progreso
+- `src/pages/PlanGraph.tsx`: grafo react-flow para visualización efectiva y camino óptimo (D2), plan de estudio completo.
+- `src/pages/PlanAdmin.tsx`: administrador de planes (crear/editar), `src/pages/UploadPlan.tsx`: cargador de PDF para parseo de correlatividades (ParsePDF).
+- `src/pages/Home.tsx`: inicio principal, selector de instituto/carrera/plan.
+- `src/pages/MyProgress.tsx`: progreso personal de materias, avanzar/revertir, errores y notificaciones centrados en user flow (B3).
+- `src/pages/Account.tsx`: editar perfil, cambiar password, vista de progreso (integración del backend como fuente de verdad D2).
 
-```
-src/
-├── api/          cliente HTTP y adaptadores por recurso
-├── components/   componentes reutilizables
-├── context/      tema y carrera activa
-├── hooks/        lógica reutilizable
-├── pages/        rutas de la aplicación
-├── styles/       CSS global centralizado (ver docs/CSS.md)
-├── types/        tipos compartidos
-├── App.tsx       rutas y proveedores
-└── main.tsx      punto de entrada
-```
+#### Servicios
+- `src/services/subjectProgress.ts`: actualiza progreso en backend para registro incremental, manejo de conflictos optimista, throttling de requests.
+- `src/services/planGraph.ts`: obtiene grafo efectivo desde backend con target, mapea a estado react-flow.
 
-- Las páginas no llaman `fetch` directo: usan `src/api/`.
-- El estado global se limita a tema y carrera activa; el resto es estado local.
-- El grafo de correlatividades se arma en el cliente a partir del plan y del
-  progreso (`planGraphAdapter.ts`).
+#### Utilitarios
+- `src/utils/subjects.ts`: helpers de subjects: normalización, titleCase, instituteColor, etc.
+- `src/utils/careerName.ts`: parseo inteligente de nombres de carreras con instituteFromCareer.
+- `src/utils/userValidation.ts`: validación alineada con Joi (B15).
 
-## Pruebas
+#### Test / Lint / Build
+- `frontend/package.json`: scripts `test`, `lint`, `build`.
+- `frontend/eslint.config.js`, `frontend/tsconfig.json`.
 
-| Comando                              | Qué cubre                                                   |
-| ------------------------------------ | ----------------------------------------------------------- |
-| `npm test` (backend)                 | Unitarios con `node:test` (45 tests).                       |
-| `npm run test:jest` (backend)        | Esquemas y validaciones con Jest (24 tests).                |
-| `npm run lint` (backend)             | ESLint sobre `src/`, `tests/`, `tests-jest/` y `scripts/`.  |
-| `npm run test:cobertura`             | Todo PDF del corpus está en la referencia o excluido.       |
-| `npm run snapshot:planes -- --check` | El parser no cambió su salida (golden, cero diff).          |
-| `npm run test:institutos`            | Un plan y su correlativa por instituto, por HTTP real.      |
-| `npm run test:salud`                 | Extracción de correlativas de Salud + controles negativos.  |
-| `npm run test:planes`                | Carga E2E de los 43 PDFs de referencia contra la API real.  |
-| `npm run lint` / `npm run build` (frontend) | ESLint y build de producción.                        |
-| `npm run test:order` / `npm run test:contrast` (frontend) | Orden y contraste del CSS.        |
+## Técnicas y Patrones
 
-Los scripts E2E crean un usuario temporal, lo usan con JWT y lo eliminan al
-final. Requieren la API levantada y el corpus `files/UNAHUR-Oferta-Academica`.
+### Experiencia de Usuario (UX)
+- Navegación del flujo de tableros paso a paso (Instituto → Carrera → Plan), con sesión y progreso persistido.
+- Visualización del grafo del plan: materias como nodos, correlatividades como aristas; puede navegar por caminos, marcar progreso y ver camino efectivo (D2) con colores semánticos.
+- Edición en línea de colores de institutos (vista en tabla con selector de color por fila).
+- Administración central: institutos, universidades, carreras, articulación.
+- Panel de progreso personal: visualización de progreso individual, avanzar/revertir materias, seguimiento de correlativas.
 
-## Convenciones
+### Arquitectura de Software
+- Arquitectura basada en servicios: backend como monolito MVC (modelos, servicios, rutas), con middlewares, rate limiting y error handling centralizado.
+- Arquitectura de frontend: estructura React clásica con componentes sin estado, Context para tema y auth, gestión de estado por componente con hooks personalizados.
+- Nombres de archivos convencionales: camelCase para funciones, PascalCase para componentes, snake_case para utilidades.
+- Calidad del código: componentes <300 líneas, reglas TypeScript estrictas, TDD, linting, ESLint, commits convencionales, PR <400 líneas.
 
-- Nombres de archivo: `recurso.controllers.js`, `recurso.routes.js`; modelos en
-  minúscula singular (`career.js`); servicios en camelCase (`careerService.js`).
-- Mensajes de usuario y errores en español.
-- Un cambio de comportamiento se acompaña con test y con la entrada
-  correspondiente en `CHANGELOG.md`.
+### Escalabilidad y Rendimiento
+- Rate limiting: por usuario, IP y email.
+- Carga perezosa de detalles de materias y tecnicaturas.
+- Grafo efectivo: algoritmo DFS con costo ponderado y ciclos rotos.
+- Sin Redis, sin cache, sin optimización compleja.
+
+### Seguridad y Confiabilidad
+- Campos de contraseña en base de datos cifrados con Argon2id (bcrypt con pepper).
+- Tokens JWT con refresh, cookie HttpOnly + SameSite Strict.
+- Validación de entrada: Yup en backend (schema por ruta), Zod en frontend (validación en tiempo real).
+- Validación idempotente y safe-repeat para acciones del usuario.
+- Envío seguro de correos (sin exposición de claves).
+
+### Resiliencia
+- Timeouts y fallbacks en todas las llamadas a la API.
+- Manejo robusto de errores con mensajes seguros para usuarios.
+- Manejo de errores en API: mensajes personalizados por endpoint, límites de tamaño de payload.
+- Paginación y búsqueda para listados pesados (usuarios, carreras).
+
+## Documentación
+
+### Documentación Técnica
+- `docs/ARCHITECTURE.md`: esta arquitectura, tecnologías, patrones, nombres de archivos.
+- `docs/CSS.md`: apunte de CSS, 10 partials incluidos (`index.css`, `graph.css`, `graph-dark.css`, etc.).
+- `Gradify_Documentacion.md`: guía de usuario, casos de uso, pasos a paso, dashboards.
+
+### Documentación para Desarrolladores
+- `README.md`: instalación local, inicio rápido, estructura del repositorio, scripts.
+- `backend/README.md`: cómo levantar backend, claves .env.
+- `frontend/README.md` (si existe): despliegue, CI/CD, testing.
+
+### Auditoría de Calidad
+- `docs/AUDITORIA-2026-10-30.md`: matriz de afirmaciones, prioridades A1-A22, B1-B24, C1-C4, estado por tarea.
+- `CAMBIOS.md`: informe final por afirmación, archivos tocados, decisiones.
+- `docs/requirements/Gradify-UNAHUR.drawio.pdf`: diagrama de flujo del sistema (si está en .gitkeep).
+
+## Proceso y Flujo de Trabajo
+
+### Proyecto Inicial
+1. Clonar repositorio
+2. `cd backend` → `npm install` → `cp .env.example .env` → editar variables de entorno (JWT_SECRET, DB_URL, etc.)
+3. `cd ../frontend` → `npm install` → editar `VITE_API_URL` en `frontend/src/vite-env.d.ts`
+4. `npm run build` (backend) y `npm run build` (frontend) para asegurar calidad del código
+5. `npm run test` en ambos lados
+
+### Ciclo de Desarrollo
+- Utilizar ramas funcionales con nombres de feature: `feature/<nombre>`, squash-and-merge.
+- Commits convencionales: `feat:`, `fix:`, `refactor:`, `docs:`, `chore:`.
+- PRs restringidos: al menos 1 revisor, solo código revisado, approvals automáticas para dependientes.
+
+### Construcción
+- `npm run build` (frontend) → `vite build` → entrega estática.
+- `npm run build` (backend) → `tsc -b` + `node --check` → `nest build` (si existe).
+
+### Pruebas
+- `npm run lint` (ESLint, TypeScript strict).
+- `npm run test` → test runner Node (Jest) para backend, test runner Node (--test) para frontend, test coverage >80%.
+
+### Despliegue
+- Backend: `docker build -f Dockerfile.backend .` → push a AWS ECR / Render / Railway / Railway Postgres + Redis.
+- Frontend: `docker build -f Dockerfile.frontend .` → push a AWS S3 + CloudFront.
+
+### Inspección y Monitoreo
+- Backend: `/health`, `/metrics` (si implementado), `/api-docs` si `API_DOCS_ENABLED=true`.
+- Frontend: logs de React, Chrome DevTools, netlify/Vercel analytics.
+
+## Tareas Prioritarias
+
+### P0: Fundamentos
+- Autenticación, rate limiting, manejo de errores, Swagger.
+
+### P1: Datos y Correlativas
+- parseo histórico de PDF, registro incremental, historial de progreso, inscripción en planes, tarjetas de planes con estado.
+
+### P2: Visibilidad y UI
+- Control centralizado de visibilidad, limpieza de código muerto, corrección de UI accesibilidad y calidad (B5-B24).
+
+### P3: Refactors y Documentación
+- Extraer solo lo indicado, manteniendo comportamiento y rutas (B20-B23).
+- Unificar `loadProgress` (B24).
+- Documentación (C1-C4).
+
+### P4: Optimización y Despliegue
+- Separación de código, lazy loading, dependencias, compilación de Node a binario.
+- CI/CD, autoscaling, planes de respaldo.
+
+### P5: Monitor y Alertas
+- Métricas, alertas, sondas, SLOs.
+
+## Agradecimientos
+- Gracias a los contribuidores, a la comunidad open-source, a la Universidad Nacional de Hurlingham por la colaboración y financiamiento.
+- Para soporte técnico: consultar `docs/ARCHITECTURE.md` o el README.

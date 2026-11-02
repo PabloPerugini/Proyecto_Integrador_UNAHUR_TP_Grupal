@@ -27,6 +27,8 @@ importa los partials en este orden.
 | 6     | `pages.css`                | Dropzone de PDFs, select buscable y tablero del grafo.   |
 | 7     | `responsive.css`           | Media queries generales por breakpoint.                  |
 | 8     | `splash.css`               | Pantalla de inicio y su animación.                       |
+| 9     | `graph.css`                | Estilos del nodo, borde y leyenda del grafo React Flow.  |
+| 10    | `graph-dark.css`           | Sobreescritura de colores del grafo para tema oscuro.    |
 
 Si agregás un partial nuevo, importalo en `index.css` en el orden que
 corresponda y documentalo en esta tabla.

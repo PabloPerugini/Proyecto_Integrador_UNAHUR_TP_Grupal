@@ -32,6 +32,16 @@ el CSS y los tokens, en [`docs/CSS.md`](docs/CSS.md).
 | Backend  | Node.js 22+, Express, MongoDB (Mongoose), Redis           |
 | Frontend | React 19, TypeScript, Vite, React Router 7, Bootstrap 5     |
 
+## Variables de entorno
+
+### Backend
+- `TRUST_PROXY` (`false` por defecto): activa la confianza en proxy inverso para leer la IP real (usado por rate limiting).
+- `PARSE_DEBUG` (`false` por defecto): habilita los logs del parser de PDF para inspeccionar las correlatividades.
+- `API_DOCS_ENABLED`: activa `/api-docs` en producción; en desarrollo está siempre encendido.
+
+### Frontend
+- `VITE_API_URL`: URL base de la API backend (`http://localhost:3000` por defecto).
+
 ## Arranque rápido
 
 
