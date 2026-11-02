@@ -882,6 +882,7 @@ export default function AdminCatalog({
                       <th>Universidad</th>
                       <th>Institutos</th>
                       <th>Carreras</th>
+                      <th className="text-end">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -900,6 +901,22 @@ export default function AdminCatalog({
                                   university._id,
                             ).length
                           }
+                        </td>
+                        <td className="text-end">
+                          <Button
+                            size="sm"
+                            variant="outline-danger"
+                            disabled={working}
+                            onClick={() => {
+                              if (window.confirm(`¿Eliminar "${university.name}"? Solo es posible si no tiene institutos ni carreras.`)) {
+                                void request(`/universities/${university._id}`, { method: 'DELETE' }).catch(() => {});
+                                setUniversities((current) => current.filter((u) => u._id !== university._id));
+                                notify('success', `Universidad "${university.name}" eliminada.`);
+                              }
+                            }}
+                          >
+                            Eliminar
+                          </Button>
                         </td>
                       </tr>
                     ))}
