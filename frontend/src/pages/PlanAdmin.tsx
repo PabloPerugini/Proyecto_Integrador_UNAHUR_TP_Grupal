@@ -306,20 +306,20 @@ export default function PlanAdmin() {
     <PageHeader title="Administrar planes de estudio" sub="Editá la información, las materias y las correlatividades del plan seleccionado." />
     <MessageBanner message={msg} onClose={clear} />
     <Card className="mb-4"><Card.Body>
-      <Form.Label>Plan de estudios</Form.Label>
-      <Form.Select value={selected} onChange={e => selectPlan(e.target.value)}><option value="">Seleccioná un plan</option>{plans.map(p => <option key={p._id} value={p._id}>{p.name} — {careerName(p)}</option>)}</Form.Select>
+      <Form.Label htmlFor="plan-admin-select">Plan de estudios</Form.Label>
+      <Form.Select id="plan-admin-select" value={selected} onChange={e => selectPlan(e.target.value)}><option value="">Seleccioná un plan</option>{plans.map(p => <option key={p._id} value={p._id}>{p.name} — {careerName(p)}</option>)}</Form.Select>
     </Card.Body></Card>
     {error && <div className="alert alert-danger">{error}</div>}
     {loading && <div className="text-center py-4"><Spinner animation="border" /> Cargando materias…</div>}
     {!loading && !error && !plan && <p className="text-muted">Todavía no hay planes registrados. Importá uno desde Cargar plan.</p>}
     {!loading && !error && plan && <>
       <Card className="mb-4"><Card.Header className="d-flex justify-content-between align-items-center"><strong>Información del plan</strong><Badge bg={plan.status === 'published' ? 'success' : 'secondary'}>{plan.status === 'published' ? 'Publicado' : 'Borrador'}</Badge></Card.Header><Card.Body>
-        <Form.Group className="mb-3"><Form.Label>Nombre del plan</Form.Label><Form.Control value={name} onChange={e => setName(e.target.value)} /></Form.Group>
-        <Form.Group className="mb-3"><Form.Label>Estado del plan</Form.Label><Form.Select value={status} onChange={e => setStatus(e.target.value as 'draft'|'published')}>
+        <Form.Group className="mb-3" controlId="plan-admin-name"><Form.Label>Nombre del plan</Form.Label><Form.Control value={name} onChange={e => setName(e.target.value)} /></Form.Group>
+        <Form.Group className="mb-3" controlId="plan-admin-status"><Form.Label>Estado del plan</Form.Label><Form.Select value={status} onChange={e => setStatus(e.target.value as 'draft'|'published')}>
           <option value="draft">Borrador</option><option value="published">Publicado</option>
         </Form.Select><Form.Text muted>Publicar el borrador no lo convierte en un plan oficial; conserva su propietario.</Form.Text></Form.Group>
-        <Form.Group className="mb-3"><Form.Label>Título intermedio (tecnicatura, opcional)</Form.Label><Form.Control value={intermediateTitle} onChange={e => setIntermediateTitle(e.target.value)} placeholder="Ej. Técnico/a Universitario/a en…" /></Form.Group>
-        {intermediateTitle.trim() && <Form.Group className="mb-3"><Form.Label>Créditos de la tecnicatura</Form.Label><Form.Control type="number" min={0} value={creditsIntermediate} onChange={e => setCreditsIntermediate(e.target.value)} /></Form.Group>}
+        <Form.Group className="mb-3" controlId="plan-admin-intermediate-title"><Form.Label>Título intermedio (tecnicatura, opcional)</Form.Label><Form.Control value={intermediateTitle} onChange={e => setIntermediateTitle(e.target.value)} placeholder="Ej. Técnico/a Universitario/a en…" /></Form.Group>
+        {intermediateTitle.trim() && <Form.Group className="mb-3" controlId="plan-admin-intermediate-credits"><Form.Label>Créditos de la tecnicatura</Form.Label><Form.Control type="number" min={0} value={creditsIntermediate} onChange={e => setCreditsIntermediate(e.target.value)} /></Form.Group>}
         <Button
           disabled={working || !name.trim() || !planHasChanges}
           onClick={() => void savePlan()}
@@ -331,7 +331,7 @@ export default function PlanAdmin() {
       <Card className="mb-4"><Card.Header><strong>Correlatividades desde PDF</strong></Card.Header><Card.Body>
         <p className="small text-muted mb-2">Subí el PDF de correlatividades: se reconoce cada materia contra el plan (sin guardar) y después la guardás con <strong>«Guardar correlativas del PDF»</strong>. Ese botón es el que aplica el PDF; <strong>«Guardar cambios manuales»</strong> (abajo de la tabla) solo guarda ediciones hechas a mano. Solo lo reconocido con requisitos se guarda; ante un ciclo no se guarda nada.</p>
         <div className="d-flex flex-wrap gap-2 align-items-center">
-          <Form.Control type="file" accept="application/pdf" style={{ maxWidth: 320 }} disabled={working} onChange={e => { const input = e.currentTarget as HTMLInputElement; const f = input.files?.[0]; if (f) void parseCorrFile(f); input.value = ''; }} />
+          <Form.Control type="file" accept="application/pdf" aria-label="PDF de correlatividades" style={{ maxWidth: 320 }} disabled={working} onChange={e => { const input = e.currentTarget as HTMLInputElement; const f = input.files?.[0]; if (f) void parseCorrFile(f); input.value = ''; }} />
           <Button size="sm" disabled={working || !corrResult || Boolean(corrSaved)} onClick={() => void applyCorr()}>Guardar correlativas del PDF</Button>
           <Button size="sm" variant="outline-danger" disabled={working || !subjects.length} onClick={() => void clearCorr()}>Quitar todas</Button>
         </div>
@@ -372,17 +372,17 @@ export default function PlanAdmin() {
           {subjects.map(s => {
             const v = draft[s._id]; if (!v) return null;
             return <tr key={s._id} className={isSubjectDirty(s) ? 'table-warning' : undefined}><td style={{ minWidth: 190 }}><Form.Control size="sm" value={v.name} aria-label={`Nombre de ${subjectName(s)}`} onChange={e => modify(s._id, { name: e.target.value })} /></td>
-              <td><Form.Control size="sm" style={{ minWidth: 90 }} value={v.code} isInvalid={duplicateCodes.has(v.code.trim())} aria-invalid={duplicateCodes.has(v.code.trim())} onChange={e => modify(s._id, { code: e.target.value })} /><Form.Control.Feedback type="invalid">Código repetido.</Form.Control.Feedback></td>
-              <td><Form.Control size="sm" type="number" min={1} style={{ width: 72 }} value={v.year} onChange={e => modify(s._id, { year: e.target.value })} /></td>
-              <td><Form.Control size="sm" type="number" min={1} style={{ width: 72 }} value={v.period} onChange={e => modify(s._id, { period: e.target.value })} /></td>
-              <td><Form.Control size="sm" type="number" min={0} style={{ width: 85 }} value={v.credits} onChange={e => modify(s._id, { credits: e.target.value })} /></td>
-              <td><Form.Check type="checkbox" checked={v.optional} onChange={e => modify(s._id, { optional: e.target.checked })} /></td>
-              <td><Form.Check type="checkbox" title="Pertenece a la tecnicatura intermedia" checked={v.intermediate} onChange={e => modify(s._id, { intermediate: e.target.checked })} /></td>
+              <td><Form.Control size="sm" style={{ minWidth: 90 }} value={v.code} isInvalid={duplicateCodes.has(v.code.trim())} aria-invalid={duplicateCodes.has(v.code.trim())} aria-label={`Código de ${subjectName(s)}`} onChange={e => modify(s._id, { code: e.target.value })} /><Form.Control.Feedback type="invalid">Código repetido.</Form.Control.Feedback></td>
+              <td><Form.Control size="sm" type="number" min={1} aria-label={`Año de ${subjectName(s)}`} style={{ width: 72 }} value={v.year} onChange={e => modify(s._id, { year: e.target.value })} /></td>
+              <td><Form.Control size="sm" type="number" min={1} aria-label={`Período de ${subjectName(s)}`} style={{ width: 72 }} value={v.period} onChange={e => modify(s._id, { period: e.target.value })} /></td>
+              <td><Form.Control size="sm" type="number" min={0} aria-label={`Créditos de ${subjectName(s)}`} style={{ width: 85 }} value={v.credits} onChange={e => modify(s._id, { credits: e.target.value })} /></td>
+              <td><Form.Check type="checkbox" aria-label={`Optativa de ${subjectName(s)}`} checked={v.optional} onChange={e => modify(s._id, { optional: e.target.checked })} /></td>
+              <td><Form.Check type="checkbox" title="Pertenece a la tecnicatura intermedia" aria-label={`Tecnicatura de ${subjectName(s)}`} checked={v.intermediate} onChange={e => modify(s._id, { intermediate: e.target.checked })} /></td>
               <td style={{ minWidth: 260 }}><details><summary style={{ cursor: 'pointer' }}>{v.prerequisites.length} requisito(s)</summary><div className="p-2 border rounded mt-2" style={{ maxHeight: 240, overflowY: 'auto', minWidth: 260 }}>
                 {subjects.filter(other => other._id !== s._id).map(other => {
                   const required = v.prerequisites.find(p => prerequisiteId(p) === other._id);
                   return <div key={other._id} className="mb-2"><Form.Check type="checkbox" label={`${other.code || '—'} · ${subjectName(other)}`} checked={Boolean(required)} onChange={e => togglePrerequisite(s._id, other._id, e.target.checked)} />
-                    {required && <Form.Select size="sm" className="mt-1" value={required.requiredStatus} onChange={e => updateRequirement(s._id, other._id, e.target.value as 'APROBADA'|'REGULARIZADA')}><option value="REGULARIZADA">Alcanza regularizada</option><option value="APROBADA">Debe estar aprobada</option></Form.Select>}
+                    {required && <Form.Select size="sm" className="mt-1" aria-label={`Requisito de ${subjectName(other)} para ${subjectName(s)}`} value={required.requiredStatus} onChange={e => updateRequirement(s._id, other._id, e.target.value as 'APROBADA'|'REGULARIZADA')}><option value="REGULARIZADA">Alcanza regularizada</option><option value="APROBADA">Debe estar aprobada</option></Form.Select>}
                   </div>;
                 })}
               </div></details></td>

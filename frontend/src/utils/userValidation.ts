@@ -3,10 +3,9 @@ export const NAME_MAX_LENGTH = 50;
 export const EMAIL_MAX_LENGTH = 254;
 export const PASSWORD_MIN_LENGTH = 6;
 export const PASSWORD_MAX_LENGTH = 72;
-export const NICKNAME_MIN_LENGTH = 3;
+export const NICKNAME_MIN_LENGTH = 1;
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const NAME_REGEX = /^[\p{L}]+(?:[ '\u2019-][\p{L}]+)*$/u;
 
 export function validateName(value: string, label: string): string {
   const trimmedValue = value.trim();
@@ -16,9 +15,6 @@ export function validateName(value: string, label: string): string {
   }
   if (trimmedValue.length > NAME_MAX_LENGTH) {
     return `El ${label} no puede superar los ${NAME_MAX_LENGTH} caracteres.`;
-  }
-  if (!NAME_REGEX.test(trimmedValue)) {
-    return `El ${label} solo puede contener letras, espacios, guiones o apóstrofes.`;
   }
   return '';
 }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 
 export interface SearchSelectOption {
   value: string;
@@ -7,6 +7,7 @@ export interface SearchSelectOption {
 }
 
 interface SearchSelectProps {
+  id?: string;
   options: SearchSelectOption[];
   value: string;
   onChange: (value: string) => void;
@@ -29,6 +30,7 @@ function normalize(value: string): string {
 
 // Select con búsqueda (equivalente liviano a react-select/Combobox, sin dependencias).
 export default function SearchSelect({
+  id,
   options,
   value,
   onChange,
@@ -43,6 +45,8 @@ export default function SearchSelect({
   const [active, setActive] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const listboxId = useId();
+  const optionId = (index: number) => `${listboxId}-option-${index}`;
 
   const selected = options.find((option) => option.value === value);
 
@@ -116,10 +120,14 @@ export default function SearchSelect({
       <div className="search-select__control">
         <input
           ref={inputRef}
+          id={id}
           type="text"
           className="form-control"
           role="combobox"
           aria-expanded={open}
+          aria-controls={open ? listboxId : undefined}
+          aria-activedescendant={open && filtered[active] ? optionId(active) : undefined}
+          aria-autocomplete="list"
           aria-label={ariaLabel}
           autoComplete="off"
           spellCheck={false}
@@ -153,15 +161,16 @@ export default function SearchSelect({
       </div>
 
       {open && (
-        <ul className="search-select__list" role="listbox">
+        <ul className="search-select__list" role="listbox" id={listboxId}>
           {filtered.length === 0 && (
-            <li className="search-select__empty">{noResultsText}</li>
+            <li className="search-select__empty" role="presentation">{noResultsText}</li>
           )}
           {filtered.slice(0, 200).map((option, index) => (
-            <li key={option.value}>
+            <li key={option.value} role="presentation">
               <button
                 type="button"
                 role="option"
+                id={optionId(index)}
                 aria-selected={option.value === value}
                 className={`search-select__option${
                   index === active ? ' search-select__option--active' : ''

@@ -28,7 +28,7 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
         <p className="text-muted">
           Ocurrió un error inesperado al mostrar esta pantalla.
         </p>
-        {this.state.error.message && (
+        {import.meta.env.DEV && this.state.error.message && (
           <p className="text-danger small">{this.state.error.message}</p>
         )}
         <Button variant="primary" onClick={() => window.location.reload()}>

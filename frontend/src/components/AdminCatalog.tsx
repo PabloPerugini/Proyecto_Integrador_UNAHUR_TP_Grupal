@@ -191,6 +191,7 @@ export default function AdminCatalog({
   // Articulación
   const [articCareerId, setArticCareerId] = useState('');
   const [articChecked, setArticChecked] = useState<string[]>([]);
+  const articInitializedFor = useRef<string | null>(null);
   const [articCareerType, setArticCareerType] = useState<CareerType | ''>('');
   const [articSearch, setArticSearch] = useState('');
   const [savingArtic, setSavingArtic] = useState(false);
@@ -577,7 +578,11 @@ export default function AdminCatalog({
   }, [careers, careerSearch, showArchivedCareers]);
 
   // ── Articulación ───────────────────────────────────────────────
+  // Solo se reinicia al cambiar la carrera elegida. Las recargas del
+  // catálogo (careers) no deben borrar lo que el usuario marcó.
   useEffect(() => {
+    if (articInitializedFor.current === articCareerId) return;
+    articInitializedFor.current = articCareerId;
     const found = careers.find((career) => career._id === articCareerId);
     setArticChecked(
       (found?.continuesIn ?? []).map((career) =>

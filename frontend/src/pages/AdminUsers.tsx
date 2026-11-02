@@ -58,9 +58,9 @@ export default function AdminUsers() {
       <PageHeader title="Usuarios" sub="Roles y cuentas registradas." />
 
       {loading && <PageLoader text="Cargando usuarios…" />}
-      {error && !loading && <div className="alert alert-danger">{error}</div>}
+      {error && <div className="alert alert-danger" role="alert">{error}</div>}
 
-      {!loading && !error && (
+      {!loading && (
         <Table responsive striped hover size="sm">
           <thead>
             <tr>
@@ -71,6 +71,13 @@ export default function AdminUsers() {
             </tr>
           </thead>
           <tbody>
+            {users.length === 0 && !error && (
+              <tr>
+                <td colSpan={4} className="text-center text-muted py-3">
+                  No hay usuarios para mostrar.
+                </td>
+              </tr>
+            )}
             {users.map((u) => (
               <tr key={u._id}>
                 <td><strong>{u.nickName}</strong></td>

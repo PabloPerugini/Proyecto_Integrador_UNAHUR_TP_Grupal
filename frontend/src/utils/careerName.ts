@@ -1,10 +1,3 @@
-const INSTITUTE_HINTS: Array<[RegExp, string]> = [
-  [/ciberseguridad|inform|tecnolog|ingenier|agron/i, 'Tecnología e Ingeniería'],
-  [/biotecnolog/i, 'Biotecnología'],
-  [/enfermer|salud|medicin|obstetric/i, 'Salud Comunitaria'],
-  [/educaci|profesorado|docen|pedagog/i, 'Educación'],
-];
-
 const STOP_WORDS = new Set([
   'a', 'al', 'de', 'del', 'e', 'el', 'en', 'y', 'la', 'las', 'los', 'o',
   'para', 'por', 'que', 'su', 'un', 'una',
@@ -73,12 +66,4 @@ export function careerNameFromFilename(filename: string): string {
     .map((w) => WORD_FIX[w] ?? w)
     .join(' ');
   return titleCase(fixed);
-}
-
-export function instituteFromCareer(name: string): string {
-  const n = name.toLowerCase();
-  for (const [re, institute] of INSTITUTE_HINTS) {
-    if (re.test(n)) return institute;
-  }
-  return '';
 }

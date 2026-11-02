@@ -17,7 +17,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     document.documentElement.setAttribute('data-bs-theme', theme);
-    localStorage.setItem(THEME_KEY, theme);
+    try {
+      localStorage.setItem(THEME_KEY, theme);
+    } catch {
+      // Modo restringido o cuota llena: el tema sigue aplicado en esta sesión.
+    }
   }, [theme]);
 
   const toggleTheme = useCallback(() => {

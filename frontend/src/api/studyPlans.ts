@@ -164,7 +164,9 @@ export const studyPlansApi = {
     const result = await request<{ studyPlan: StudyPlan }>(`/study-plans/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
     return result.studyPlan;
   },
-  getSubjects: (planId: string) => request<PlanSubject[]>(`/study-plans/${planId}/subjects`),  updateSubject: async (planId: string, subjectId: string, data: Partial<PlanSubject>) => {
+  getSubjects: (planId: string) =>
+    request<PlanSubject[]>(`/study-plans/${planId}/subjects`),
+  updateSubject: async (planId: string, subjectId: string, data: Partial<PlanSubject>) => {
     const result = await request<{ planSubject: PlanSubject }>(`/study-plans/${planId}/subjects/${subjectId}`, { method: 'PATCH', body: JSON.stringify(data) });
     return result.planSubject;
   },

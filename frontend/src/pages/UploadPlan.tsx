@@ -625,6 +625,7 @@ export default function UploadPlan() {
                           <td>
                             <Form.Control
                               size="sm"
+                              aria-label={`Código de la materia ${index + 1}`}
                               value={subject.code ?? ''}
                               disabled={
                                 preview.saving ||
@@ -645,6 +646,7 @@ export default function UploadPlan() {
                           <td style={{ minWidth: 230 }}>
                             <Form.Control
                               size="sm"
+                              aria-label={`Nombre de la materia ${index + 1}`}
                               value={subject.name}
                               disabled={
                                 preview.saving ||
@@ -668,6 +670,7 @@ export default function UploadPlan() {
                               size="sm"
                               min={1}
                               max={20}
+                              aria-label={`Año de la materia ${index + 1}`}
                               value={subject.year ?? ''}
                               disabled={
                                 preview.saving ||
@@ -693,6 +696,7 @@ export default function UploadPlan() {
                               size="sm"
                               min={1}
                               max={12}
+                              aria-label={`Período de la materia ${index + 1}`}
                               value={
                                 subject.period ??
                                 subject.cuatrimestre ??
@@ -722,6 +726,7 @@ export default function UploadPlan() {
                           <td className="text-center">
                             <Form.Check
                               title="Pertenece al título intermedio (tecnicatura)"
+                              aria-label={`Tecnicatura de la materia ${index + 1}`}
                               checked={Boolean(
                                 subject.intermediate
                               )}
@@ -794,7 +799,7 @@ export default function UploadPlan() {
 
                   {/* NOMBRE DEL PLAN */}
 
-                  <Form.Group className="mb-3">
+                  <Form.Group className="mb-3" controlId={`plan-name-${id}`}>
                     <Form.Label>
                       Nombre del plan
                     </Form.Label>
@@ -867,12 +872,13 @@ export default function UploadPlan() {
                       PERMITIR ELEGIR O CAMBIAR */}
 
                   {careers.length > 1 && (
-                    <Form.Group className="mb-3">
+                    <Form.Group className="mb-3" controlId={`plan-career-${id}`}>
                       <Form.Label>
                         Carrera
                       </Form.Label>
 
                       <SearchSelect
+                        id={`plan-career-${id}`}
                         options={careers.map((career) => ({
                           value: career._id,
                           label: career.name,

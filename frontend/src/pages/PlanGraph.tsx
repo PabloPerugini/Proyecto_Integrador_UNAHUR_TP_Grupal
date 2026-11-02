@@ -148,6 +148,14 @@ const GRAPH_SPACING = {
   rowGap: 152,
 };
 
+// Margen extra del área paneable alrededor del grafo.
+const MAP_MARGINS = {
+  left: 700,
+  right: 700,
+  top: 25,
+  bottom: 400,
+};
+
 const STATUS_LEGEND: { status: SubjectStatus; label: string; stat: 'aprobadas' | 'regulares' | 'enCurso' | 'bloqueadas' | 'disponibles' }[] = [
   { status: 'Aprobada', label: 'Aprobadas', stat: 'aprobadas' },
   { status: 'Regular', label: 'Regulares', stat: 'regulares' },
@@ -638,13 +646,6 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
       } : node.data,
     };
   }), [baseNodes, fastPath.set, criticalPath.set, activeMode, activePath, highlightedNextCodes, selectedCode, selectedNode, graph?.userStudyPlanId, advanceSubject, progressSaving, newlyUnlockedCodes]);
-
-  const MAP_MARGINS = {
-    left: 700,    // Espacio a la izquierda
-    right: 700,   // Espacio a la derecha
-    top: 25,     // Espacio arriba
-    bottom: 400,  // Espacio abajo
-  };
 
   const mapExtent = useMemo<CoordinateExtent>(() => {
     // Límites temporales si todavía no hay materias

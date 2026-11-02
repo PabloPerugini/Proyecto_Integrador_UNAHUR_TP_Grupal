@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { ThemeProvider } from './context/ThemeContext'
 import { CareerSelectionProvider } from './context/CareerContext'
 import PageLoader from './components/PageLoader'
@@ -47,6 +47,13 @@ function PageSuspense({ children }: { children: React.ReactNode }) {
   return <Suspense fallback={<PageLoader text="Abriendo…" />}>{children}</Suspense>
 }
 
+// Un error de render en una pantalla no debe dejar la app rota al navegar:
+// la key por ruta desmonta el boundary y limpia el estado de error.
+function RouteErrorBoundary({ children }: { children: React.ReactNode }) {
+  const location = useLocation()
+  return <ErrorBoundary key={location.pathname}>{children}</ErrorBoundary>
+}
+
 export default function App() {
   const [showSplash, setShowSplash] = useState(true)
   const [fading, setFading] = useState(false)
@@ -81,7 +88,7 @@ export default function App() {
       <AuthProvider>
       <CareerSelectionProvider>
         <BrowserRouter>
-          <ErrorBoundary>
+          <RouteErrorBoundary>
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
@@ -104,7 +111,7 @@ export default function App() {
               </Route>
               <Route path="*" element={<PageSuspense><Error404 /></PageSuspense>} />
             </Routes>
-          </ErrorBoundary>
+          </RouteErrorBoundary>
         </BrowserRouter>
       </CareerSelectionProvider>
       </AuthProvider>
