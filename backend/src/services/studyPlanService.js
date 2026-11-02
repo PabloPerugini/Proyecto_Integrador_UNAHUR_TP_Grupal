@@ -19,14 +19,14 @@ const getAllStudyPlans = async (user, { career } = {}) => {
 
   return StudyPlan.find({ ...careerFilter, ...planVisibilityFilter(user) })
     .populate(populateCareer)
-    .populate("createdBy");
+    .populate("createdBy", "_id");
 };
 
 // Obtener un plan por ID
 const findStudyPlanById = async (id, user) => {
   return StudyPlan.findOne({ _id: id, ...planVisibilityFilter(user) })
     .populate(populateCareer)
-    .populate("createdBy");
+    .populate("createdBy", "_id");
 };
 
 // Crear un plan oficial (sin dueño, publicado) o personal.
@@ -121,7 +121,7 @@ const updateStudyPlan = async (id, studyPlanData) => {
     }
   )
     .populate("career")
-    .populate("createdBy");
+    .populate("createdBy", "_id");
 };
 
 // Crear un error de conflicto

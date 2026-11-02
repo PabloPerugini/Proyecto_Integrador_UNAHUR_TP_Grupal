@@ -1,12 +1,13 @@
-// Límite de tasa para las rutas que gastan créditos de IA externa
-// (parse-official / parse-correlativas): la IA es fallback, pero cada PDF
-// distinto sale a Groq/Gemini con decenas de miles de caracteres, así que
-// sin cota un cliente anónimo puede consumir las claves del proyecto.
+// Límite de tasa para las rutas que gastan créditos de IA externa (hoy solo
+// /plan-imports/preview): cada PDF distinto puede salir a Groq/Gemini con
+// decenas de miles de caracteres, así que sin cota un cliente podría consumir
+// las claves del proyecto.
 //
 // Diseño:
 //  * Clave = usuario autenticado (req.user._id). El header x-user-id se ignora:
 //    es falsificable y permitía evadir el límite cambiándolo en cada request.
-//  * Sin usuario (rutas públicas) la clave es la IP normalizada.
+//  * Si no hay usuario (las rutas actuales están todas autenticadas; queda como
+//    defensa) la clave es la IP normalizada.
 //  * Loopback y redes privadas quedan exentas POR DEFECTO: ahí corren los
 //    tests masivos (43 PDFs) y la UI en docker/LAN. Un atacante desde
 //    Internet no llega como 127.x / 10.x / 172.16-31.x / 192.168.x.

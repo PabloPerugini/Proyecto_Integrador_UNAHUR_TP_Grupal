@@ -4,22 +4,13 @@ const express = require("express");
 const helmet = require("helmet");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
-const rateLimit = require("express-rate-limit");
 const swaggerUi = require("swagger-ui-express");
 const YAML = require("yamljs");
 const routes = require("./routes");
 const errorHandler = require("./middlewares/errorHandler");
 const { parseTrustProxy } = require("./config/trustProxy");
-let limiterGeneral;
-let limiterLogin;
-let limiterRegister;
-try {
-  ({ limiterGeneral, limiterLogin, limiterRegister } = require("./config/limits"));
-} catch {
-  limiterGeneral = rateLimit({ windowMs: 15 * 60 * 1000, limit: 200 });
-  limiterLogin = rateLimit({ windowMs: 15 * 60 * 1000, limit: 20 });
-  limiterRegister = rateLimit({ windowMs: 15 * 60 * 1000, max: 10 });
-}
+const { apiDocsEnabled } = require("./config/apiDocs");
+const { limiterGeneral, limiterLogin, limiterRegister } = require("./config/limits");
 
 const app = express();
 
@@ -99,7 +90,9 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+if (apiDocsEnabled()) {
+  app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+}
 app.use("/", routes);
 
 app.use((req, res) => {

@@ -221,29 +221,63 @@ paths:
     get:
       tags:
         - StudyPlans
-      summary: Mis planes (ADMIN ve todos)
+      summary: Planes visibles para el usuario (ADMIN ve todos)
+      description: >
+        Devuelve los planes oficiales publicados (sin dueño), los propios del
+        usuario y, para ADMIN, también los inactivos. Con `career` filtra por
+        carrera; un id inválido se ignora.
+      parameters:
+        - name: career
+          in: query
+          required: false
+          schema:
+            type: string
+          description: ObjectId de la carrera
       responses:
         "200":
           description: Lista de planes
     post:
       tags:
         - StudyPlans
-      summary: Crea un plan personal
+      summary: Crea un plan oficial (solo ADMIN)
+      description: >
+        El plan queda sin dueño (`createdBy: null`) y publicado. El body no
+        puede fijar `createdBy` ni `status`.
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
+              required: [name, career]
+              properties:
+                name:
+                  type: string
+                career:
+                  type: string
+                resolution:
+                  type: string
+                durationYears:
+                  type: number
+                creditsFinal:
+                  type: number
+                creditsIntermediate:
+                  type: number
+                intermediateTitle:
+                  type: string
       responses:
         "201":
-          description: Plan creado
+          description: Plan oficial creado
+        "400":
+          description: Datos inválidos o carrera inexistente
+        "409":
+          description: Ya existe un plan con esos datos
 
   /study-plans/{id}:
     get:
       tags:
         - StudyPlans
-      summary: Detalle del plan (dueño o ADMIN)
+      summary: Detalle del plan (oficial publicado, propio o ADMIN)
       parameters:
         - $ref: "#/components/parameters/id"
       responses:
@@ -338,7 +372,40 @@ paths:
                 matched: 21
                 modified: 5
         "400":
-          description: Body inválido
+          description: Falta `intermediate`, `ids` no es un arreglo o está vacío, o algún id no es un ObjectId válido
+
+  /study-plans/{id}/parse-correlativas:
+    post:
+      tags:
+        - StudyPlans
+      summary: Parsea un PDF de correlatividades (dueño o ADMIN, no guarda)
+      description: >
+        Sube un PDF de correlatividades y lo matchea contra las materias del
+        plan. Devuelve una fila por materia con `matched`, `code`, `dbName`,
+        `confidence` y los códigos `requires` resueltos. No modifica la base:
+        para guardar, usar `POST /study-plans/{id}/correlativas`.
+      parameters:
+        - $ref: "#/components/parameters/id"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Filas parseadas y matcheadas (sin guardar)
+        "400":
+          description: Falta el archivo o no es un PDF
+        "404":
+          description: Plan no encontrado o sin permisos
+        "422":
+          description: El plan no tiene materias cargadas o el PDF no se pudo leer
 
   /study-plans/{id}/subjects/{subjectId}:
     get:
@@ -557,6 +624,9 @@ paths:
       tags:
         - Users
       summary: Login (devuelve JWT Bearer + cookie httpOnly)
+      description: >
+        `nickName` y `password` deben ser strings no vacíos; otro tipo
+        devuelve 400. Credenciales incorrectas devuelven 401.
       security: []
       requestBody:
         required: true
@@ -568,11 +638,15 @@ paths:
               properties:
                 nickName:
                   type: string
+                  minLength: 1
                 password:
                   type: string
+                  minLength: 1
       responses:
         "200":
           description: Token JWT
+        "400":
+          description: nickName o password faltante o con tipo inválido
         "401":
           description: Credenciales inválidas
 

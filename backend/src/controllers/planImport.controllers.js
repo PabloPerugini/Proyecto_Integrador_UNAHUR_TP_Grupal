@@ -18,7 +18,7 @@ const {
 
 const { isConfigured } = require("../services/ai.service");
 
-const { extractPlan } = require("../services/planExtraction.strategy");
+const { extractPlan, careerHintFromFilename } = require("../services/planExtraction.strategy");
 
 // Obtener las importaciones del usuario
 const getUserPlanImports = async (req, res) => {
@@ -83,10 +83,7 @@ const tryClassifyIntermediate = async (parsed, originalname) => {
   }
 
   try {
-    const careerHint = String(originalname || "")
-      .replace(/\.pdf$/i, "")
-      .replace(/[_-]+/g, " ")
-      .slice(0, 120);
+    const careerHint = careerHintFromFilename(originalname);
 
     const { names, provider, rejected } =
       await classifyIntermediateWithAI(parsed.subjects, {

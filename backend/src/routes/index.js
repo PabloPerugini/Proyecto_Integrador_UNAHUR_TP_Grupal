@@ -1,5 +1,6 @@
 
 const { Router } = require("express");
+const { apiDocsEnabled } = require("../config/apiDocs");
 
 const careerRoutes = require("./career.routes");
 const progressRoutes = require("./progress.routes");
@@ -21,7 +22,7 @@ router.get("/", (req, res) => {
   res.json({
     name: "UNAHUR TP API",
     status: "ok",
-    docs: "/api-docs",
+    docs: apiDocsEnabled() ? "/api-docs" : null,
     health: "/health",
   });
 });

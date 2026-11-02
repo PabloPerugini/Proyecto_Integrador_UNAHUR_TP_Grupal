@@ -25,6 +25,10 @@ const subjectSchema = new mongoose.Schema(
   }
 );
 
+// No único: el mismo slug puede repetirse entre planes/carreras y se resuelve
+// por nombre dentro de cada plan. El índice acelera las búsquedas por slug.
+subjectSchema.index({ slug: 1 });
+
 const Subject = mongoose.model("Subject", subjectSchema);
 
 module.exports = Subject;

@@ -26,7 +26,7 @@ npm run lint
 Una vez iniciado:
 
 - API en `http://localhost:3000`
-- Documentación Swagger en `http://localhost:3000/api-docs` (v2.0, ~30 paths)
+- Documentación Swagger en `http://localhost:3000/api-docs` (v2.1, ~30 paths). En producción queda apagada por defecto: `API_DOCS_ENABLED=true` la habilita y `API_DOCS_ENABLED=false` la fuerza apagada en cualquier entorno.
 
 ## Estructura
 

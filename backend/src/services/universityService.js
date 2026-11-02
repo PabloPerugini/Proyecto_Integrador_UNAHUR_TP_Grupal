@@ -17,9 +17,16 @@ const createUniversity = async (universityData) => {
 };
 
 const updateUniversity = async (id, universityData) => {
+    // Lista blanca: el body nunca se pasa crudo a Mongoose.
+    const update = {};
+    if (universityData.name !== undefined) update.name = universityData.name;
+    if (universityData.description !== undefined) {
+        update.description = universityData.description;
+    }
+
     return University.findByIdAndUpdate(
         id,
-        universityData,
+        update,
         {
             new: true,
             runValidators: true,

@@ -6,9 +6,4 @@ const connectMongo = async () => {
   console.log("MongoDB: Conectado");
 };
 
-const disconnectMongo = async () => {
-  await mongoose.disconnect();
-  console.log("MongoDB: Desconectado");
-};
-
-module.exports = { connectMongo, disconnectMongo };
+module.exports = { connectMongo };

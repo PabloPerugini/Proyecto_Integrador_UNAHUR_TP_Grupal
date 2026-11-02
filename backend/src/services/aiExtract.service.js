@@ -9,6 +9,7 @@ const crypto = require("crypto");
 const { chat } = require("./ai.service");
 const { parseJsonStrict } = require("./aiJson");
 const { extractLines } = require("./pdfParser.service");
+const { normalizeName } = require("./correlativas.service");
 
 // 1B.B4: versión de prompt+modelos — cambiar el SYSTEM o el modelo invalida
 // la caché (antes solo hash del buffer, 7 días de stale).
@@ -152,9 +153,6 @@ Reglas:
 - NUNCA incluyas filas que no sean materias, como "Actividades Curriculares Acreditables (ACA)".
 - Si el título intermedio no coincide con un tramo claro del plan, devolvé {"intermediateSubjects":[]}.
 - No agregues comentarios ni texto fuera del JSON.`;
-
-const normalizeName = (v) =>
-  String(v || "").replace(/\s+/g, " ").trim().toLowerCase();
 
 // Filas que no son materias del plan (ACA, etc.): nunca entran en la propuesta.
 const isNonSubject = (s) =>

@@ -109,9 +109,6 @@ function buildSugerencias({ subjects, progress = [] }) {
     .filter(Number.isFinite);
   const oldest = firsts.length ? Math.min(...firsts) : null;
   const regularizadas = progress.filter(isRegular).length;
-  const aprobadas1er = progress.filter(
-    (p) => isAprobada(p) && (byCode.get(p.subjectCode)?.year === 1 || byCode.get(p.subjectCode)?.year == null),
-  ).length;
   const r5 =
     oldest != null &&
     Date.now() - oldest > 2 * YEAR_MS &&

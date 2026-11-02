@@ -18,6 +18,8 @@ const planSubjectSchema = new mongoose.Schema(
       type: String,
       default: "",
       trim: true,
+      // Puede repetirse entre planes e incluso quedar vacío: no es unique.
+      // El identificador estable de la materia es `_id`.
     },
 
 

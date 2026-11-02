@@ -5,6 +5,7 @@
 // endpoint de auto-promoción, a propósito). No crean carreras ni planes.
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 
 // El entorno local (app y scripts desde Windows) apunta a la base real del
 // stack Docker; una variable de sistema ya definida tiene prioridad (dotenv
@@ -12,6 +13,8 @@ const path = require("path");
 require("dotenv").config({ path: path.join(__dirname, "..", "..", ".env"), quiet: true });
 
 const API = process.env.API_URL || "http://localhost:3000";
+// Dominio configurable para no depender de un dominio real ni fijo.
+const EMAIL_DOMAIN = process.env.TEST_EMAIL_DOMAIN || "example.com";
 
 async function reqJson(method, urlPath, { json, token, timeoutMs = 30000 } = {}) {
   const controller = new AbortController();
@@ -59,12 +62,13 @@ async function withRateRetry(fn, attempts = 4) {
 // Devuelve { nick, token, cleanup } (cleanup borra el usuario, best-effort).
 async function setupTestUser(tag) {
   const nick = `test-${tag}`.toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 40);
-  const password = "TestE2E2026!x";
+  // Password aleatoria por corrida: nunca una credencial fija en el repo.
+  const password = `TestE2E-${crypto.randomBytes(18).toString("base64url")}!`;
   const reg = await withRateRetry(() => reqJson("POST", "/users/register", {
     json: {
       nickName: nick,
       password,
-      email: `${nick}@example.com`,
+      email: `${nick}@${EMAIL_DOMAIN}`,
       firstName: "Test",
       lastName: "E2E",
     },

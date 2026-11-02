@@ -53,6 +53,10 @@ subjectProgressSchema.index(
     {unique:true}
 );
 
+// No único: el mismo planSubject aparece en el progreso de varios usuarios.
+// Acelera los exists/filtros por materia usados al borrar planes y carreras.
+subjectProgressSchema.index({ planSubject: 1 });
+
 const SubjectProgress = mongoose.model(
     "SubjectProgress",
     subjectProgressSchema

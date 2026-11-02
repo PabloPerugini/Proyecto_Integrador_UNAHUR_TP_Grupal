@@ -1,10 +1,9 @@
 /*
  * Resolución de correlatividades para la nueva arquitectura (StudyPlan/PlanSubject).
  *
- * Los matchers puros (normalizeName, normKey, compactKey, levenshtein,
- * bestDbMatch, cleanRequiresList, findCycle) se portan verbatim del
- * backend pre-merge (commit 1fccfa6^, controllers/career.controllers.js):
- * misma lógica probada, sin tocar Mongo. Se exponen para unitarios.
+ * Matchers puros (sin Mongo): normalizeName/normKey/compactKey comparan
+ * nombres, bestDbMatch empareja lo leído del PDF con las materias del plan y
+ * cleanRequiresList/findCycle validan requisitos antes de guardar.
  *
  * Lo nuevo: resolvePrerequisites() resuelve el `correlativasTexto` libre que
  * trae el preview del parser contra las materias del propio plan, por
@@ -172,10 +171,6 @@ function buildPrerequisites(refIds, existing = [], defaultStatus = "REGULARIZADA
     planSubject: refId,
     requiredStatus: statusByRef.get(String(refId)) || defaultStatus,
   }));
-}
-
-function escapeRegExp(s) {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 // Busca ocurrencias no solapadas de `needle` en `hay` (índices de inicio/fin).

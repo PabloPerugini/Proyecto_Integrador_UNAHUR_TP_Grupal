@@ -45,15 +45,6 @@ function getUserId(req) {
   }
 }
 
-const requireAuth = (req, res, next) => {
-  const userId = getUserId(req);
-  if (!userId) {
-    return res.status(401).json({ message: "No estás autenticado" });
-  }
-  req.userId = userId;
-  next();
-};
-
 const optionalAuth = async (req, res, next) => {
   req.userId = getUserId(req);
   // Adjunta el usuario para decisiones por rol (ej. includeArchived solo ADMIN).
@@ -70,7 +61,6 @@ const optionalAuth = async (req, res, next) => {
 };
 
 module.exports = {
-  requireAuth,
   optionalAuth,
   getUserId,
   signToken,

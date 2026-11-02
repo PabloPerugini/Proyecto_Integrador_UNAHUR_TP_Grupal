@@ -1,5 +1,4 @@
-// parseJsonStrict compartido (Fase 5.2 — antes duplicado en
-// aiExtract.service.js y aiCorrelativas.service.js).
+// parseJsonStrict compartido por los servicios que piden JSON a la IA.
 function parseJsonStrict(reply) {
   const clean = String(reply || "")
     .replace(/```json\s*/gi, "")

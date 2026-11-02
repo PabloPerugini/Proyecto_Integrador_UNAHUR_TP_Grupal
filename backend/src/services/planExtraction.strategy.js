@@ -44,6 +44,21 @@ const hasSubjects = (parsed) => subjectCount(parsed) > 0;
 
 // ---- Estrategia 1: parser determinístico ----
 
+// pdfjs-dist identifica los PDFs ilegibles/escaneados con estos nombres de
+// excepción. Cualquier otro error (bug interno, fallo de memoria, etc.) no se
+// disfraza de 422: se propaga tal cual para que el errorHandler lo registre.
+const PDF_READ_ERROR_NAMES = new Set([
+  "InvalidPDFException",
+  "PasswordException",
+  "MissingPDFException",
+  "UnexpectedResponseException",
+  "FormatError",
+  "UnknownErrorException",
+]);
+
+const isPdfReadError = (error) =>
+  Boolean(error) && PDF_READ_ERROR_NAMES.has(error.name);
+
 const createParserStrategy = ({ parseOfficialPlan: parse } = {}) => {
   const reader = parse || parseOfficialPlan;
   return {
@@ -51,8 +66,8 @@ const createParserStrategy = ({ parseOfficialPlan: parse } = {}) => {
     // Placeholder para políticas futuras (por ejemplo feature flag del
     // parser). Hoy el parser corre siempre primero.
     canExtract: () => true,
-    // Un PDF ilegible no se recupera con IA: sus errores son definitivos
-    // (statusCode 422) y cortan la cadena.
+    // Un PDF ilegible no se recupera con IA: corta la cadena. El resto de los
+    // errores también corta (fail-fast), pero conserva su status original.
     isDefiniteError: () => true,
 
     async extract(context) {
@@ -63,10 +78,12 @@ const createParserStrategy = ({ parseOfficialPlan: parse } = {}) => {
           aiProvider: null,
         };
       } catch (error) {
+        if (!isPdfReadError(error)) throw error;
         const parseError = new Error(
           "No se pudo leer el PDF. Verificá que contenga texto extraíble"
         );
         parseError.statusCode = 422;
+        parseError.cause = error;
         throw parseError;
       }
     },

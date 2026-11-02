@@ -95,14 +95,31 @@ test("Strategy: fallo de IA no corta la cadena (queda el parser vacío → 422 f
   assert.equal(outcome.parsed.subjects.length, 0);
 });
 
-test("Strategy: error del parser es definitivo (corta la cadena con 422)", async () => {
+test("Strategy: un error desconocido del parser no se disfraza de 422", async () => {
   const parser = parserStub(async () => {
-    throw new Error("pdf ilegible");
+    throw new Error("bug interno del parser");
   });
 
   await assert.rejects(
     () => extractPlan("pdf", { strategies: [parser, aiStub({ result: subjectsOf(2) })] }),
-    (error) => error.statusCode === 422,
+    (error) => {
+      assert.equal(error.statusCode, undefined);
+      assert.equal(error.message, "bug interno del parser");
+      return true;
+    },
+  );
+});
+
+test("Strategy: un PDF inválido del parser sigue siendo 422", async () => {
+  const parser = parserStub(async () => {
+    const error = new Error("Invalid PDF structure");
+    error.name = "InvalidPDFException";
+    throw error;
+  });
+
+  await assert.rejects(
+    () => extractPlan("pdf", { strategies: [parser, aiStub({ result: subjectsOf(2) })] }),
+    (error) => error.statusCode === 422 && /No se pudo leer el PDF/.test(error.message),
   );
 });
 
