@@ -130,6 +130,8 @@ export interface GraphNode {
   optional: boolean;
   intermediate?: boolean;
   status: SubjectStatus;
+  savedStatus?: SubjectStatus;
+  effectiveStatus: SubjectStatus;
   position: { x: number; y: number };
 }
 
@@ -142,12 +144,22 @@ export interface GraphEdge {
 export interface GraphStats {
   total: number;
   aprobadas: number;
+  pendientes: number;
   disponibles: number;
   bloqueadas: number;
   enCurso: number;
   regulares: number;
   creditsTotal: number;
   creditsAprobados: number;
+}
+
+export interface TargetPath {
+  target: string;
+  chain: string[];
+  chainCosts: number[];
+  cost: number;
+  edgeIds: string[];
+  hasCycle: boolean;
 }
 
 export interface IntermediateProgress {
@@ -167,10 +179,25 @@ export interface GraphData {
   edges: GraphEdge[];
   availableNow: string[];
   criticalPath: string[];
+  criticalPathCosts: number[];
+  criticalPathCost: number;
+  criticalPathEdges: string[];
   hasCycle: boolean;
   topologicalOrder: string[];
+  targetPath: TargetPath | null;
   stats: GraphStats;
   intermediate?: IntermediateProgress;
+}
+
+// Respuesta cruda de GET /study-plans/:id/graph. El backend manda la
+// duración en formato de plan y el estado efectivo ya resuelto.
+export interface GraphResponseNode extends Omit<GraphNode, 'duration' | 'status'> {
+  duration: string | null;
+  status: SubjectStatus;
+}
+
+export interface GraphResponse extends Omit<GraphData, 'nodes'> {
+  nodes: GraphResponseNode[];
 }
 
 export type CorrelativasMatchConfidence = 'exact' | 'compact' | 'fuzzy' | null;

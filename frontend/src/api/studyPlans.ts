@@ -1,5 +1,6 @@
 import { request, uploadPdf } from './client';
 import { subjectName } from '../utils/subjectName';
+import type { GraphResponse } from '../types';
 
 export { subjectName } from '../utils/subjectName';
 
@@ -36,12 +37,6 @@ export interface CorrUpdate {
 export interface CorrSaveResult {
   saved: number;
   dropped: string[];
-}
-export interface GraphLike {
-  nodes: unknown[];
-  edges: unknown[];
-  availableNow: unknown[];
-  [key: string]: unknown;
 }
 export interface SugerenciaDisponible {
   code: string;
@@ -179,7 +174,10 @@ export const studyPlansApi = {
   deletePlan: (planId: string) => request<{
     removed: { subjects: number; enrollments: number; progress: number; imports: number };
   }>(`/study-plans/${planId}`, { method: 'DELETE' }),
-  getGraph: (planId: string) => request<GraphLike>(`/study-plans/${planId}/graph`),
+  getGraph: (planId: string, target?: string | null) =>
+    request<GraphResponse>(
+      `/study-plans/${planId}/graph${target ? `?target=${encodeURIComponent(target)}` : ''}`,
+    ),
   getIntermediate: (planId: string) => request<IntermediateView>(`/study-plans/${planId}/intermediate`),
   getSugerencias: (planId: string) => request<SugerenciasLike>(`/study-plans/${planId}/sugerencias`),
   parseCorrelativas: (planId: string, file: File) => uploadCorrelativas<CorrParseResult>(`/study-plans/${planId}/parse-correlativas`, file),

@@ -22,41 +22,11 @@ import PageLoader from '../components/PageLoader';
 import EmptyState from '../components/EmptyState';
 
 import { IconCap, IconBoard } from '../components/icons';
+import { getCareerColor, getPlanCareerColor } from '../utils/careerColor';
 import { instituteColor, instituteGradient, instituteGradientTec } from '../utils/instituteColors';
 
-function unitNameOfCareer(career: Career): string | null {
-  const unit = career.academicUnit;
-  if (unit && typeof unit === 'object') return unit.name ?? null;
-  return null;
-}
-
-function unitColorOfCareer(career: Career): string | null {
-  const unit = career.academicUnit;
-  if (unit && typeof unit === 'object') return unit.color ?? null;
-  return null;
-}
-
-function unitNameOfPlanCareer(plan: StudyPlan): string | null {
-  const career = plan.career;
-  if (!career || typeof career === 'string') return null;
-  const unit = career.academicUnit;
-  if (unit && typeof unit === 'object') return unit.name ?? null;
-  return null;
-}
-
-function unitColorOfPlanCareer(plan: StudyPlan): string | null {
-  const career = plan.career;
-  if (!career || typeof career === 'string') return null;
-  const unit = career.academicUnit;
-  if (unit && typeof unit === 'object') return unit.color ?? null;
-  return null;
-}
-
 function careerCoverColor(career: Career): string {
-  return (
-    career.color ||
-    instituteColor(unitNameOfCareer(career), unitColorOfCareer(career))
-  );
+  return getCareerColor(career);
 }
 
 interface PlanEntry {
@@ -352,13 +322,7 @@ function planCareerName(plan: StudyPlan): string {
 }
 
 function planCareerColor(plan: StudyPlan): string {
-  if (plan.career && typeof plan.career === 'object') {
-    return (
-      plan.career.color ||
-      instituteColor(unitNameOfPlanCareer(plan), unitColorOfPlanCareer(plan))
-    );
-  }
-  return instituteColor(null);
+  return getPlanCareerColor(plan);
 }
 
 // =========================================

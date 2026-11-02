@@ -1,78 +1,17 @@
-import type { GraphData, GraphNode, SubjectStatus } from '../types';
-import { studyPlansApi, orderedSubjects, subjectName, prerequisiteId, careerName, type PlanSubject, type StudyPlan, type ProgressStatus } from './studyPlans';
-import { getCareerColor } from '../utils/careerColor';
-import { resolveProgressStatuses } from '../utils/progressStatus';
+import type { GraphData } from '../types';
+import { studyPlansApi, type StudyPlan } from './studyPlans';
+import { mapGraphResponse } from '../utils/graphMapper';
+import { getPlanCareerColor } from '../utils/careerColor';
 
-function toLabel(status: ProgressStatus | undefined): SubjectStatus {
-  return status === 'APROBADA' ? 'Aprobada' : status === 'REGULARIZADA' ? 'Regular' : status === 'CURSANDO' ? 'Cursando' : status === 'DISPONIBLE' ? 'Disponible' : 'Bloqueada';
-}
-export async function getPlanGraph(plan: StudyPlan, strictProgress = false): Promise<GraphData> {
-  let progressLoadFailed = false;
-  const [items, enrollments] = await Promise.all([
-    studyPlansApi.getSubjects(plan._id),
-    studyPlansApi.getMine().catch(error => { if (strictProgress) throw error; progressLoadFailed = true; return []; }),
-  ]);
-  const enrollment = enrollments.find(p => (typeof p.studyPlan === 'string' ? p.studyPlan : p.studyPlan?._id) === plan._id);
-  const savedProgress = enrollment ? await studyPlansApi.getProgress(enrollment._id).catch(error => { if (strictProgress) throw error; progressLoadFailed = true; return []; }) : [];
-  const statusById = resolveProgressStatuses(items, new Map(savedProgress.map(p => [
-    typeof p.planSubject === 'string' ? p.planSubject : p.planSubject?._id ?? '', p.status,
-  ])));
-  const itemsSorted = orderedSubjects(items);
-  const byId = new Map(itemsSorted.map(s => [s._id, s]));
-  const seen = new Set<string>();
-  const codeById = new Map<string,string>();
-  for (const item of itemsSorted) {
-    let code = item.code?.trim() || item._id.slice(-8);
-    if (seen.has(code)) code = `${code}-${item._id.slice(-5)}`;
-    seen.add(code);
-    codeById.set(item._id, code);
-  }
-  const inYear = new Map<number, number>();
-  const nodes: GraphNode[] = itemsSorted.map((item: PlanSubject) => {
-    const year = item.year ?? 0;
-    const row = inYear.get(year) || 0;
-    inYear.set(year, row + 1);
-    const d: GraphNode['duration'] = item.duration === 'ANUAL' ? 'A' : item.duration === 'OTRA' ? 'TF' : 'C';
-    return {
-      id: codeById.get(item._id)!, code: codeById.get(item._id)!, name: subjectName(item),
-      planSubjectId: item._id,
-      year: item.year ?? null, cuatrimestre: item.period ?? null, duration: d,
-      credits: item.credits ?? 0, kind: item.kind ?? 'Materia', optional: item.optional ?? false,
-      intermediate: item.intermediate ?? false, status: toLabel(statusById.get(item._id)),
-      position: { x: (year === 0 ? 0 : year - 1) * 310, y: row * 125 + 70 },
-    };
+// El backend es la fuente de verdad del grafo (D2): estados, disponibilidad,
+// camino crítico, estadísticas y camino al nodo seleccionado.
+export async function getPlanGraph(
+  plan: StudyPlan,
+  { target = null }: { target?: string | null } = {},
+): Promise<GraphData> {
+  const response = await studyPlansApi.getGraph(plan._id, target);
+  return mapGraphResponse(plan, {
+    ...response,
+    color: response.color || getPlanCareerColor(plan),
   });
-  const edges = itemsSorted.flatMap(item => (item.prerequisites ?? []).flatMap(prereq => {
-    const sourceId = prerequisiteId(prereq);
-    if (!sourceId || !byId.has(sourceId)) return [];
-    const source = codeById.get(sourceId)!;
-    const target = codeById.get(item._id)!;
-    return [{ id: `${source}->${target}`, source, target }];
-  }));
-  const availableNow = nodes.filter(n => n.status === 'Disponible').map(n => n.code);
-  const approved = itemsSorted.filter(item => statusById.get(item._id) === 'APROBADA');
-  const totalCredits = itemsSorted.reduce((a,s) => a + (s.credits ?? 0), 0);
-  const approvedCredits = approved.reduce((a,s) => a + (s.credits ?? 0), 0);
-  const intermediateItems = itemsSorted.filter(s => s.intermediate);
-  return {
-    title: `${careerName(plan)} · ${plan.name}`,
-    userStudyPlanId: enrollment?._id,
-    progressLoadFailed,
-    color: typeof plan.career === 'object' && plan.career ? getCareerColor({ name: plan.career.name || '', color: plan.career.color, academicUnit: plan.career.academicUnit ?? null }) : '#238a42',
-    nodes, edges, availableNow, criticalPath: [], hasCycle: false, topologicalOrder: [],
-    stats: {
-      total: nodes.length, aprobadas: approved.length, disponibles: availableNow.length,
-      bloqueadas: nodes.filter(n => n.status === 'Bloqueada').length,
-      enCurso: nodes.filter(n => n.status === 'Cursando').length,
-      regulares: nodes.filter(n => n.status === 'Regular').length,
-      creditsTotal: totalCredits, creditsAprobados: approvedCredits,
-    },
-    intermediate: intermediateItems.length ? {
-      title: plan.intermediateTitle ?? null,
-      total: intermediateItems.length,
-      aprobadas: intermediateItems.filter(s => statusById.get(s._id) === 'APROBADA').length,
-      credits: intermediateItems.reduce((a,s) => a + (s.credits ?? 0), 0),
-      creditsAprob: intermediateItems.filter(s => statusById.get(s._id) === 'APROBADA').reduce((a,s) => a + (s.credits ?? 0), 0),
-    } : undefined,
-  };
 }

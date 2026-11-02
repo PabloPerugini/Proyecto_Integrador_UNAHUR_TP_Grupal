@@ -1,4 +1,3 @@
-import type { Career } from '../types';
 import { instituteColor, DEFAULT_INSTITUTE_COLOR } from './instituteColors';
 
 // Fuente canónica de color por instituto: prioridad al color guardado en
@@ -19,16 +18,18 @@ export function deriveCareerColor(
   return DEFAULT_INSTITUTE_COLOR;
 }
 
+export interface CareerColorInput {
+  color?: string | null;
+  institute?: string;
+  name?: string;
+  academicUnit?:
+    | string
+    | { _id?: string; name: string; color?: string | null }
+    | null;
+}
+
 export function getCareerColor(
-  career:
-    | (Pick<Career, 'color' | 'institute' | 'name'> & {
-        academicUnit?:
-          | string
-          | { _id: string; name: string; color?: string | null }
-          | null;
-      })
-    | null
-    | undefined,
+  career: CareerColorInput | null | undefined,
 ): string {
   if (career?.color) return career.color;
   const unit = career?.academicUnit;
@@ -41,4 +42,12 @@ export function getCareerColor(
     unitName,
     unitColor,
   );
+}
+
+/** Color de un plan: usa la carrera poblada y cae al color por defecto. */
+export function getPlanCareerColor(
+  plan: { career?: string | CareerColorInput | null } | null | undefined,
+): string {
+  const career = plan?.career && typeof plan.career === 'object' ? plan.career : null;
+  return getCareerColor(career);
 }

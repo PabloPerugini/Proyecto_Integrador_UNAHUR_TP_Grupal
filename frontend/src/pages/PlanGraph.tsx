@@ -22,9 +22,9 @@ import { useCareerSelection } from '../context/CareerContext';
 import { useTheme } from '../hooks/useTheme';
 import { yearLabel } from '../utils/subjects';
 import { STATUS_BADGE, statusLabel } from '../utils/status';
-import { instituteColor, instituteGradientTec } from '../utils/instituteColors';
+import { getPlanCareerColor } from '../utils/careerColor';
+import { instituteGradientTec } from '../utils/instituteColors';
 import { getDirectSuccessorCodes, HIGHLIGHT_COLOR, UNLOCK_COLOR } from '../utils/graphHighlight';
-import { getStudyPath } from '../utils/studyPaths';
 import { previousProgressStatus } from '../utils/progressStatus';
 import PlanNode, { toPlanNodeData, StatusBadges, type PlanNodeData } from '../components/PlanNodeCard';
 import SubjectStatusIcon from '../components/SubjectStatusIcon';
@@ -337,7 +337,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
     try {
       await studyPlansApi.saveProgress(graph.userStudyPlanId, subject.planSubjectId, { status });
       saved = true;
-      const updated = await getPlanGraph(selectedPlan, true);
+      const updated = await getPlanGraph(selectedPlan, { target: pinnedCode });
       if (progressOperation.current === operation) {
         if (backwards) setUnlockHighlight(null);
         if (status === 'APROBADA') {
@@ -359,19 +359,13 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
         setProgressSaving(false);
       }
     }
-  }, [graph, selectedPlan]);
+  }, [graph, pinnedCode, selectedPlan]);
 
   // Color del instituto (oficial UNAHUR) con fallback a carrera/grafo.
-  const planBaseColor = useMemo(() => {
-    const c = selectedPlan?.career;
-    if (c && typeof c === 'object') {
-      if (c.color) return c.color;
-      const u = c.academicUnit;
-      if (u && typeof u === 'object' && u.name)
-        return instituteColor(u.name, u.color);
-    }
-    return graph?.color ?? '#238a42';
-  }, [selectedPlan, graph]);
+  const planBaseColor = useMemo(
+    () => graph?.color ?? getPlanCareerColor(selectedPlan),
+    [selectedPlan, graph],
+  );
 
   useEffect(() => {
     let active = true;
@@ -403,9 +397,18 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
         () => { if (active) setInterCodes(null); },
       );
     }
-    getPlanGraph(selectedPlan).then(g => {
+    return () => { active = false; };
+  }, [id, selectedPlan, setSelectedCareerId]);
+
+  // El backend resuelve el camino al nodo elegido; se vuelve a pedir el grafo
+  // cuando cambia el target (la respuesta vieja se descarta).
+  useEffect(() => {
+    if (!id || !selectedPlan) return;
+    let active = true;
+    getPlanGraph(selectedPlan, { target: pinnedCode }).then(g => {
       if (!active) return;
       setGraph(g);
+      setErr(null);
       if (g.progressLoadFailed) {
         setProgressError('No se pudo cargar tu progreso guardado. Los estados pueden no reflejar tus materias aprobadas.');
       }
@@ -413,7 +416,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
       if (active) setErr(e instanceof Error ? e.message : 'No se pudo cargar el plan');
     });
     return () => { active = false; };
-  }, [id, selectedPlan, setSelectedCareerId]);
+  }, [id, selectedPlan, pinnedCode]);
 
   useEffect(() => {
     if (id || plans.length === 0) return;
@@ -451,16 +454,38 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
 
   const selectedNode = useMemo(() => displayGraph?.nodes.find((n) => n.code === selectedCode) ?? null, [displayGraph, selectedCode]);
   const byCodeMap = useMemo(() => new Map((displayGraph?.nodes ?? []).map((n) => [n.code, n])), [displayGraph]);
+  // Los caminos pueden incluir materias fuera de la vista (tecnicatura):
+  // para el detalle se buscan nombres en todo el plan, no solo en el subgrafo.
+  const fullByCodeMap = useMemo(() => new Map((graph?.nodes ?? []).map((n) => [n.code, n])), [graph]);
   const highlightedNextCodes = useMemo(() => getDirectSuccessorCodes(
     displayGraph?.edges ?? [], selectedNode?.code ?? null,
   ), [displayGraph, selectedNode]);
 
-  const fastPath = useMemo(() => getStudyPath(
-    displayGraph?.nodes ?? [], displayGraph?.edges ?? [], selectedCode,
-  ), [displayGraph, selectedCode]);
-  const criticalPath = useMemo(() => getStudyPath(
-    displayGraph?.nodes ?? [], displayGraph?.edges ?? [],
-  ), [displayGraph]);
+  // Caminos ya resueltos por el backend; acá solo se indexan para dibujar.
+  // Son caminos de todo el plan: en la vista de tecnicatura se resaltan solo
+  // los nodos visibles, pero el costo y las aristas siguen siendo globales.
+  const fastPath = useMemo(() => {
+    const path = displayGraph?.targetPath;
+    const chain = path?.chain ?? [];
+    return {
+      chain,
+      chainCosts: path?.chainCosts ?? [],
+      cost: path?.cost ?? 0,
+      set: new Set(chain),
+      edgeSet: new Set(path?.edgeIds ?? []),
+      hasCycle: Boolean(path?.hasCycle),
+    };
+  }, [displayGraph]);
+  const criticalPath = useMemo(() => {
+    const chain = displayGraph?.criticalPath ?? [];
+    return {
+      chain,
+      cost: displayGraph?.criticalPathCost ?? 0,
+      set: new Set(chain),
+      edgeSet: new Set(displayGraph?.criticalPathEdges ?? []),
+      hasCycle: Boolean(displayGraph?.hasCycle),
+    };
+  }, [displayGraph]);
   const activePath = pathMode === 'critical' && criticalPath.chain.length > 0
     ? criticalPath
     : pathMode === 'optimal' && fastPath.chain.length > 0 ? fastPath : null;
@@ -470,10 +495,10 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
     () =>
       fastPath.chain.map((code, i) => ({
         code,
-        name: byCodeMap.get(code)?.name ?? code,
+        name: fullByCodeMap.get(code)?.name ?? code,
         cost: fastPath.chainCosts[i] ?? 0,
       })),
-    [fastPath.chain, fastPath.chainCosts, byCodeMap],
+    [fastPath.chain, fastPath.chainCosts, fullByCodeMap],
   );
 
   const baseNodes: Node[] = useMemo(() => {
