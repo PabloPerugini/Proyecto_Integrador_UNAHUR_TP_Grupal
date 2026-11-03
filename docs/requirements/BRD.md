@@ -11,8 +11,8 @@
 | Institución           | Universidad Nacional de Hurlingham (UNAHUR)                          |
 | Unidad Académica      | Facultad de Informática — Proyecto Integrador Programación           |
 | Tipo de documento     | BRD — Documentación de Requerimientos de Negocio                     |
-| Versión               | 2.5                                                                   |
-| Fecha                 | 20 de octubre de 2026                                              |
+| Versión               | 2.6                                                                   |
+| Fecha                 | 03 de noviembre de 2026                                           |
 | Sponsor Operación     | Secretaría Académica / Dirección de Carrera                          |
 | Sponsor Organización  | UNAHUR                                                               |
 | Integrantes           | Perugini, Pablo; Acuña, Marcos; Masgo Sandoval, Joaquín; Renaud, Román; Remonda, Eliel; Cotera, Dylan |
@@ -43,6 +43,7 @@
 | 2.3     | 14/10/2026   | Equipo | Catálogo curado por instituto (19 carreras canónicas, `isArchived`, filtros `?unit`/`includeArchived`, `withCounts`); Home Institutos→Carreras→Planes con "qué puedo cursar" y avance perezosos; **tecnicatura intermedia** (flag `intermediate`, sub-plan virtual `/study-plans/:id/intermediate`, pestañas Lic/Tec); **articulación** entre carreras (`continuesIn` + UI admin); **correlativas que bloquean el avance** (validación en backend + pre-chequeo en Mi progreso); promedio con notas y exportar CSV; seguridad (ADMIN en import/creación, `checkOrigin` CSRF, logout invalida JWT) y versionado liviano de planes; AppShell único por rol, Mi cuenta, Admin Usuarios y Archivadas; 26 unitarios. |
 | 2.4     | 16/10/2026   | Equipo | **Tipo de carrera** (`careerType`: Licenciatura/Tecnicatura/Profesorado/Ingenieria/Otro) para distinguir el pregrado del grado en el catálogo; **título intermedio honesto**: aviso cuando el plan lo declara sin materias marcadas, **marcado en lote** (todo el plan / un año / un período) y **propuesta de IA revisable** validada contra las materias reales; chip 🎓 Tecnicatura en el catálogo; 32 unitarios. |
 | 2.5     | 20/10/2026   | Equipo | **Inicio limpio**: la portada muestra solo inscripciones y accesos (*Ver materias*, *Qué puedo cursar* y *Mi avance* pasan a Mi progreso/grafo). **Baja reversible de planes**: quitar el plan conserva el progreso (inscripción archivada) y la reinscripción lo reactiva. Archivadas integradas a **Catálogo → Carreras**. **Edición de materias** en el plan con nombre visible editable y guardado en lote. **Validaciones reutilizables** de cuenta/registro (nombre, email, contraseña y confirmación) compartidas entre Registro y Mi cuenta. |
+| 2.6     | 02/11/2026   | Equipo | **Parser modular v7d** (`services/pdf/` + fachada), grafo/tablero con iconos SVG, avance/reversión por clic, confirm con deduplicación (`duplicatesDropped`) y códigos únicos (`uniqueSubjectCodes`), borrado de planes desde UI y CSS centralizado (`styles/`). |
 
 ---
 
