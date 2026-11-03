@@ -1,0 +1,33 @@
+Línea base — Gradify
+Fecha: 2026-11-03
+Rama: fix/revision-2026-10-30
+Node del host: v26.12.1
+Docker: daemon detenido al momento de la medición
+
+Tests
+- Backend Node: 46/46 pass (9 archivos)
+- Backend Jest: 116/116 pass (33 suites)
+- Frontend: 44/44 pass (10 archivos)
+
+Lint
+- Backend: 0 errores, 14 warnings preexistentes
+- Frontend: 0 errores
+
+Build
+- Frontend: correcto con Vite 8.2.2
+- Salida: dist/ generado (ignorado por git)
+
+Auditoría de dependencias de producción
+- Backend: 10 vulnerabilidades (1 crítica, 4 altas, 5 moderadas)
+  - body-parser, brace-expansion, glob, ip-address, joi, minimatch, multer, proxy-addr, qs, yamljs
+- Frontend: 0 vulnerabilidades
+
+Estado de git al inicio
+- 12 archivos eliminados
+- 2 archivos modificados: docs/requirements/BRD.md, docs/requirements/Test-Cases.md
+- 1 archivo nuevo: docs/requirements/modelo-datos-gradify-v2.drawio
+
+Observaciones
+- El bug de baja de universidades está en frontend/src/components/AdminCatalog.tsx:910-915.
+- backend/src/services/universityService.js solo valida carreras y no incluye archivadas.
+- UserProgress no tiene ruta montada: progress.routes.js solo expone parse-history.
