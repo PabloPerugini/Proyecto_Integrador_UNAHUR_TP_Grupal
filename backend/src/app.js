@@ -5,7 +5,7 @@ const helmet = require("helmet");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const swaggerUi = require("swagger-ui-express");
-const YAML = require("yamljs");
+const yaml = require("js-yaml");
 const routes = require("./routes");
 const errorHandler = require("./middlewares/errorHandler");
 const { parseTrustProxy } = require("./config/trustProxy");
@@ -24,7 +24,7 @@ if (trustProxy !== null) {
 const fs = require("fs");
 const swaggerFile = path.join(__dirname, "../docs/swagger.yaml");
 const swaggerDocument = fs.existsSync(swaggerFile)
-  ? YAML.load(swaggerFile)
+  ? yaml.load(fs.readFileSync(swaggerFile, "utf8"))
   : { openapi: "3.0.0", info: { title: "Gradify API", version: "1.0.0" }, paths: {} };
 
 // CORS: whitelist desde env + credentials para cookies JWT (integración auth-cookie-ia).
