@@ -1,5 +1,6 @@
 const University = require("../models/university");
 const Career = require("../models/career");
+const AcademicUnit = require("../models/academicUnit");
 
 const getAllUniversities = async () => {
     return University.find();
@@ -34,12 +35,31 @@ const updateUniversity = async (id, universityData) => {
     );
 };
 
+const conflictError = (message) => {
+    const error = new Error(message);
+    error.statusCode = 409;
+    error.expose = true;
+    return error;
+};
+
 const deleteUniversity = async(id) => {
-    if (await Career.exists({ university: id })) {
-        const error = new Error("No se puede borrar una universidad con carreras asociadas");
-        error.statusCode = 409;
-        throw error;
+    // Las carreras archivadas también dependen de la universidad: si no se
+    // incluyen, el borrado las dejaría huérfanas.
+    const careerExists = await Career.exists({ university: id }).setOptions({
+        includeArchived: true,
+    });
+    if (careerExists) {
+        throw conflictError(
+            "No se puede borrar una universidad con carreras asociadas"
+        );
     }
+
+    if (await AcademicUnit.exists({ university: id })) {
+        throw conflictError(
+            "No se puede borrar una universidad con institutos asociados"
+        );
+    }
+
     return University.findByIdAndDelete(id);
 };
 
