@@ -907,11 +907,30 @@ export default function AdminCatalog({
                             size="sm"
                             variant="outline-danger"
                             disabled={working}
-                            onClick={() => {
-                              if (window.confirm(`¿Eliminar "${university.name}"? Solo es posible si no tiene institutos ni carreras.`)) {
-                                void request(`/universities/${university._id}`, { method: 'DELETE' }).catch(() => {});
-                                setUniversities((current) => current.filter((u) => u._id !== university._id));
+                            aria-label={`Eliminar universidad "${university.name}"`}
+                            onClick={async () => {
+                              if (!window.confirm(`¿Eliminar "${university.name}"? Solo es posible si no tiene institutos ni carreras.`)) return;
+                              setWorking(true);
+                              try {
+                                await request(`/universities/${university._id}`, { method: 'DELETE' });
+                                setUniversities((current) =>
+                                  current.filter((u) => u._id !== university._id),
+                                );
+                                // Limpia selecciones que apuntaban a la universidad borrada.
+                                if (careerUniversityId === university._id) setCareerUniversityId('');
+                                if (unitUniversityId === university._id) setUnitUniversityId('');
+                                if (editUnitUniversityId === university._id) setEditUnitUniversityId('');
+                                if (editCareerUniversityId === university._id) setEditCareerUniversityId('');
                                 notify('success', `Universidad "${university.name}" eliminada.`);
+                              } catch (err) {
+                                notify(
+                                  'danger',
+                                  err instanceof Error
+                                    ? err.message
+                                    : `No se pudo eliminar la universidad "${university.name}".`,
+                                );
+                              } finally {
+                                setWorking(false);
                               }
                             }}
                           >
