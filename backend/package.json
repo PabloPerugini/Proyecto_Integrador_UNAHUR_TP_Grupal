@@ -5,7 +5,7 @@
   "description": "API REST del Proyecto Integrador UNAHUR",
   "main": "src/main.js",
   "engines": {
-    "node": ">=22"
+    "node": ">=26"
   },
   "scripts": {
     "dev": "nodemon src/main.js",

@@ -4,15 +4,15 @@
   "version": "0.0.0",
   "type": "module",
   "engines": {
-    "node": ">=22"
+    "node": ">=26"
   },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "test": "node --experimental-strip-types --test tests/planCard.test.mjs tests/academicOrdering.test.mjs tests/statusContrast.test.mjs tests/subjectName.test.mjs tests/progressStatus.test.mjs tests/planImport.test.mjs tests/csv.test.mjs tests/progressDraft.test.mjs tests/graphMapper.test.mjs tests/userValidation.test.mjs",
-    "test:order": "node --experimental-strip-types --test tests/academicOrdering.test.mjs",
-    "test:contrast": "node --experimental-strip-types --test tests/statusContrast.test.mjs",
+    "test": "node --test tests/planCard.test.mjs tests/academicOrdering.test.mjs tests/statusContrast.test.mjs tests/subjectName.test.mjs tests/progressStatus.test.mjs tests/planImport.test.mjs tests/csv.test.mjs tests/progressDraft.test.mjs tests/graphMapper.test.mjs tests/userValidation.test.mjs",
+    "test:order": "node --test tests/academicOrdering.test.mjs",
+    "test:contrast": "node --test tests/statusContrast.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -25,7 +25,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@types/node": "^24.13.3",
+    "@types/node": "^24.19.2",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.1.0",
