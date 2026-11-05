@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Form, Spinner, Table } from 'react-bootstrap';
+import { Alert, Button, Form, OverlayTrigger, Spinner, Table, Tooltip } from 'react-bootstrap';
 import { studyPlansApi, orderedSubjects, subjectName, careerName, prerequisiteId, type StudyPlan, type PlanSubject, type ProgressStatus, type UserStudyPlan } from '../api/studyPlans';
 import { uploadPdf } from '../api/client';
 import { useCareerSelection } from '../context/CareerContext';
@@ -7,7 +7,7 @@ import { useFlashMessage } from '../hooks/useFlashMessage';
 import PageHeader from '../components/PageHeader';
 import MessageBanner from '../components/MessageBanner';
 import PdfDropzone from '../components/PdfDropzone';
-import { IconBoard, IconCheck, IconCoins } from '../components/icons';
+import { IconCheck, IconCoins } from '../components/icons';
 import { instituteColor, instituteGradientTec } from '../utils/instituteColors';
 
 // La tabla solo permite elegir estados registrables; DISPONIBLE/BLOQUEADA son
@@ -26,16 +26,6 @@ function getId(value: string | { _id: string } | null | undefined): string | nul
 function normalize(value: string): string {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
 }
-function Ring({ value, color }: { value: number; color: string }) {
-  const safe = Math.max(0, Math.min(100, Math.round(value)));
-  const r = 43; const circumference = 2 * Math.PI * r;
-  return <div className="ring" style={{ width: 96, height: 96 }}>
-    <svg width="96" height="96">
-      <circle className="ring__track" cx="48" cy="48" r={r} strokeWidth="9" fill="none" />
-      <circle className="ring__value" cx="48" cy="48" r={r} stroke="#198754" strokeWidth="9" fill="none" strokeDasharray={circumference} strokeDashoffset={circumference * (1 - safe / 100)} />
-    </svg><div className="ring__center" style={{ color }}>{safe}%</div>
-  </div>;
-}
 export default function MyProgress() {
   const { careerId: selectedFromContext, setCareerId } = useCareerSelection(); // ahora representa StudyPlan
   const { msg, flash, flashFromError, clear } = useFlashMessage();
@@ -50,6 +40,7 @@ export default function MyProgress() {
   const [error, setError] = useState<string | null>(null);
   const [historyPreview, setHistoryPreview] = useState<{ matched: number; missing: number } | null>(null);
   const [tab, setTab] = useState<'lic' | 'tec'>('lic');
+  const [yearTooltip, setYearTooltip] = useState<string | null>(null);
   const enrollment = enrollments.find(x => getId(x.studyPlan) === selectedId);
   const selectedPlan = plans.find(p => p._id === selectedId);
 
@@ -224,7 +215,7 @@ export default function MyProgress() {
     : null;
   const creditsTotal = subjects.reduce((a,s) => a + (s.credits ?? 0), 0);
   const creditsApproved = approved.reduce((a,s) => a + (s.credits ?? 0), 0);
-  const percentage = creditsTotal ? Math.round(creditsApproved * 100 / creditsTotal) : subjects.length ? Math.round(approved.length * 100 / subjects.length) : 0;
+  const percentage = subjects.length ? Math.round(approved.length * 100 / subjects.length) : 0;
   const byYear = useMemo(() => {
     const map = new Map<number,{ total: number; approved: number }>();
     for (const item of subjects) {
@@ -254,26 +245,94 @@ export default function MyProgress() {
       <div className="mt-2"><Button disabled={working} onClick={() => void addToMine()}>Agregar a mi progreso</Button></div>
     </Alert>}
     {!loading && !error && selectedPlan && <>
-      <div className="stat-grid">
-        <div className="stat-card"><span className="stat-card__label">materias aprobadas</span><span className="stat-card__value">{fmt.format(approved.length)}</span><span className="stat-card__foot">de {subjects.length} en total</span><div className="stat-card__bar"><span style={{ width: `${subjects.length ? approved.length * 100 / subjects.length : 0}%` }} /></div></div>
+      <div className="stat-grid progress-overview">
+        <div className="stat-card progress-overview__summary">
+          <div className="progress-overview__heading">
+            <strong className="stat-card__value">{percentage}%</strong>
+          </div>
+          <span className="stat-card__foot">{fmt.format(approved.length)} de {fmt.format(subjects.length)} materias aprobadas</span>
+          <div className="progress-years" style={{ gridTemplateColumns: byYear.map(([, value]) => `${value.total}fr`).join(' ') || '1fr' }}>
+            <div className="progress-years__track" role="group" aria-label={`Avance del plan: ${percentage}% completado. Detalle por año`}>
+              {byYear.map(([year, value]) => (
+                <OverlayTrigger
+                  key={`${selectedId}-${year}`}
+                  placement="top"
+                  trigger={['hover', 'focus']}
+                  rootClose
+                  show={yearTooltip === `${selectedId}-${year}`}
+                  onToggle={show => setYearTooltip(current => show ? `${selectedId}-${year}` : current === `${selectedId}-${year}` ? null : current)}
+                  overlay={<Tooltip id={`progress-year-${selectedId}-${year}`}>
+                    {value.approved} de {value.total}
+                  </Tooltip>}
+                >
+                  <button
+                    type="button"
+                    className="progress-years__segment"
+                    style={{ flex: value.total }}
+                    aria-label={`${year === 0 ? 'Sin año' : `Año ${year}`}: ${value.approved} de ${value.total} materias aprobadas`}
+                    onClick={() => setYearTooltip(`${selectedId}-${year}`)}
+                    onKeyDown={event => { if (event.key === 'Escape') setYearTooltip(null); }}
+                  >
+                    <span style={{ width: `${value.approved * 100 / value.total}%` }} />
+                  </button>
+                </OverlayTrigger>
+              ))}
+            </div>
+            {byYear.map(([year, value]) => (
+              <span className="progress-years__label" key={year} aria-label={`${year === 0 ? 'Sin año' : `Año ${year}`}: ${value.approved} de ${value.total} materias aprobadas`}>
+                {year === 0 ? 'Sin año' : `${year}.º año`}
+              </span>
+            ))}
+          </div>
+        </div>
         <div className="stat-card"><span className="stat-card__label">créditos</span><span className="stat-card__value">{fmt.format(creditsApproved)}<span className="fs-6 text-muted fw-semibold"> / {fmt.format(creditsTotal)}</span></span><span className="stat-card__foot">aprobados sobre total del plan</span></div>
-        <div className="stat-card"><span className="stat-card__label">avance</span><div className="ring-wrap"><Ring value={percentage} color="#198754" /></div></div>
-        <div className="stat-card"><span className="stat-card__label">te faltan</span><span className="stat-card__value">{subjects.length - approved.length}</span><span className="stat-card__foot">materias por aprobar</span></div>
         <div className="stat-card"><span className="stat-card__label">promedio</span><span className="stat-card__value">{average === null ? '—' : average.toFixed(2)}</span><span className="stat-card__foot">{grades.length === 1 ? '1 materia con nota' : `${grades.length} materias con nota`}</span></div>
       </div>
-      {byYear.length > 0 && <div className="card mb-4"><div className="card-header d-flex align-items-center gap-2"><IconBoard size={16} /> Avance por año</div><div className="card-body d-grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))' }}>
-        {byYear.map(([year,v]) => <div key={year}><div className="yr-row mb-1"><span className="yr-row__label">{year === 0 ? 'Sin año' : `Año ${year}`}</span><span className="text-muted small">{v.approved}/{v.total}</span></div><div className="mini-progress"><div className="mini-progress__bar" style={{ width: `${v.total ? v.approved * 100 / v.total : 0}%` }} /></div></div>)}
-      </div></div>}
       {enrollment && <div className="card mb-4"><div className="card-header d-flex align-items-center gap-2"><IconCheck size={16} /> Importar historia académica (PDF)</div><div className="card-body">
         <PdfDropzone onFiles={onHistory} multiple={false} text="Arrastrá tu historia académica acá" hint="Se reconocerán las materias aprobadas; revisalas antes de guardar" />
         {historyPreview && <Alert variant="info" className="mt-3">{historyPreview.matched} aprobadas reconocidas; {historyPreview.missing} sin coincidencia. Los cambios aún no se guardaron.</Alert>}
       </div></div>}
-      <div className="card mb-4"><div className="card-header d-flex justify-content-between align-items-center gap-2 flex-wrap"><span className="d-flex align-items-center gap-2"><IconCoins size={16} /> Estado por materia</span><span className="d-flex flex-wrap gap-2">{selectedPlan?.intermediateTitle && <><Button size="sm" variant={tab === 'lic' ? 'primary' : 'outline-primary'} onClick={() => setTab('lic')}>Licenciatura</Button><Button size="sm" variant={tab === 'tec' ? 'primary' : 'outline-primary'} style={tab === 'tec' ? { background: instituteGradientTec(baseColor), borderColor: 'transparent' } : undefined} onClick={() => setTab('tec')}>Tecnicatura</Button></>}{enrollment && <Button size="sm" variant="outline-secondary" onClick={() => exportCsv()}>Exportar CSV</Button>}{enrollment && <Button size="sm" disabled={working || dirty.length === 0} onClick={() => void saveAll()}>{working ? 'Guardando…' : `Guardar cambios (${dirty.length})`}</Button>}</span></div>
-        <div className="card-body">{tab === 'tec' && <p className="small text-muted">Vista de tecnicatura{selectedPlan?.intermediateTitle ? `: ${selectedPlan.intermediateTitle}` : ''}: lo que cargues acá cuenta para ambas titulaciones.</p>}<Table size="sm" responsive striped hover><thead><tr><th>Materia</th><th>Año</th><th>Estado</th><th>Nota</th><th>Créditos</th></tr></thead><tbody>
+      <div className="card mb-4 subject-editor">
+        <div className="card-header d-flex justify-content-between align-items-center gap-2 flex-wrap">
+          <span className="d-flex align-items-center gap-2"><IconCoins size={16} /> Estado por materia</span>
+          {selectedPlan?.intermediateTitle && <div className="d-flex flex-wrap gap-2">
+            <Button size="sm" variant={tab === 'lic' ? 'primary' : 'outline-primary'} onClick={() => setTab('lic')}>Licenciatura</Button>
+            <Button size="sm" variant={tab === 'tec' ? 'primary' : 'outline-primary'} style={tab === 'tec' ? { background: instituteGradientTec(baseColor), borderColor: 'transparent' } : undefined} onClick={() => setTab('tec')}>Tecnicatura</Button>
+          </div>}
+          {enrollment && <div className="subject-editor__actions">
+            <Button size="sm" variant="outline-secondary" onClick={() => exportCsv()}>Exportar CSV</Button>
+            <Button size="sm" disabled={working || dirty.length === 0} onClick={() => void saveAll()}>{working ? 'Guardando…' : `Guardar cambios (${dirty.length})`}</Button>
+          </div>}
+        </div>
+        <div className="card-body">{tab === 'tec' && <p className="small text-muted">Vista de tecnicatura{selectedPlan?.intermediateTitle ? `: ${selectedPlan.intermediateTitle}` : ''}: lo que cargues acá cuenta para ambas titulaciones.</p>}
+        <div className="d-none d-md-block"><Table size="sm" responsive striped hover><thead><tr><th>Materia</th><th>Año</th><th>Estado</th><th>Nota</th><th>Créditos</th></tr></thead><tbody>
           {visibleSubjects.map(s => <tr key={s._id}><td><strong>{subjectName(s)}</strong><div className="text-muted small">{s.code || 'Sin código'}</div></td><td>{s.year ?? '—'}{s.period != null ? ` · ${s.period}º` : ''}</td>
             <td><Form.Select size="sm" disabled={!enrollment || working} value={draft[s._id]?.status ?? 'PENDIENTE'} onChange={e => update(s._id, { status: e.target.value as ProgressStatus })}>{(Object.keys(STATUS) as SelectableStatus[]).map(k => <option key={k} value={k}>{STATUS[k]}</option>)}</Form.Select></td>
             <td><Form.Control size="sm" type="number" min={0} max={10} style={{ width: 86 }} disabled={!enrollment || working} value={draft[s._id]?.grade ?? ''} onChange={e => update(s._id, { grade: e.target.value })} /></td><td>{s.credits ?? 0}</td></tr>)}
-        </tbody></Table>
+        </tbody></Table></div>
+        <div className="subject-editor__cards d-md-none">
+          {visibleSubjects.map(s => (
+            <article className="subject-editor__subject" key={s._id} aria-labelledby={`subject-title-${s._id}`}>
+              <h3 id={`subject-title-${s._id}`} className="subject-editor__name">{subjectName(s)}</h3>
+              <p className="subject-editor__meta">
+                {s.code || 'Sin código'} · {s.year == null ? 'Sin año' : `Año ${s.year}.º`}{s.period != null ? ` · ${s.period}.º` : ''}
+                {(s.credits ?? 0) > 0 && <> · {s.credits} créditos</>}
+              </p>
+              <div className="subject-editor__fields">
+                <Form.Group controlId={`subject-status-${s._id}`}>
+                  <Form.Label>Estado</Form.Label>
+                  <Form.Select size="sm" disabled={!enrollment || working} value={draft[s._id]?.status ?? 'PENDIENTE'} onChange={e => update(s._id, { status: e.target.value as ProgressStatus })}>
+                    {(Object.keys(STATUS) as SelectableStatus[]).map(k => <option key={k} value={k}>{STATUS[k]}</option>)}
+                  </Form.Select>
+                </Form.Group>
+                <Form.Group controlId={`subject-grade-${s._id}`}>
+                  <Form.Label>Nota</Form.Label>
+                  <Form.Control size="sm" type="number" min={0} max={10} placeholder="—" disabled={!enrollment || working} value={draft[s._id]?.grade ?? ''} onChange={e => update(s._id, { grade: e.target.value })} />
+                </Form.Group>
+              </div>
+            </article>
+          ))}
+        </div>
         {!visibleSubjects.length && <p className="text-muted">{tab === 'tec' && subjects.length > 0 ? 'La tecnicatura todavía no tiene materias marcadas.' : 'Este plan todavía no tiene materias.'}</p>}
         {enrollment && dirty.length > 0 && <Button disabled={working} onClick={() => void saveAll()}>{working ? 'Guardando…' : `Guardar cambios (${dirty.length})`}</Button>}
       </div></div>

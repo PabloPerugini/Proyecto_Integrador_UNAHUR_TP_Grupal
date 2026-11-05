@@ -104,10 +104,9 @@ function nodeBorder(
   return `${width} #CBD5E1`;
 }
 
-function StatusBadges({ d }: { d: Pick<PlanNodeData, 'available' | 'optimal' | 'critical'> }) {
+function StatusBadges({ d }: { d: Pick<PlanNodeData, 'optimal' | 'critical'> }) {
   return (
     <>
-      {d.available && <span className="badge text-bg-warning" style={{ fontSize: 9 }}>disponible</span>}
       {d.optimal && <span className="badge" style={{ fontSize: 9, background: '#d9870b' }}>óptima</span>}
       {d.critical && <span className="badge text-bg-dark" style={{ fontSize: 9 }}>crítico</span>}
     </>
@@ -994,7 +993,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
         onClick={() => setPinnedCode((prev) => (prev === d.code ? null : d.code))}
         style={{
           background: pathColor ?? statusColor(d.status),
-          color: pathColor ? '#211407' : '#fff',
+          color: pathColor ? '#211407' : '#23395d',
           opacity: activePath && !activePath.set.has(d.code) ? DIMMED_OPACITY : 1,
           outline: pathColor && selected ? '2px solid #23395d' : undefined,
           outlineOffset: 3,
@@ -1011,23 +1010,12 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
       >
         <div className="d-flex justify-content-between align-items-start gap-2">
           <span style={{ fontWeight: 700, fontSize: 12, lineHeight: 1.25 }}>{d.name}</span>
-          <span
-            className="badge"
-            style={{
-              background: 'rgba(255,255,255,.22)',
-              color: '#fff',
-              fontSize: 9,
-              flexShrink: 0,
-              border: '1px solid rgba(255,255,255,.4)',
-            }}
-          >
-            {d.cuatrimestre === 1 ? '1C' : d.cuatrimestre === 2 ? '2C' : d.duration === 'A' || d.duration === 'TF' ? 'Anual' : 'Cuatrimestral'}
-          </span>
+          <SubjectStatusIcon status={d.status} className="board-subject-status-icon" />
         </div>
-        <div style={{ fontSize: 11, opacity: 0.92, marginTop: 3 }}>
+        <div style={{ fontSize: 11, color: pathColor ? '#211407' : '#526987', marginTop: 3 }}>
           {d.code} · {d.credits} cr · {statusLabel(d.status)}
         </div>
-        <div style={{ fontSize: 10, opacity: 0.95, marginTop: 3 }}>
+        <div style={{ fontSize: 10, color: pathColor ? '#211407' : '#526987', marginTop: 3 }}>
           <StatusBadges d={d} />
         </div>
       </button>

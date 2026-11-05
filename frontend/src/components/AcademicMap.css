@@ -343,3 +343,8 @@
 [data-bs-theme="dark"] .academic-island--3 { --island-fill: #20374580; --island-border: #334f60; }
 [data-bs-theme="dark"] .academic-island--4 { --island-fill: #3c352280; --island-border: #554b35; }
 [data-bs-theme="dark"] .academic-island-step { color: #b6c9e2; }
+.board-subject-status-icon {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+}
