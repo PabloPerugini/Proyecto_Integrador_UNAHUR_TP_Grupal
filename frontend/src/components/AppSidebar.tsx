@@ -92,7 +92,7 @@ export default function AppSidebar() {
         }
       >
         <span className="sidebar__link-icon"><IconUsers /></span>
-        <span className="sidebar__label sidebar__link-label">Mi cuenta</span>
+        <span className="sidebar__label sidebar__link-label" data-collapsed-label="Cuenta">Mi cuenta</span>
       </NavLink>
       <button
         type="button"
