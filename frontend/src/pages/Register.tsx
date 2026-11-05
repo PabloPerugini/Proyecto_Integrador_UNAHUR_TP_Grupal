@@ -130,7 +130,7 @@ export default function Register() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} noValidate>
         <FormField
           label="NickName"
           autoComplete="username"

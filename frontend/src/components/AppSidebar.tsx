@@ -30,6 +30,7 @@ export default function AppSidebar() {
     {
       to: careerId ? `/grafo/${careerId}` : '/grafo',
       label: 'Correlatividades',
+      collapsedLabel: 'Mapa',
       icon: <IconGraph />,
     },
     {
@@ -40,6 +41,7 @@ export default function AppSidebar() {
     {
       to: '/progreso',
       label: 'Mi progreso',
+      collapsedLabel: 'Progreso',
       icon: <IconChart />,
     },
   ];
@@ -55,13 +57,14 @@ export default function AppSidebar() {
       <NavLink
         key={item.to}
         to={item.to}
+        aria-label={item.label}
         onClick={onClick}
         className={({ isActive }) =>
           `sidebar__link${isActive ? ' sidebar__link--active' : ''}`
         }
       >
         <span className="sidebar__link-icon">{item.icon}</span>
-        {item.label}
+        <span className="sidebar__label sidebar__link-label" data-collapsed-label={item.label}>{item.label}</span>
       </NavLink>
     ));
 
@@ -74,28 +77,35 @@ export default function AppSidebar() {
         </>
       )}
 
-      <div className="sidebar__section mt-3">Preferencias</div>
-      <div className="sidebar__link" style={{ cursor: 'default' }}>
-        <span className="sidebar__link-icon" />
-        <span className="d-flex align-items-center">
-          Modo {theme === 'dark' ? 'oscuro' : 'claro'} <ThemeToggle />
+      <div className="sidebar__link sidebar__theme" style={{ cursor: 'default' }}>
+        <span className="sidebar__theme-content">
+          <ThemeToggle />
+          <span className="sidebar__label sidebar__link-label">Modo {theme === 'dark' ? 'oscuro' : 'claro'}</span>
         </span>
       </div>
       <div className="sidebar__section mt-3">{user?.nickName || 'Estudiante'}</div>
       <NavLink
         to="/cuenta"
+        aria-label="Mi cuenta"
         className={({ isActive }) =>
           `sidebar__link${isActive ? ' sidebar__link--active' : ''}`
         }
       >
-        Mi cuenta
+        <span className="sidebar__link-icon"><IconUsers /></span>
+        <span className="sidebar__label sidebar__link-label">Mi cuenta</span>
       </NavLink>
       <button
         type="button"
-        className="sidebar__link border-0 bg-transparent text-start"
+        aria-label="Cerrar sesión"
+        className="sidebar__link sidebar__logout border-0 bg-transparent text-start"
         onClick={() => { logout(); navigate('/login'); }}
       >
-        Cerrar sesión
+        <span className="sidebar__link-icon">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M9 4H4v16h5M9 12h12m-4-4 4 4-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </span>
+        <span className="sidebar__label sidebar__link-label sidebar__logout-label">Cerrar sesión</span>
       </button>
     </SidebarBase>
   );
