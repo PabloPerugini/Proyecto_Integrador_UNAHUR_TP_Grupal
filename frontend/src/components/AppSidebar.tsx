@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useMatch, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 import { useCareerSelection } from '../context/CareerContext';
@@ -22,6 +22,7 @@ export default function AppSidebar() {
   const { theme } = useTheme();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const isUsersRoute = useMatch('/admin/users/*') !== null;
   const { careerId } = useCareerSelection();
   const isAdmin = user?.rol === 'ADMIN';
 
@@ -48,7 +49,7 @@ export default function AppSidebar() {
 
   const adminNav: NavItem[] = [
     { to: '/cargar', label: 'Cargar plan', icon: <IconUpload /> },
-    { to: '/admin', label: 'Editar plan', icon: <IconEdit /> },
+    { to: '/admin', label: 'Editar plan', icon: <IconEdit />, end: isUsersRoute },
     { to: '/admin/users', label: 'Usuarios', icon: <IconUsers /> },
   ];
 
@@ -57,6 +58,7 @@ export default function AppSidebar() {
       <NavLink
         key={item.to}
         to={item.to}
+        end={item.end}
         aria-label={item.label}
         onClick={onClick}
         className={({ isActive }) =>

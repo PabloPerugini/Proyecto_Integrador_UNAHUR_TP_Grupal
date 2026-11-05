@@ -1703,3 +1703,255 @@ a {
     flex: 1 1 auto;
   }
 }
+
+/* Compact academic progress summary */
+.progress-overview__summary {
+  grid-column: 1 / -1;
+  gap: 14px;
+  padding: 18px 20px;
+}
+.progress-overview__topline {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+}
+.progress-overview__heading {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.progress-overview__average {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  color: var(--gradify-text);
+}
+.progress-overview__average strong {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+.progress-overview__bar {
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--gradify-surface-3);
+}
+.progress-overview__bar > span {
+  display: block;
+  height: 100%;
+  min-width: 0;
+  border-radius: inherit;
+  background: var(--gradify-brand);
+  transition: width 240ms ease;
+}
+.progress-overview__mobile-break { display: none; }
+@media (max-width: 575.98px) {
+  .progress-overview__summary { padding: 16px; }
+  .progress-overview__mobile-break { display: initial; }
+}
+
+.progress-controls {
+  margin-bottom: 16px;
+}
+.progress-plan-select {
+  width: fit-content;
+  max-width: 100%;
+}
+.progress-plan-select .card-body { padding: 12px; min-width: 0; }
+.progress-plan-select .form-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--gradify-text-muted);
+  font-size: 0.78rem;
+}
+.progress-plan-select__field {
+  position: relative;
+  max-width: 100%;
+  min-width: 150px;
+}
+.progress-plan-select__measure {
+  display: block;
+  visibility: hidden;
+  white-space: nowrap;
+  overflow: hidden;
+  padding: 8px 44px 8px 12px;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+.progress-plan-select .form-select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  min-height: 40px;
+  font-size: 1rem;
+  text-overflow: ellipsis;
+}
+.progress-overview__topline { flex-wrap: wrap; }
+.progress-overview__metrics {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 16px 24px;
+  margin-left: auto;
+}
+.progress-overview__total {
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+/* User administration on small screens */
+.admin-users__cards {
+  display: grid;
+  gap: 12px;
+}
+.admin-user-card {
+  min-width: 0;
+  padding: 14px 12px 12px;
+  border: 1px solid var(--gradify-border);
+  border-radius: 12px;
+  background: var(--gradify-surface);
+  color: var(--gradify-text);
+}
+.admin-user-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.admin-user-card__header > strong {
+  min-width: 0;
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+.admin-user-card__role {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--gradify-surface-3);
+  color: var(--gradify-text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.admin-user-card__role--admin {
+  background: rgba(13, 110, 253, 0.15);
+  color: var(--bs-primary-text-emphasis);
+}
+.admin-user-card__details {
+  margin: 16px 0 20px;
+}
+.admin-user-card__details dt {
+  margin-bottom: 2px;
+  color: var(--gradify-text-muted);
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+.admin-user-card__details dd {
+  margin: 0;
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+}
+.admin-user-card__actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  padding-top: 20px;
+  border-top: 1px solid var(--gradify-border);
+}
+.admin-user-card__actions .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  white-space: normal;
+}
+.admin-user-card__actions svg { flex-shrink: 0; }
+.admin-users-table {
+  padding: 8px 12px;
+  border: 1px solid var(--gradify-border);
+  border-radius: 12px;
+  background: var(--gradify-surface);
+  overflow: hidden;
+}
+.admin-users-table .table {
+  width: 100%;
+  margin-bottom: 0;
+  table-layout: fixed;
+  --bs-table-color: var(--gradify-text);
+}
+.admin-users-table .table thead th {
+  padding: 7px 0;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+.admin-users-table th:nth-child(1) { width: 23%; }
+.admin-users-table th:nth-child(2) { width: 34%; }
+.admin-users-table th:nth-child(3) { width: 18%; }
+.admin-users-table th:nth-child(4) { width: 25%; }
+.admin-users-table .table td {
+  padding: 9px 0;
+  vertical-align: middle;
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}
+.admin-users-table .table td:not(:last-child),
+.admin-users-table .table th:not(:last-child) { padding-right: 12px; }
+.admin-users-table .table tbody tr:last-child td { border-bottom: 0; }
+.admin-users-table__actions .btn {
+  padding: 3px 8px;
+  border-radius: 8px;
+  font-size: 0.65rem;
+  line-height: 1.4;
+}
+.admin-users-table__actions .btn + .btn { margin-left: 4px; }
+.progress-overview__credits-suffix { display: none; }
+@media (max-width: 479.98px) {
+  .progress-overview__summary {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px 16px;
+    padding: 14px 12px 16px;
+  }
+  .progress-overview__topline,
+  .progress-overview__metrics { display: contents; }
+  .progress-overview__heading {
+    grid-column: 1;
+    grid-row: 1;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .progress-overview__heading .stat-card__value { font-size: 1.5rem; }
+  .progress-overview__subject-word,
+  .progress-overview__mobile-break { display: none; }
+  .progress-overview__average {
+    grid-column: 2;
+    grid-row: 1;
+    gap: 8px;
+  }
+  .progress-overview__bar {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    height: 8px;
+  }
+  .progress-overview__credits {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    margin-top: 0;
+    padding-top: 12px;
+    border-top: 1px solid var(--gradify-border);
+  }
+  .progress-overview__credits strong { font-size: 1rem; }
+  .progress-overview__credits-suffix { display: inline; }
+  .progress-overview__total { font-size: 0.75rem; }
+}

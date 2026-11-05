@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Form, OverlayTrigger, Spinner, Table, Tooltip } from 'react-bootstrap';
+import { useCallback, useEffect, useState } from 'react';
+import { Alert, Button, Form, Spinner, Table } from 'react-bootstrap';
 import { studyPlansApi, orderedSubjects, subjectName, careerName, prerequisiteId, type StudyPlan, type PlanSubject, type ProgressStatus, type UserStudyPlan } from '../api/studyPlans';
 import { uploadPdf } from '../api/client';
 import { useCareerSelection } from '../context/CareerContext';
@@ -40,7 +40,6 @@ export default function MyProgress() {
   const [error, setError] = useState<string | null>(null);
   const [historyPreview, setHistoryPreview] = useState<{ matched: number; missing: number } | null>(null);
   const [tab, setTab] = useState<'lic' | 'tec'>('lic');
-  const [yearTooltip, setYearTooltip] = useState<string | null>(null);
   const enrollment = enrollments.find(x => getId(x.studyPlan) === selectedId);
   const selectedPlan = plans.find(p => p._id === selectedId);
 
@@ -208,6 +207,7 @@ export default function MyProgress() {
   // Pestaña tecnicatura: mismo progreso, vista filtrada (cuenta para ambas).
   const visibleSubjects = tab === 'tec' ? subjects.filter(s => s.intermediate) : subjects;
   const grades = approved
+    .filter(s => (draft[s._id]?.grade ?? '').trim() !== '')
     .map(s => Number(draft[s._id]?.grade))
     .filter(n => Number.isFinite(n));
   const average = grades.length
@@ -216,27 +216,21 @@ export default function MyProgress() {
   const creditsTotal = subjects.reduce((a,s) => a + (s.credits ?? 0), 0);
   const creditsApproved = approved.reduce((a,s) => a + (s.credits ?? 0), 0);
   const percentage = subjects.length ? Math.round(approved.length * 100 / subjects.length) : 0;
-  const byYear = useMemo(() => {
-    const map = new Map<number,{ total: number; approved: number }>();
-    for (const item of subjects) {
-      const year = item.year ?? 0;
-      const group = map.get(year) || { total: 0, approved: 0 };
-      group.total++;
-      if (draft[item._id]?.status === 'APROBADA') group.approved++;
-      map.set(year, group);
-    }
-    return [...map.entries()].sort((a,b) => a[0] - b[0]);
-  }, [subjects, draft]);
   return <div>
     <PageHeader title="Mi progreso" sub="Marcá las materias que cursaste y seguí cuánto te falta para recibirte." />
     <MessageBanner message={msg} onClose={clear} />
-    <div className="card mb-4"><div className="card-body">
-      <Form.Label>Plan de estudios</Form.Label>
-      <Form.Select value={selectedId} onChange={e => { setSelectedId(e.target.value); setCareerId(e.target.value); setTab('lic'); }}>
-        {!selectedId && <option value="">Seleccioná un plan...</option>}
-        {plans.filter((p) => p._id === selectedId || enrollments.some((e) => getId(e.studyPlan) === p._id)).map(p => <option key={p._id} value={p._id}>{p.name} — {careerName(p)}</option>)}
-      </Form.Select>
-    </div></div>
+    {!loading && !error && selectedPlan && <div className="progress-controls">
+      <div className="card progress-plan-select"><div className="card-body">
+        <Form.Label htmlFor="progress-plan">Plan de estudios</Form.Label>
+        <div className="progress-plan-select__field">
+          <span className="progress-plan-select__measure" aria-hidden="true">{selectedPlan.name} — {careerName(selectedPlan)}</span>
+        <Form.Select id="progress-plan" value={selectedId} onChange={e => { setSelectedId(e.target.value); setCareerId(e.target.value); setTab('lic'); }}>
+          {!selectedId && <option value="">Seleccioná un plan...</option>}
+          {plans.filter((p) => p._id === selectedId || enrollments.some((e) => getId(e.studyPlan) === p._id)).map(p => <option key={p._id} value={p._id}>{p.name} — {careerName(p)}</option>)}
+        </Form.Select>
+        </div>
+      </div></div>
+    </div>}
     {loading && <div className="text-center py-5"><Spinner animation="border" /> Cargando tu progreso…</div>}
     {error && !loading && <Alert variant="danger">{error}</Alert>}
     {!loading && !error && plans.length === 0 && <Alert variant="info">Todavía no hay planes de estudio disponibles. Podés importar uno desde Cargar plan.</Alert>}
@@ -247,46 +241,27 @@ export default function MyProgress() {
     {!loading && !error && selectedPlan && <>
       <div className="stat-grid progress-overview">
         <div className="stat-card progress-overview__summary">
-          <div className="progress-overview__heading">
-            <strong className="stat-card__value">{percentage}%</strong>
-          </div>
-          <span className="stat-card__foot">{fmt.format(approved.length)} de {fmt.format(subjects.length)} materias aprobadas</span>
-          <div className="progress-years" style={{ gridTemplateColumns: byYear.map(([, value]) => `${value.total}fr`).join(' ') || '1fr' }}>
-            <div className="progress-years__track" role="group" aria-label={`Avance del plan: ${percentage}% completado. Detalle por año`}>
-              {byYear.map(([year, value]) => (
-                <OverlayTrigger
-                  key={`${selectedId}-${year}`}
-                  placement="top"
-                  trigger={['hover', 'focus']}
-                  rootClose
-                  show={yearTooltip === `${selectedId}-${year}`}
-                  onToggle={show => setYearTooltip(current => show ? `${selectedId}-${year}` : current === `${selectedId}-${year}` ? null : current)}
-                  overlay={<Tooltip id={`progress-year-${selectedId}-${year}`}>
-                    {value.approved} de {value.total}
-                  </Tooltip>}
-                >
-                  <button
-                    type="button"
-                    className="progress-years__segment"
-                    style={{ flex: value.total }}
-                    aria-label={`${year === 0 ? 'Sin año' : `Año ${year}`}: ${value.approved} de ${value.total} materias aprobadas`}
-                    onClick={() => setYearTooltip(`${selectedId}-${year}`)}
-                    onKeyDown={event => { if (event.key === 'Escape') setYearTooltip(null); }}
-                  >
-                    <span style={{ width: `${value.approved * 100 / value.total}%` }} />
-                  </button>
-                </OverlayTrigger>
-              ))}
+          <div className="progress-overview__topline">
+            <div className="progress-overview__heading">
+              <strong className="stat-card__value">{percentage}%</strong>
+              <span className="stat-card__foot">{fmt.format(approved.length)} de {fmt.format(subjects.length)} <span className="progress-overview__subject-word">materias</span><br className="progress-overview__mobile-break" /> aprobadas</span>
             </div>
-            {byYear.map(([year, value]) => (
-              <span className="progress-years__label" key={year} aria-label={`${year === 0 ? 'Sin año' : `Año ${year}`}: ${value.approved} de ${value.total} materias aprobadas`}>
-                {year === 0 ? 'Sin año' : `${year}.º año`}
-              </span>
-            ))}
+            <div className="progress-overview__metrics">
+              <div className="progress-overview__average progress-overview__credits" aria-label={`${creditsApproved} de ${creditsTotal} créditos aprobados`}>
+                <span className="stat-card__foot">Créditos<span className="progress-overview__credits-suffix"> aprobados</span></span>
+                <strong>{fmt.format(creditsApproved)}<span className="progress-overview__total"> / {fmt.format(creditsTotal)}</span></strong>
+              </div>
+              <div className="progress-overview__average" aria-label={`Promedio: ${average === null ? 'sin notas' : average.toFixed(2)}`}>
+                <span className="stat-card__foot">Promedio</span>
+                <strong>{average === null ? '—' : average.toFixed(2)}</strong>
+              </div>
+            </div>
+          </div>
+          <div className="progress-overview__bar" role="progressbar" aria-label="Progreso de materias aprobadas" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percentage}>
+            <span style={{ width: `${percentage}%` }} />
           </div>
         </div>
-        <div className="stat-card"><span className="stat-card__label">créditos</span><span className="stat-card__value">{fmt.format(creditsApproved)}<span className="fs-6 text-muted fw-semibold"> / {fmt.format(creditsTotal)}</span></span><span className="stat-card__foot">aprobados sobre total del plan</span></div>
-        <div className="stat-card"><span className="stat-card__label">promedio</span><span className="stat-card__value">{average === null ? '—' : average.toFixed(2)}</span><span className="stat-card__foot">{grades.length === 1 ? '1 materia con nota' : `${grades.length} materias con nota`}</span></div>
+
       </div>
       {enrollment && <div className="card mb-4"><div className="card-header d-flex align-items-center gap-2"><IconCheck size={16} /> Importar historia académica (PDF)</div><div className="card-body">
         <PdfDropzone onFiles={onHistory} multiple={false} text="Arrastrá tu historia académica acá" hint="Se reconocerán las materias aprobadas; revisalas antes de guardar" />
@@ -324,6 +299,7 @@ export default function MyProgress() {
                   <Form.Select size="sm" disabled={!enrollment || working} value={draft[s._id]?.status ?? 'PENDIENTE'} onChange={e => update(s._id, { status: e.target.value as ProgressStatus })}>
                     {(Object.keys(STATUS) as SelectableStatus[]).map(k => <option key={k} value={k}>{STATUS[k]}</option>)}
                   </Form.Select>
+
                 </Form.Group>
                 <Form.Group controlId={`subject-grade-${s._id}`}>
                   <Form.Label>Nota</Form.Label>
