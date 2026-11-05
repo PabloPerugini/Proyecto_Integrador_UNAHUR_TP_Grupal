@@ -57,6 +57,7 @@ type UniversityRef = string | { _id: string; name: string } | null | undefined;
 
 interface AdminCatalogProps {
   onCareerCreated: () => Promise<unknown> | void;
+  onUniversityChange?: (id: string) => void;
   onNotify?: (type: FlashMessage['type'], text: string) => void;
 }
 
@@ -144,8 +145,9 @@ function UnitColorPicker({
 export default function AdminCatalog({
   onCareerCreated,
   onNotify,
+  onUniversityChange,
 }: AdminCatalogProps) {
-  const [tab, setTab] = useState<AdminTab>('institutos');
+  const [tab, setTab] = useState<AdminTab>('universidades');
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
   const [localMessage, setLocalMessage] = useState<FlashMessage | null>(null);
@@ -157,7 +159,8 @@ export default function AdminCatalog({
   // Alta de instituto
   const [unitName, setUnitName] = useState('');
   const [unitType, setUnitType] = useState('INSTITUTO');
-  const [unitUniversityId, setUnitUniversityId] = useState('');
+  const [selectedUniversityId, setSelectedUniversityId] = useState('');
+  const unitUniversityId = selectedUniversityId;
   const [unitDescription, setUnitDescription] = useState('');
   const [unitColor, setUnitColor] = useState(DEFAULT_UNIT_COLOR);
 
@@ -173,7 +176,7 @@ export default function AdminCatalog({
   const [universityDescription, setUniversityDescription] = useState('');
 
   // Alta de carrera
-  const [careerUniversityId, setCareerUniversityId] = useState('');
+  const careerUniversityId = selectedUniversityId;
   const [careerName, setCareerName] = useState('');
   const [careerType, setCareerType] = useState<CareerType | ''>('');
   const [careerDescription, setCareerDescription] = useState('');
@@ -224,6 +227,7 @@ export default function AdminCatalog({
       .then(([universityList, unitList, careerList]) => {
         if (!active) return;
         setUniversities(universityList);
+        setSelectedUniversityId(current => universityList.some(u => u._id === current) ? current : universityList[0]?._id ?? '');
         setUnits(Array.isArray(unitList) ? unitList : []);
         setCareers(
           (Array.isArray(careerList) ? careerList : []).sort((a, b) =>
@@ -248,6 +252,20 @@ export default function AdminCatalog({
     };
   }, [onNotify]);
 
+  useEffect(() => {
+    onUniversityChange?.(selectedUniversityId);
+    setArticCareerId('');
+    setArticChecked([]);
+    setCareerSearch('');
+    setArticSearch('');
+  }, [selectedUniversityId, onUniversityChange]);
+
+  const selectedUnits = unitsOfUniversity(units, selectedUniversityId);
+  const selectedCareers = useMemo(
+    () => careers.filter(career => universityIdOf(career.university) === selectedUniversityId),
+    [careers, selectedUniversityId],
+  );
+
   const universityOptions = useMemo(
     () =>
       universities.map((university) => ({
@@ -258,6 +276,23 @@ export default function AdminCatalog({
   );
 
   // ── Universidades ──────────────────────────────────────────────
+  const deleteUniversity = async (university: University) => {
+    if (working || savingArtic) return;
+    if (!window.confirm(`¿Eliminar la universidad "${university.name}"? Esta acción no se puede deshacer.`)) return;
+    setWorking(true);
+    try {
+      await request(`/universities/${encodeURIComponent(university._id)}`, { method: 'DELETE' });
+      const remaining = universities.filter(item => item._id !== university._id);
+      setUniversities(remaining);
+      setSelectedUniversityId(current => current === university._id ? remaining[0]?._id ?? '' : current);
+      notify('success', `Universidad "${university.name}" eliminada.`);
+    } catch (err) {
+      notify('danger', err instanceof Error ? err.message : 'No se pudo eliminar la universidad');
+    } finally {
+      setWorking(false);
+    }
+  };
+
   const createUniversity = async (event: FormEvent) => {
     event.preventDefault();
     if (working || !universityName.trim()) return;
@@ -275,12 +310,12 @@ export default function AdminCatalog({
       );
       setUniversities((current) => [...current, response.university]);
       // Pre-selección inteligente: queda lista para crear carreras.
-      setCareerUniversityId(response.university._id);
+      setSelectedUniversityId(response.university._id);
       setUniversityName('');
       setUniversityDescription('');
       notify(
         'success',
-        `Universidad "${response.university.name}" creada. Ya quedó seleccionada en "Crear carrera".`,
+        `Universidad "${response.university.name}" creada. Ya quedó seleccionada para administrar sus institutos, carreras y planes.`,
       );
     } catch (err) {
       notify(
@@ -544,14 +579,14 @@ export default function AdminCatalog({
   };
 
   const activeCareers = useMemo(
-    () => careers.filter((career) => !career.isArchived),
-    [careers],
+    () => selectedCareers.filter((career) => !career.isArchived),
+    [selectedCareers],
   );
-  const archivedCareerCount = careers.length - activeCareers.length;
+  const archivedCareerCount = selectedCareers.length - activeCareers.length;
 
   const visibleCareers = useMemo(() => {
     const q = normalize(careerSearch);
-    return careers.filter((career) => {
+    return selectedCareers.filter((career) => {
       if (!showArchivedCareers && career.isArchived) return false;
       if (!q) return true;
       return normalize(
@@ -563,7 +598,7 @@ export default function AdminCatalog({
         ].join(' '),
       ).includes(q);
     });
-  }, [careers, careerSearch, showArchivedCareers]);
+  }, [selectedCareers, careerSearch, showArchivedCareers]);
 
   // ── Articulación ───────────────────────────────────────────────
   useEffect(() => {
@@ -627,14 +662,27 @@ export default function AdminCatalog({
   );
 
   return (
-    <Card className="mb-4">
-      <Card.Header className="d-flex flex-wrap justify-content-between align-items-center gap-2">
-        <strong>Administrar entidades</strong>
-        <span className="text-muted small">
-          Institutos, universidades, carreras y articulación
-        </span>
-      </Card.Header>
+    <>
+    <h2 id="admin-catalog-title" className="h5 fw-bold mb-3">Administrar entidades</h2>
+    <Card className="mb-4" aria-labelledby="admin-catalog-title">
       <Card.Body>
+    {!loading && universities.length > 0 && (
+      <div className="mb-4 university-context">
+
+          <Form.Label htmlFor="catalog-university" className="university-context__label">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="M3 21V7l6-4 6 4v14M15 10h6v11M1 21h22M7 8h4M7 12h4M7 16h4M18 13v2M18 17v2" /></svg>
+            Universidad seleccionada
+          </Form.Label>
+          <div className="university-context__field">
+            <span className="university-context__measure" aria-hidden="true">{universities.find(university => university._id === selectedUniversityId)?.name}</span>
+          <Form.Select id="catalog-university" value={selectedUniversityId} disabled={working || savingArtic}
+            onChange={event => setSelectedUniversityId(event.target.value)}>
+            {universities.map(university => <option key={university._id} value={university._id}>{university.name}</option>)}
+          </Form.Select>
+          </div>
+
+      </div>
+    )}
         {!onNotify && localMessage && (
           <Alert
             variant={localMessage.type}
@@ -658,8 +706,98 @@ export default function AdminCatalog({
             }}
             className="mb-3"
           >
+            {/* ── Universidades ──────────────────────────────── */}
+            <Tab eventKey="universidades" title="Universidades">
+              {universities.length === 0 ? (
+                <Alert variant="warning" className="d-flex align-items-start gap-2" style={{ width: 'fit-content', maxWidth: '100%' }} role="status">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="flex-shrink-0" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M12 7v6M12 16v1" />
+                  </svg>
+                  <strong>Primero creá una universidad para poder agregar institutos, carreras y planes de estudio.</strong>
+                </Alert>
+              ) : (
+                <p className="text-muted small">Registrá las universidades para asociar institutos y carreras.</p>
+              )}
+              <Form
+                onSubmit={createUniversity}
+                className="mb-4"
+                style={{ maxWidth: 520 }}
+              >
+                <Form.Group className="mb-3">
+                  <Form.Label>Nombre de la universidad</Form.Label>
+                  <Form.Control
+                    required
+                    minLength={2}
+                    maxLength={150}
+                    value={universityName}
+                    placeholder="Universidad Nacional de Hurlingham"
+                    onChange={(event) => setUniversityName(event.target.value)}
+                  />
+                </Form.Group>
+                <Form.Group className="mb-3">
+                  <Form.Label>Descripción (opcional)</Form.Label>
+                  <Form.Control
+                    as="textarea"
+                    rows={2}
+                    maxLength={300}
+                    value={universityDescription}
+                    onChange={(event) =>
+                      setUniversityDescription(event.target.value)
+                    }
+                  />
+                </Form.Group>
+                <Button
+                  type="submit"
+                  className="btn-gradify"
+                  disabled={working || !universityName.trim()}
+                >
+                  {working ? 'Creando…' : 'Crear universidad'}
+                </Button>
+              </Form>
+
+              {universities.length > 0 && (
+                <Table size="sm" striped responsive>
+                  <thead>
+                    <tr>
+                      <th>Universidad</th>
+                      <th>Institutos</th>
+                      <th>Carreras</th><th className="text-end">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {universities.map((university) => (
+                      <tr key={university._id}>
+                        <td>{university.name}</td>
+                        <td>
+                          {unitsOfUniversity(units, university._id).length}
+                        </td>
+                        <td>
+                          {
+                            careers.filter(
+                              (career) =>
+                                !career.isArchived &&
+                                universityIdOf(career.university) ===
+                                  university._id,
+                            ).length
+                          }
+                        </td>
+                        <td className="text-end">
+                          <Button size="sm" variant="outline-danger" disabled={working || savingArtic}
+                            aria-label={`Eliminar universidad ${university.name}`}
+                            onClick={() => void deleteUniversity(university)}>
+                            Eliminar
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              )}
+            </Tab>
+
             {/* ── Institutos ─────────────────────────────────── */}
-            <Tab eventKey="institutos" title="Institutos">
+            <Tab eventKey="institutos" title="Institutos" disabled={!selectedUniversityId}>
               <p className="text-muted small mb-3">
                 Creá, editá o eliminá institutos y asignales un color. Las
                 carreras se asignan a un instituto desde la pestaña Carreras.
@@ -667,7 +805,7 @@ export default function AdminCatalog({
 
               <Form onSubmit={createUnit} className="mb-4">
                 <div className="row g-2">
-                  <div className="col-12 col-md-5">
+                  <div className="col-12 col-md-8">
                     <Form.Group>
                       <Form.Label className="small">Nombre</Form.Label>
                       <Form.Control
@@ -707,18 +845,7 @@ export default function AdminCatalog({
                       />
                     </Form.Group>
                   </div>
-                  <div className="col-12 col-md-3">
-                    <Form.Group>
-                      <Form.Label className="small">Universidad</Form.Label>
-                      <SearchSelect
-                        options={universityOptions}
-                        value={unitUniversityId}
-                        onChange={setUnitUniversityId}
-                        placeholder="Buscar universidad…"
-                        ariaLabel="Universidad del instituto"
-                      />
-                    </Form.Group>
-                  </div>
+
                   <div className="col-12">
                     <Form.Group>
                       <Form.Label className="small">
@@ -744,7 +871,7 @@ export default function AdminCatalog({
                 </Button>
               </Form>
 
-              {units.length === 0 ? (
+              {selectedUnits.length === 0 ? (
                 <p className="text-muted mb-0">Todavía no hay institutos.</p>
               ) : (
                 <div className="table-responsive">
@@ -760,7 +887,7 @@ export default function AdminCatalog({
                       </tr>
                     </thead>
                     <tbody>
-                      {units.map((unit) => (
+                      {selectedUnits.map((unit) => (
                         <tr key={unit._id}>
                           <td>
                             <UnitColorPicker
@@ -816,83 +943,8 @@ export default function AdminCatalog({
               )}
             </Tab>
 
-            {/* ── Universidades ──────────────────────────────── */}
-            <Tab eventKey="universidades" title="Universidades">
-              <p className="text-muted small">
-                Registrá las universidades para asociar institutos y carreras.
-              </p>
-              <Form
-                onSubmit={createUniversity}
-                className="mb-4"
-                style={{ maxWidth: 520 }}
-              >
-                <Form.Group className="mb-3">
-                  <Form.Label>Nombre de la universidad</Form.Label>
-                  <Form.Control
-                    required
-                    minLength={2}
-                    maxLength={150}
-                    value={universityName}
-                    placeholder="Universidad Nacional de Hurlingham"
-                    onChange={(event) => setUniversityName(event.target.value)}
-                  />
-                </Form.Group>
-                <Form.Group className="mb-3">
-                  <Form.Label>Descripción (opcional)</Form.Label>
-                  <Form.Control
-                    as="textarea"
-                    rows={2}
-                    maxLength={300}
-                    value={universityDescription}
-                    onChange={(event) =>
-                      setUniversityDescription(event.target.value)
-                    }
-                  />
-                </Form.Group>
-                <Button
-                  type="submit"
-                  className="btn-gradify"
-                  disabled={working || !universityName.trim()}
-                >
-                  {working ? 'Creando…' : 'Crear universidad'}
-                </Button>
-              </Form>
-
-              {universities.length > 0 && (
-                <Table size="sm" striped>
-                  <thead>
-                    <tr>
-                      <th>Universidad</th>
-                      <th>Institutos</th>
-                      <th>Carreras</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {universities.map((university) => (
-                      <tr key={university._id}>
-                        <td>{university.name}</td>
-                        <td>
-                          {unitsOfUniversity(units, university._id).length}
-                        </td>
-                        <td>
-                          {
-                            careers.filter(
-                              (career) =>
-                                !career.isArchived &&
-                                universityIdOf(career.university) ===
-                                  university._id,
-                            ).length
-                          }
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </Table>
-              )}
-            </Tab>
-
             {/* ── Carreras ───────────────────────────────────── */}
-            <Tab eventKey="carreras" title="Carreras">
+            <Tab eventKey="carreras" title="Carreras" disabled={!selectedUniversityId}>
               <p className="text-muted small mb-3">
                 Creá carreras, editalas, asignales instituto o archivalas /
                 eliminalas. Las archivadas se muestran con “Ver archivadas” y
@@ -901,19 +953,7 @@ export default function AdminCatalog({
 
               <Form onSubmit={createCareer} className="mb-4">
                 <div className="row g-2">
-                  <div className="col-12 col-md-4">
-                    <Form.Group>
-                      <Form.Label className="small">Universidad</Form.Label>
-                      <SearchSelect
-                        options={universityOptions}
-                        value={careerUniversityId}
-                        onChange={setCareerUniversityId}
-                        placeholder="Buscar universidad…"
-                        ariaLabel="Universidad de la carrera"
-                      />
-                    </Form.Group>
-                  </div>
-                  <div className="col-12 col-md-5">
+                  <div className="col-12 col-md-9">
                     <Form.Group>
                       <Form.Label className="small">
                         Nombre de la carrera
@@ -928,6 +968,7 @@ export default function AdminCatalog({
                       />
                     </Form.Group>
                   </div>
+
                   <div className="col-12 col-md-3">
                     <Form.Group>
                       <Form.Label className="small">Tipo de carrera</Form.Label>
@@ -980,7 +1021,7 @@ export default function AdminCatalog({
                   {careerSearch
                     ? ` de ${
                         showArchivedCareers
-                          ? careers.length
+                          ? selectedCareers.length
                           : activeCareers.length
                       }`
                     : ''}
@@ -1116,7 +1157,7 @@ export default function AdminCatalog({
             </Tab>
 
             {/* ── Articulación ───────────────────────────────── */}
-            <Tab eventKey="articulacion" title="Articulación">
+            <Tab eventKey="articulacion" title="Articulación" disabled={!selectedUniversityId}>
               <p className="text-muted small mb-3">
                 Elegí una carrera y marcá en cuáles se puede continuar (ej. la
                 Tecnicatura en Producción Agroecológica continúa en Desarrollo
@@ -1427,5 +1468,6 @@ export default function AdminCatalog({
         </Form>
       </Modal>
     </Card>
+    </>
   );
 }

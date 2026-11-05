@@ -24,7 +24,7 @@ function universityName(plan: StudyPlan): string {
   return university.name ?? '';
 }
 
-export default function SavedPlansPanel({ refreshKey = 0 }: { refreshKey?: number }) {
+export default function SavedPlansPanel({ refreshKey = 0, careerIds }: { refreshKey?: number; careerIds?: string[] }) {
   const navigate = useNavigate();
   const { msg, flash, flashFromError, clear } = useFlashMessage();
   const [plans, setPlans] = useState<StudyPlan[]>([]);
@@ -49,16 +49,20 @@ export default function SavedPlansPanel({ refreshKey = 0 }: { refreshKey?: numbe
     return () => { active = false; };
   }, [refreshKey]);
 
-  useEffect(() => { setPage(1); }, [search]);
+  useEffect(() => { setPage(1); }, [search, careerIds]);
 
   // Búsqueda en vivo por plan, carrera o universidad.
   const filtered = useMemo(() => {
     const q = normalize(search);
-    if (!q) return plans;
-    return plans.filter((plan) =>
+    const scopedPlans = careerIds ? plans.filter(plan => {
+      const careerId = typeof plan.career === 'string' ? plan.career : plan.career?._id;
+      return careerId && careerIds.includes(careerId);
+    }) : plans;
+    if (!q) return scopedPlans;
+    return scopedPlans.filter((plan) =>
       normalize([plan.name, careerName(plan), universityName(plan)].join(' ')).includes(q),
     );
-  }, [plans, search]);
+  }, [plans, search, careerIds]);
 
   // Borrado definitivo del plan: la API elimina en cascada materias,
   // progreso de los inscriptos e importaciones del PDF.

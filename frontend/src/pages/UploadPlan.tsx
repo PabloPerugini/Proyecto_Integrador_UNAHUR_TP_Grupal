@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Button, Card, Form, Table } from 'react-bootstrap';
 
 import { request, uploadPdf } from '../api/client';
@@ -84,6 +84,7 @@ interface PreviewEntry {
 
   planName: string;
   careerId: string;
+  universityId: string;
 
   saving: boolean;
   saved?: ConfirmResponse;
@@ -117,7 +118,13 @@ function normalizeName(value: string): string {
 
 export default function UploadPlan() {
 
-  const { careers, reload } = useCareers();
+  const { careers: allCareers, reload } = useCareers();
+  const [selectedUniversityId, setSelectedUniversityId] = useState('');
+  const careers = useMemo(() => allCareers.filter(career => {
+    const university = career.university;
+    return (typeof university === 'string' ? university : university?._id) === selectedUniversityId;
+  }), [allCareers, selectedUniversityId]);
+  const selectedCareerIds = useMemo(() => careers.map(career => career._id), [careers]);
 
   const {
     msg,
@@ -139,6 +146,10 @@ export default function UploadPlan() {
   // ===========================================
 
   const resolveCareerId = (preview: PreviewEntry) => {
+    const careers = allCareers.filter(career => {
+      const university = career.university;
+      return (typeof university === 'string' ? university : university?._id) === preview.universityId;
+    });
     // Si el administrador ya eligió una carrera,
     // respetamos esa selección.
     if (
@@ -222,6 +233,7 @@ export default function UploadPlan() {
           planName: 'Plan de estudios',
 
           careerId: '',
+          universityId: selectedUniversityId,
           saving: false,
         },
       }));
@@ -481,7 +493,7 @@ export default function UploadPlan() {
 
       {/* ADMINISTRACIÓN */}
 
-      <AdminCatalog onCareerCreated={reload} onNotify={flash} />
+      <AdminCatalog onCareerCreated={reload} onNotify={flash} onUniversityChange={setSelectedUniversityId} />
 
       {/* SUBIR PDF */}
 
@@ -495,6 +507,7 @@ export default function UploadPlan() {
         <Card.Body>
           <PdfDropzone
             onFiles={onFiles}
+            disabled={!selectedUniversityId}
             multiple
           />
 
@@ -508,7 +521,7 @@ export default function UploadPlan() {
 
       {/* VISTAS PREVIAS */}
 
-      {Object.entries(previews).map(([id, preview]) => {
+      {Object.entries(previews).filter(([, preview]) => preview.universityId === selectedUniversityId).map(([id, preview]) => {
         const careerId = resolveCareerId(preview);
 
         const selectedCareer = careers.find(
@@ -792,8 +805,8 @@ export default function UploadPlan() {
 
                   {careers.length === 0 && (
                     <div className="alert alert-warning">
-                      Todavía no hay carreras registradas.
-                      Creá una universidad y una carrera
+                      Todavía no hay carreras registradas en esta universidad.
+                      Creá una carrera
                       desde el panel superior.
                     </div>
                   )}
@@ -876,7 +889,7 @@ export default function UploadPlan() {
       })}
 
       {/* Los planes reales pertenecen a StudyPlan, no a Career. */}
-      <SavedPlansPanel refreshKey={savedPlansVersion} />
+      <SavedPlansPanel refreshKey={savedPlansVersion} careerIds={selectedCareerIds} />
     </div>
   );
 }
