@@ -66,8 +66,8 @@ export default function Login() {
         </button>
       </form>
 
-      <div className="text-center mt-3 small">
-        ¿No tenés cuenta todavía?{' '}
+      <div className="auth-card__footer text-center mt-3 small">
+        <span>¿No tenés cuenta todavía?</span>
         <Link to="/register" className="fw-bold">
           Registrate acá
         </Link>

@@ -83,8 +83,8 @@ export default function App() {
         <BrowserRouter>
           <ErrorBoundary>
             <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
+              <Route path="/login" element={<div className="auth-app"><Login /></div>} />
+              <Route path="/register" element={<div className="auth-app"><Register /></div>} />
               <Route element={<ProtectedRoute />}>
               <Route element={<AppShell />}>
                 <Route path="/" element={<Home />} />

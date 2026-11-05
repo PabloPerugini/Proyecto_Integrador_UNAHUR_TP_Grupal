@@ -221,8 +221,8 @@ export default function Register() {
         </button>
       </form>
 
-      <div className="text-center mt-3 small">
-        ¿Ya tenés cuenta?{' '}
+      <div className="auth-card__footer text-center mt-3 small">
+        <span>¿Ya tenés cuenta?</span>
         <Link to="/login" className="fw-bold">
           Iniciá sesión acá
         </Link>
