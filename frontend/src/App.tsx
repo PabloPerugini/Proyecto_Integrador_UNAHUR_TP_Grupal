@@ -25,6 +25,7 @@ const PlanGraph = lazy(() => import('./pages/PlanGraph'))
 const PlanBoard = lazy(() => import('./pages/PlanBoard'))
 const UploadPlan = lazy(() => import('./pages/UploadPlan'))
 const Error404 = lazy(() => import('./pages/Error404'))
+const Faq = lazy(() => import('./pages/Faq'))
 
 function AdminRoute() {
   const { user, status } = useAuth();
@@ -90,6 +91,7 @@ export default function App() {
                 <Route path="/" element={<Home />} />
                 <Route path="/progreso" element={<PageSuspense><MyProgress /></PageSuspense>} />
                 <Route path="/cuenta" element={<Account />} />
+                <Route path="/faq" element={<PageSuspense><Faq /></PageSuspense>} />
                 <Route path="/grafo/:id?" element={<PageSuspense><PlanGraph /></PageSuspense>} />
                 <Route path="/tablero/:id?" element={<PageSuspense><PlanBoard /></PageSuspense>} />
                 <Route path="/403" element={<Forbidden />} />

@@ -30,7 +30,7 @@ npm run test:subjects
 
 > Variable opcional: `VITE_API_URL` (por defecto `http://localhost:3000`), apunta al backend. No hay un `.env.Ejemplo` propio del frontend; si necesitás cambiar la URL, creá `.env` con esa variable.
 
-> Los tests cubren búsqueda FAQ, estados de progreso, resaltado del grafo, trazado de aristas y nombre visible por plan (`nameOverride`).
+> Los tests cubren búsqueda FAQ, estados de progreso, resaltado del grafo, trazado de aristas y nombre visible por plan (`nameOverride`). Las preguntas frecuentes se mantienen como datos locales en `src/data/faq.ts`; su búsqueda y filtro no usan IA ni requieren conexión adicional.
 
 ## Estructura
 
@@ -44,7 +44,7 @@ src/
 ├── hooks/         # Custom hooks
 ├── layouts/       # Layouts compartidos
 ├── pages/         # Páginas / rutas de la aplicación
-├── styles/        # Estilos compartidos y responsive
+├── index.css      # Estilos globales y responsive
 ├── types/         # Tipos TypeScript
 ├── utils/         # Funciones auxiliares
 ├── App.tsx        # Rutas y proveedores

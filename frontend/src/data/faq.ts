@@ -21,7 +21,7 @@ export const FAQS: Faq[] = [
     category: 'importar-plan',
     question: '¿Cómo importo un plan de estudios?',
     answer:
-      'Ingresá como ADMIN a "Cargar plan", subí el PDF del plan de correlatividades, revisá el preview y confirmá la importación. Las materias y correlativas se guardan automáticamente.',
+      'Ingresá como ADMIN a "Cargar plan", subí el PDF del plan de estudios y revisá la vista previa. Confirmá la importación y luego revisá o cargá las correlatividades del plan.',
     tags: ['importar', 'pdf', 'plan', 'cargar'],
     link: '/cargar',
   },
@@ -30,7 +30,7 @@ export const FAQS: Faq[] = [
     category: 'importar-plan',
     question: '¿Qué hago si el PDF no se lee?',
     answer:
-      'Asegurate de que el PDF tenga texto seleccionable (no sea escaneado). Si sigue fallando, subilo las páginas con la tabla de correlatividades y probá de nuevo.',
+      'Asegurate de que el PDF tenga texto seleccionable y no sea un escaneo. Si el problema continúa, revisá que el archivo corresponda al plan y volvé a intentar la carga.',
     tags: ['pdf', 'error', 'lectura'],
   },
   {

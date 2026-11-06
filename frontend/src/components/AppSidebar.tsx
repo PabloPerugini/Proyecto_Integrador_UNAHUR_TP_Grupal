@@ -13,6 +13,7 @@ import {
   IconUpload,
   IconEdit,
   IconUsers,
+  IconHelp,
 } from './icons';
 
 // Shell único por rol: mismas vistas base para todos,
@@ -45,6 +46,7 @@ export default function AppSidebar() {
       collapsedLabel: 'Progreso',
       icon: <IconChart />,
     },
+    { to: '/faq', label: 'Preguntas frecuentes', collapsedLabel: 'Ayuda', icon: <IconHelp /> },
   ];
 
   const adminNav: NavItem[] = [

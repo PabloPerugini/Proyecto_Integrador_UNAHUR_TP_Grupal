@@ -4,10 +4,10 @@ const STOP_WORDS = new Set([
   'a', 'al', 'algo', 'ante', 'antes', 'como', 'con', 'contra', 'cual',
   'cuando', 'cuanto', 'de', 'del', 'desde', 'donde', 'el', 'ella', 'ellas',
   'ellos', 'en', 'entre', 'esa', 'esas', 'ese', 'esos', 'esta', 'estas',
-  'este', 'estos', 'hacia', 'hasta', 'las', 'los', 'mas', 'más', 'me', 'mi',
+  'este', 'estos', 'hacia', 'hasta', 'las', 'los',   'mas', 'me', 'mi',
   'mientras', 'muy', 'nada', 'no', 'nos', 'o', 'otra', 'otras', 'otro', 'otros',
-  'para', 'pero', 'por', 'porque', 'que', 'qué', 'quien', 'quienes', 'se',
-  'si', 'sin', 'sobre', 'su', 'sus', 'tal', 'tambien', 'también', 'tanto', 'te',
+  'para', 'pero', 'por', 'porque',   'que', 'quien', 'quienes', 'se',
+  'si',   'sin', 'sobre', 'su', 'sus', 'tal', 'tambien', 'tanto', 'te',
   'tu', 'tus', 'un', 'una', 'unas', 'uno', 'unos', 'ver', 'y', 'ya', 'yo',
 ]);
 
@@ -45,10 +45,9 @@ export function faqSearch(faqs: Faq[], query: string): Faq[] {
 
   const scored = faqs
     .map((faq) => {
-      const haystack = normalize(
+      const haystackWords = new Set(tokens(
         `${faq.question} ${faq.answer} ${faq.tags.join(' ')} ${faq.category}`,
-      );
-      const haystackWords = new Set(tokens(haystack));
+      ));
       const matches = queryTokens.filter((t) => haystackWords.has(t)).length;
       return { faq, matches };
     })

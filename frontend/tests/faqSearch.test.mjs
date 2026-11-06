@@ -8,8 +8,8 @@ const faqs = [
   { id: '3', category: 'Progreso', question: '¿Cómo guardo mi progreso?', answer: 'Marcá materias como aprobadas en Mi progreso.', tags: ['progreso', 'notas'], link: '/progreso' },
 ];
 
-test('normaliza mayúsculas y acentos', () => {
-  const resultados = faqSearch(faqs, 'importar plan de estudios');
+test('normaliza mayúsculas y tildes al comparar', () => {
+  const resultados = faqSearch(faqs, 'COMO importo un PLAN');
   assert.strictEqual(resultados[0].id, '1');
 });
 
@@ -29,7 +29,11 @@ test('consulta vacía devuelve todas', () => {
   assert.strictEqual(resultados.length, 3);
 });
 
-test('ignora acentos en la consulta', () => {
-  const resultados = faqSearch(faqs, 'correlatividades');
+test('encuentra contenido acentuado con una consulta sin tildes', () => {
+  const resultados = faqSearch(faqs, 'que son las correlatividades');
   assert.strictEqual(resultados[0].id, '2');
+});
+
+test('una consulta compuesta solo por palabras vacías no devuelve resultados', () => {
+  assert.deepStrictEqual(faqSearch(faqs, 'más que para'), []);
 });
