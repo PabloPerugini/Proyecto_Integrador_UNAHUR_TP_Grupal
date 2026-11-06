@@ -1,7 +1,7 @@
 # Documento de Seguimiento de Testing
 
 **Proyecto:** Gradify — Grafo Interactivo de Correlatividades y Seguimiento de Progreso Académico
-**Versión:** 2.7
+**Versión:** 2.8
 **Fecha:** 2026-11-06
 **Sponsor Organización:** Universidad Nacional de Hurlingham (UNAHUR) — Licenciatura en Informática
 **Autor:** Equipo del proyecto integrador
@@ -207,7 +207,7 @@ Registro anticipado de las dos tandas posteriores a la corrida 10 (CHANGELOG 1.2
 | 41 | Registro/Mi cuenta validan por campo (2–50, email ≤ 254, contraseña 6–72, nick ≥ 3) y el backend lo replica | 🟡 pendiente de ejecutar |
 | 42 | Home sin *Ver materias/Qué puedo cursar/Mi avance*; detalle necesario solo en Mi progreso/grafo | 🟡 pendiente de ejecutar |
 
-**Regresión automatizada (06/11/2026):** `npm test` backend pasó 43/43; `test:faq` 5/5, `test:status` 3/3, `test:graph` 3/3, `test:layout` 3/3 y `test:subjects` 4/4. La prioridad de `nameOverride` está cubierta en ambas capas. Esto no sustituye la verificación manual del guardado en lote del caso 40 ni de los casos 39, 41 y 42.
+**Regresión automatizada (06/11/2026):** `npm test` backend pasó 43/43; `test:faq` 6/6, `test:status` 3/3, `test:graph` 3/3, `test:layout` 3/3 y `test:subjects` 4/4. La prioridad de `nameOverride` está cubierta en ambas capas. Esto no sustituye la verificación manual del guardado en lote del caso 40 ni de los casos 39, 41 y 42.
 
 ---
 
@@ -221,3 +221,10 @@ Registro anticipado de las dos tandas posteriores a la corrida 10 (CHANGELOG 1.2
 | 8 | 14/10/2026 | v2.3 (institutos, tecnicatura, articulación, RN05) | `npm test` 26/26; golden sin diferencias; front verde |
 | 9 | 16/10/2026 | v2.4 (tipo de carrera, intermedio, IA revisable) | `npm test` 32/32; golden 43/43; masiva 27+1+15+0; salud OK; E2E v2.4 18/18 |
 | 10 | 16/10/2026 | v2.5 (panel admin completo, correlativas regularizadas) | `npm test` 32/32; E2E admin 14/14; correlativas scratch 5/5; front `tsc`+`lint` verdes |
+
+## Verificación de FAQ (06/11/2026, v2.8)
+
+- Se incorpora el Caso 46 para la ruta `/faq`: sugerencias, consulta por Enter, respuestas locales, enlaces relacionados, respuesta sin coincidencias y aviso de privacidad.
+- `npm run test:faq`: 6/6; esta suite cubre `faqSearch`, no la interfaz conversacional completa.
+- Build y lint de frontend correctos; lint reporta una advertencia existente en `PlanGraph.tsx:791`.
+- Verificación de humo en navegador con sesión simulada: chip de sugerencia, envío por Enter, respuesta relacionada con enlace a `/progreso`, respuesta sin coincidencias y aviso de privacidad; a 390 px no hubo desbordamiento horizontal. No equivale a una prueba E2E contra backend ni a validación en dispositivo físico.

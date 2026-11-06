@@ -30,7 +30,7 @@ npm run test:subjects
 
 > Variable opcional: `VITE_API_URL` (por defecto `http://localhost:3000`), apunta al backend. No hay un `.env.Ejemplo` propio del frontend; si necesitás cambiar la URL, creá `.env` con esa variable.
 
-> Los tests cubren búsqueda FAQ, estados de progreso, resaltado del grafo, trazado de aristas y nombre visible por plan (`nameOverride`). Las preguntas frecuentes se mantienen como datos locales en `src/data/faq.ts`; su búsqueda y filtro no usan IA ni requieren conexión adicional.
+> Los tests cubren búsqueda FAQ, estados de progreso, resaltado del grafo, trazado de aristas y nombre visible por plan (`nameOverride`). La ruta `/faq` ofrece una conversación guiada con sugerencias, respuestas relacionadas y enlaces a secciones de la app; el contenido está en `src/data/faq.ts` y `faqSearch` lo busca localmente, sin IA, backend ni envío de consultas.
 
 ## Estructura
 

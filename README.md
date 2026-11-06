@@ -12,7 +12,7 @@ Proyecto integrador de la materia **Programación - Informática (UNAHUR)**. El 
 - Seguimiento del progreso por materia con baja reversible de planes (quitar un plan conserva el avance).
 - Panel de administración del catálogo, universidades, planes y materias, con validaciones para altas y bajas protegidas.
 - Interfaz adaptable a escritorio, tablet y móvil; las vistas principales de grafo, tablero y progreso ajustan su presentación al ancho disponible.
-- Preguntas frecuentes con búsqueda local por texto y categoría, sin integrar IA ni enviar consultas a servicios externos.
+- Ayuda de preguntas frecuentes en formato conversacional guiado: sugerencias y búsqueda local sobre respuestas disponibles, sin IA ni envío de consultas a servicios externos.
 
 ## Estructura del repositorio
 

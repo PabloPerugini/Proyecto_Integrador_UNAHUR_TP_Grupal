@@ -11,7 +11,7 @@
 | Institución           | Universidad Nacional de Hurlingham (UNAHUR)                          |
 | Unidad Académica      | Facultad de Informática — Proyecto Integrador Programación           |
 | Tipo de documento     | FRD — Documentación de Requerimientos Funcionales                    |
-| Versión               | 2.8                                                                  |
+| Versión               | 2.9                                                                  |
 | Fecha                 | 6 de noviembre de 2026                                             |
 | Sponsor Operación     | Secretaría Académica / Dirección de Carrera                          |
 | Sponsor Organización  | UNAHUR                                                               |
@@ -46,6 +46,7 @@
 | 2.6     | 20/10/2026   | Equipo | **Inicio limpio + baja reversible:** se quitaron *Ver materias*, *Qué puedo cursar* y *Mi avance* de la portada (el detalle vive en Mi progreso y en el grafo); inscripciones como **filas amplias** con tabs y **"Sumar otra carrera"**; **Quitar plan** con confirmación — `DELETE /user-study-plans/:id` archiva (`archivedAt`) si hay progreso y la **reinscripción reactiva con el avance intacto**. Archivadas integradas al catálogo (SC009). **Editar plan:** materias con **nombre editable por plan** (`nameOverride`), **guardado en lote** solo de lo modificado (filas resaltadas), códigos requeridos y sin duplicados. **Validaciones reutilizables** de cuenta/registro (front + backend Joi): nombre/apellido 2–50 solo letras, email ≤ 254, contraseña 6–72, nickName ≥ 3, confirmación de contraseña. |
 | 2.7     | 06/11/2026   | Equipo | Actualización del grafo/tablero (iconos SVG por estado y mejoras visuales), ajustes responsive en vistas principales, operaciones ADMIN para crear materias y eliminar universidades con validaciones. |
 | 2.8     | 06/11/2026   | Equipo | `nameOverride` ahora prevalece sobre el nombre del catálogo en Grafo, Tablero, Mi progreso, Home y el matching de correlativas. Se agregan pruebas unitarias para nombres por plan y para utilidades frontend cuyos scripts no tenían pruebas. |
+| 2.9     | 06/11/2026   | Equipo | Se documenta la ayuda FAQ conversacional guiada: sugerencias, búsqueda local de respuestas predefinidas, enlaces relacionados y aviso de privacidad; no usa IA ni envía consultas. |
 
 ---
 
@@ -306,6 +307,7 @@ flowchart LR
 | US-11 | Administrador | Administrar el **catálogo completo**: institutos (con color), carreras (editar/archivar/borrar) y articulación. | Mantener el catálogo al día sin romper dependencias ni planes. | Pestañas *Institutos · Universidades · Carreras · Articulación*: edición con whitelist, color con autoguardado, `409` con mensaje si hay carreras/planes/subunidades; carreras archivables (restaurables con “Ver archivadas” en la misma pestaña) y borrables; articulación buscable. | SC005/SC006 |
 | US-12 | Estudiante    | **Quitar un plan** de mi cuenta sin perder mi progreso.                                                           | Cambiar de carrera sin miedo a borrar mi avance.                                                          | *Quitar plan* pide confirmación; con progreso la inscripción se **archiva** (`archivedAt`) y al volver a inscribirse se **reactiva con el avance intacto**; sin progreso la inscripción se borra. | SC001       |
 | US-13 | Administrador | **Editar las materias** de un plan por nombre visible y de forma masiva. | Corregir nombres largos o partidos del PDF sin tocar el catálogo general. | En *Editar plan*, cada fila permite editar el **nombre visible** (`nameOverride`, prevalece sobre el nombre del catálogo), código/año/período/créditos/optativa/Tec y correlativas; el **guardado en lote** solo envía las filas modificadas (resaltadas), exige código no vacío y **bloquea códigos duplicados**. | AR-2 |
+| US-14 | Estudiante | Consultar ayuda sobre las funciones de Gradify. | Encontrar orientación sin depender de un servicio externo. | En `/faq`, las consultas sugeridas y el texto ingresado se buscan localmente en `FAQS` mediante `faqSearch`; se muestran respuestas disponibles y enlaces relacionados, o una orientación cuando no hay coincidencias. La interfaz informa que no usa IA ni envía consultas. | — |
 
 ### 4.2 Criterios de Bondad
 
@@ -405,6 +407,12 @@ flowchart LR
 ### SC010 · Acceso denegado y 404 (`/403`, `*`)
 
 - `/403` se muestra cuando un `USUARIO` intenta acceder a rutas de administración; `*` renderiza la página 404 para rutas inexistentes.
+
+### SC011 · Preguntas frecuentes (`/faq`)
+
+- Interfaz conversacional guiada con consultas sugeridas y formulario de búsqueda.
+- Las respuestas provienen exclusivamente de `FAQS` en `src/data/faq.ts`, mediante `faqSearch`; se muestran enlaces a secciones relacionadas cuando existen y un mensaje orientativo cuando no hay coincidencias.
+- La búsqueda se ejecuta localmente en el navegador; no usa IA ni envía la consulta al backend o a servicios externos.
 
 ---
 

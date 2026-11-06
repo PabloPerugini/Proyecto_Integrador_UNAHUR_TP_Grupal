@@ -11,7 +11,7 @@
 | Institución           | Universidad Nacional de Hurlingham (UNAHUR)                          |
 | Unidad Académica      | Facultad de Informática — Proyecto Integrador Programación           |
 | Tipo de documento     | BRD — Documentación de Requerimientos de Negocio                     |
-| Versión               | 2.6                                                                   |
+| Versión               | 2.7                                                                   |
 | Fecha                 | 6 de noviembre de 2026                                             |
 | Sponsor Operación     | Secretaría Académica / Dirección de Carrera                          |
 | Sponsor Organización  | UNAHUR                                                               |
@@ -44,6 +44,7 @@
 | 2.4     | 16/10/2026   | Equipo | **Tipo de carrera** (`careerType`: Licenciatura/Tecnicatura/Profesorado/Ingenieria/Otro) para distinguir el pregrado del grado en el catálogo; **título intermedio honesto**: aviso cuando el plan lo declara sin materias marcadas, **marcado en lote** (todo el plan / un año / un período) y **propuesta de IA revisable** validada contra las materias reales; chip 🎓 Tecnicatura en el catálogo; 32 unitarios. |
 | 2.5     | 20/10/2026   | Equipo | **Inicio limpio**: la portada muestra solo inscripciones y accesos (*Ver materias*, *Qué puedo cursar* y *Mi avance* pasan a Mi progreso/grafo). **Baja reversible de planes**: quitar el plan conserva el progreso (inscripción archivada) y la reinscripción lo reactiva. Archivadas integradas a **Catálogo → Carreras**. **Edición de materias** en el plan con nombre visible editable y guardado en lote. **Validaciones reutilizables** de cuenta/registro (nombre, email, contraseña y confirmación) compartidas entre Registro y Mi cuenta. |
 | 2.6     | 06/11/2026   | Equipo | Actualización del grafo y tablero (iconos SVG por estado y mejoras de disposición), navegación y adaptación responsive; administración de universidades y materias; registro de pruebas actuales. Los créditos y el detalle académico oficial por unidad/período siguen sujetos a validar con documentación institucional. |
+| 2.7     | 06/11/2026   | Equipo | Se incorpora una ayuda de preguntas frecuentes en formato conversacional guiado, con búsqueda local sobre respuestas predefinidas y sin IA ni envío de consultas a servicios externos. |
 
 ---
 
@@ -131,6 +132,7 @@ El alcance incluye:
 - Panel de estadísticas del progreso del estudiante (porcentaje de avance, créditos, **promedio** y exportación a **CSV**).
 - Administración de usuarios (roles USUARIO/ADMIN y baja) y restauración de carreras archivadas desde el catálogo, más **Mi cuenta** (perfil y contraseña).
 - **Baja reversible** de la inscripción al plan: el estudiante puede quitar un plan sin perder su progreso y retomarlo más tarde con el avance intacto.
+- Ayuda de preguntas frecuentes guiada, con consultas sugeridas y búsqueda local de respuestas existentes, sin IA ni servicios externos.
 
 ---
 

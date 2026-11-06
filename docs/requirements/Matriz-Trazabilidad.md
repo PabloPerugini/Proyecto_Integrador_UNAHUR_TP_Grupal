@@ -11,9 +11,9 @@
 | Institución           | Universidad Nacional de Hurlingham (UNAHUR)                          |
 | Unidad Académica      | Facultad de Informática — Proyecto Integrador Programación           |
 | Tipo de documento     | Matriz de trazabilidad — cruce BRD / FRD ↔ verificación existente    |
-| Versión               | 1.7                                                                  |
-| Fecha                 | 20 de octubre de 2026                                              |
-| Documentos de origen  | `BRD.md` v2.5 · `FRD.md` v2.6 · `Test-Plan.md` v2.6 · `Test-Cases.md` v2.5 |
+| Versión               | 1.8                                                                  |
+| Fecha                 | 6 de noviembre de 2026                                              |
+| Documentos de origen  | `BRD.md` v2.7 · `FRD.md` v2.9 · `Test-Plan.md` v2.9 · `Test-Cases.md` v2.8 |
 | Sponsor Operación     | Secretaría Académica / Dirección de Carrera                          |
 | Sponsor Organización  | UNAHUR                                                               |
 | Integrantes           | Perugini, Pablo; Acuña, Marcos; Masgo Sandoval, Joaquín; Renaud, Román; Remonda, Eliel; Cotera, Dylan |
@@ -130,6 +130,7 @@ existe** en el repositorio, respondiendo tres preguntas:
 | US-11 | Admin administra el catálogo completo (institutos con color, carreras, articulación) | **E2E v2.5 (14/14)**: `401` sin token; alta con `color` (hex validado; `400` inválido); `PATCH` nombre/color persistido; `withCounts` con `careerCount`; `409` al borrar instituto con carreras; editar/reasignar carrera (`academicUnit: null` y reasignar); borrados en orden carrera → instituto → universidad; UI en pestañas (Casos 25/30/36/37) | E2E ✅ API · UI 🟡 | ⚠️ |
 | US-12 | Baja reversible: quitar plan sin perder progreso y reactivar al reinscribirse | `DELETE /user-study-plans/:id` archiva con `SubjectProgress` (`archivedAt`) y sin progreso borra; reinscripción reactiva (`addUserStudyPlan`); UI muestra *Quitar plan* solo en planes inscriptos (E2E de la corriente: pendiente) | Caso 39 | 🟡 |
 | US-13 | Editar materias del plan: nombre visible por plan (`nameOverride`) y guardado en lote | `nameOverride` en modelo/servicio/front (`subjectName` prioriza el override); `saveSubjects` en lote (solo filas modificadas resaltadas, código obligatorio y sin duplicados); Caso 40 | Caso 40 | 🟡 |
+| US-14 | Consultar ayuda FAQ sin depender de IA ni servicios externos | Datos `FAQS` y búsqueda local `faqSearch`; `npm run test:faq` (6/6) cubre el buscador. Caso 46: humo manual en navegador con sesión simulada (chip, Enter, respuesta/enlace, sin coincidencias y 390 px sin overflow); sin E2E contra backend ni dispositivo físico | Unitario + navegador (parcial) | ⚠️ |
 
 ## 5. Matriz — Criterios de bondad (FRD §4.2)
 
@@ -349,3 +350,4 @@ Repegada a la tabla (sin líneas en blanco intermedias).
 | 1.5 | 16/10/2026 | Equipo + agente | Verificación completa 16/10 (corrida 9): masiva 27+1+15+0, salud OK (negativos 400/400), E2E v2.4 18/18, `seed:planes` OK=29 local; BUG-019 y `modified` honesto en el bulk; §13 fila 8 cerrada. Cobertura 14✅/25🟡/19⚠️/0❌/0⛔ (58 puntos). |
 | 1.6 | 19/10/2026 | Equipo + agente | Inicio limpio (sin *Ver materias/Qué puedo cursar/Mi avance*), filas de inscripciones con *Quitar plan* y **baja reversible** (`archivedAt` + reactivación); archivadas integradas a **Catálogo → Carreras** (SC009 deja de ser ruta `/admin/archivadas`). Docs referenciados en US-08/US-11/SC009 y Caso 30/37. |
 | 1.7 | 20/10/2026 | Equipo + agente | **v2.6**: stories **US-12** (baja reversible) y **US-13** (`nameOverride` + guardado en lote con códigos únicos); Casos 39–40 definidos en Test-Plan (pendientes de corrida); validaciones reutilizables de cuenta/registro documentadas (US-09/SC000/SC007). Documentación: BRD 2.5 / FRD 2.6 / Test-Plan 2.6 / Test-Cases 2.5. Cobertura 15✅/27🟡/20⚠️/0❌/0⛔ (62 puntos). |
+| 1.8 | 06/11/2026 | Equipo + agente | **v2.9**: documentada la FAQ conversacional local (US-14/SC011), Caso 46 y verificación automatizada del buscador `faqSearch` (6/6) más humo manual en navegador con sesión simulada; no se hizo E2E con backend ni prueba en dispositivo físico. Fuentes: BRD 2.7 / FRD 2.9 / Test-Plan 2.9 / Test-Cases 2.8. |

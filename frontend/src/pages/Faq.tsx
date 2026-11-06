@@ -1,107 +1,155 @@
-import { useMemo, useState } from 'react';
-import Accordion from 'react-bootstrap/Accordion';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import Form from 'react-bootstrap/Form';
 import { Link } from 'react-router-dom';
-import PageHeader from '../components/PageHeader';
-import { FAQS, type FaqCategory } from '../data/faq';
+import { IconHelp } from '../components/icons';
+import { FAQS, type Faq } from '../data/faq';
 import { faqSearch } from '../utils/faqSearch';
+import './Faq.css';
 
-const categories: { value: FaqCategory; label: string }[] = [
-  { value: 'importar-plan', label: 'Importar planes' },
-  { value: 'correlatividades', label: 'Correlatividades' },
-  { value: 'progreso', label: 'Progreso' },
-  { value: 'bajas', label: 'Bajas' },
-  { value: 'admin', label: 'Administración' },
-  { value: 'cuenta', label: 'Cuenta' },
-];
-
-const categoryLabels = Object.fromEntries(
-  categories.map(({ value, label }) => [value, label]),
-) as Record<FaqCategory, string>;
-
-function isFaqCategory(value: string): value is FaqCategory {
-  return categories.some(categoryOption => categoryOption.value === value);
+interface ConversationTurn {
+  id: number;
+  query: string;
+  answers: Faq[];
 }
+
+const suggestedQuestions: { question: Faq; label: string }[] = [
+  { question: FAQS[4], label: 'Mi progreso' },
+  { question: FAQS[2], label: 'Correlatividades' },
+  { question: FAQS[0], label: 'Importar un plan' },
+  { question: FAQS[7], label: 'Baja de un plan' },
+];
 
 export default function Faq() {
   const [query, setQuery] = useState('');
-  const [category, setCategory] = useState<FaqCategory | ''>('');
+  const [turns, setTurns] = useState<ConversationTurn[]>([]);
+  const [nextId, setNextId] = useState(0);
+  const threadEndRef = useRef<HTMLDivElement>(null);
 
-  const results = useMemo(
-    () => faqSearch(FAQS, query).filter(item => !category || item.category === category),
-    [query, category],
-  );
+  useEffect(() => {
+    threadEndRef.current?.scrollIntoView({ block: 'nearest' });
+  }, [turns]);
+
+  function ask(question: string) {
+    const trimmed = question.trim();
+    if (!trimmed) return;
+
+    setTurns(current => [
+      ...current,
+      { id: nextId, query: trimmed, answers: faqSearch(FAQS, trimmed) },
+    ]);
+    setNextId(id => id + 1);
+    setQuery('');
+  }
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    ask(query);
+  }
 
   return (
-    <>
-      <PageHeader
-        title="Preguntas frecuentes"
-        sub="Respuestas rápidas sobre el uso de Gradify."
-      />
+    <section className="faq-chat" aria-labelledby="faq-title">
+      <header className="faq-chat__header">
+        <div>
+          <h1 id="faq-title">¿En qué te ayudamos?</h1>
+          <p>Encontrá respuestas claras para avanzar con tu carrera.</p>
+        </div>
+        <span className="faq-chat__local">
+          <span className="faq-chat__local-dot" />
+          Ayuda local · Sin IA
+        </span>
+      </header>
 
-      <section aria-label="Buscar preguntas frecuentes" className="mb-4">
-        <p className="text-muted">
-          La búsqueda se realiza localmente en estas preguntas; no usa IA ni envía tu consulta a un servidor.
+      <div className="faq-chat__thread" aria-live="polite" aria-relevant="additions">
+        <div className="faq-chat__message faq-chat__message--assistant">
+          <span className="faq-chat__avatar" aria-hidden="true"><IconHelp size={20} /></span>
+          <div className="faq-chat__bubble">
+            ¡Hola! Puedo orientarte con las funciones de Gradify. Elegí un tema o escribí una consulta;
+            buscaré entre las respuestas disponibles.
+          </div>
+        </div>
+
+        <div className="faq-chat__suggestions">
+          <p>Consultas frecuentes</p>
+          <div className="faq-chat__chips">
+            {suggestedQuestions.map(({ question, label }) => (
+              <button
+                className="faq-chat__chip"
+                key={question.id}
+                onClick={() => ask(question.question)}
+                type="button"
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {turns.map(turn => (
+          <div className="faq-chat__turn" key={turn.id}>
+            <div className="faq-chat__message faq-chat__user">
+              <p>{turn.query}</p>
+            </div>
+
+            {turn.answers.length > 0 ? (
+              <div className="faq-chat__message faq-chat__message--assistant">
+                <span className="faq-chat__avatar" aria-hidden="true"><IconHelp size={20} /></span>
+                <div className="faq-chat__answers">
+                  {turn.answers.map(answer => (
+                    <article className="faq-chat__bubble" key={answer.id}>
+                      <h2>{answer.question}</h2>
+                      <p>{answer.answer}</p>
+                      {answer.link && (
+                        <Link className="faq-chat__link" to={answer.link}>
+                          Ir a la sección relacionada <span aria-hidden="true">→</span>
+                        </Link>
+                      )}
+                    </article>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="faq-chat__message faq-chat__message--assistant">
+                <span className="faq-chat__avatar" aria-hidden="true"><IconHelp size={20} /></span>
+                <div className="faq-chat__bubble">
+                  <h2>No encontré una respuesta exacta</h2>
+                  <p>
+                    Probá con otras palabras o elegí una de las consultas frecuentes para explorar
+                    la ayuda disponible.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+        <div ref={threadEndRef} />
+      </div>
+
+      <footer className="faq-chat__composer">
+        <Form className="faq-chat__form" onSubmit={handleSubmit}>
+          <Form.Control
+            aria-label="Escribí tu consulta"
+            autoComplete="off"
+            className="faq-chat__input"
+            onChange={event => setQuery(event.target.value)}
+            placeholder="Escribí tu consulta…"
+            type="search"
+            value={query}
+          />
+          <button
+            aria-label="Buscar respuesta"
+            className="faq-chat__send"
+            disabled={!query.trim()}
+            type="submit"
+          >
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M21 3 10.5 13.5M21 3l-6.7 18-3.8-7.5L3 9.7 21 3Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        </Form>
+        <p className="faq-chat__privacy">
+          Las respuestas se buscan localmente en las FAQ de Gradify; no se envía tu consulta.
         </p>
-        <div className="row g-3">
-          <div className="col-12 col-md-8">
-            <Form.Label htmlFor="faq-search">Buscar por pregunta, respuesta o tema</Form.Label>
-            <Form.Control
-              id="faq-search"
-              type="search"
-              value={query}
-              onChange={event => setQuery(event.target.value)}
-              placeholder="Ej.: importar un plan, materias disponibles"
-            />
-          </div>
-          <div className="col-12 col-md-4">
-            <Form.Label htmlFor="faq-category">Filtrar por categoría</Form.Label>
-            <Form.Select
-              id="faq-category"
-              value={category}
-              onChange={event => {
-                const value = event.target.value;
-                setCategory(isFaqCategory(value) ? value : '');
-              }}
-            >
-              <option value="">Todas las categorías</option>
-              {categories.map(({ value, label }) => (
-                <option key={value} value={value}>{label}</option>
-              ))}
-            </Form.Select>
-          </div>
-        </div>
-      </section>
-
-      <p className="small text-muted" role="status" aria-live="polite">
-        {results.length} {results.length === 1 ? 'respuesta encontrada' : 'respuestas encontradas'}
-      </p>
-
-      {results.length > 0 ? (
-        <Accordion>
-          {results.map(item => (
-            <Accordion.Item eventKey={item.id} key={item.id}>
-              <Accordion.Header>
-                <span className="me-2">{item.question}</span>
-                <span className="badge text-bg-light">{categoryLabels[item.category]}</span>
-              </Accordion.Header>
-              <Accordion.Body>
-                <p>{item.answer}</p>
-                {item.link && (
-                  <Link to={item.link} className="link-primary">
-                    Ir a la sección relacionada
-                  </Link>
-                )}
-              </Accordion.Body>
-            </Accordion.Item>
-          ))}
-        </Accordion>
-      ) : (
-        <div className="empty-state" role="status">
-          <h2 className="h5">No encontramos respuestas</h2>
-          <p className="mb-0">Probá con otras palabras o elegí otra categoría.</p>
-        </div>
-      )}
-    </>
+      </footer>
+    </section>
   );
 }

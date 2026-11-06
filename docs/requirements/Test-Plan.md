@@ -1,7 +1,7 @@
 # Plan de Pruebas
 
 **Proyecto:** Gradify — Grafo Interactivo de Correlatividades y Seguimiento de Progreso Académico
-**Versión:** 2.8
+**Versión:** 2.9
 **Fecha:** 06/11/2026
 **Sponsor Organización:** Universidad Nacional de Hurlingham (UNAHUR) — Licenciatura en Informática
 **Autor:** Equipo del proyecto integrador
@@ -26,6 +26,7 @@ Garantizar que la aplicación web (React) y su API REST (Node/Express + MongoDB 
 - Verificación del manejo centralizado de errores (`400` IDs/validaciones/archivos, `404` inexistente, `409` duplicados, `500` genérico) y de que el proceso no se cae.
 - Verificación de planes extensos y de formatos inesperados.
 - Verificación de la interfaz: navegación (AppShell, roles, 403/404), estados de materia, camino crítico, pestañas Lic/Tec, promedio/CSV, accesibilidad básica, comportamiento de `ErrorBoundary` y adaptación responsive en móvil/tablet/escritorio.
+- Verificación de la ayuda FAQ en `/faq`: consultas sugeridas, búsqueda local, respuestas y enlaces relacionados, mensaje sin coincidencias y aviso de privacidad (sin IA ni envío de consultas).
 - Regresión visual de iconos SVG por estado, controles de progreso y administración de universidades/materias.
 
 ## Herramientas para el Testing
@@ -127,8 +128,9 @@ Garantizar que la aplicación web (React) y su API REST (Node/Express + MongoDB 
    - Caso 43: **Alta de materias y baja de universidad.** Como ADMIN, crear una materia para un plan y comprobar que aparece en su lista; intentar borrar una universidad con entidades dependientes y verificar que la operación se rechaza con un mensaje claro; borrar una universidad sin dependencias y verificar que se elimina.
    - Caso 44: **Responsive y áreas seguras.** Revisar Home, Grafo, Tablero, Mi progreso y Administración en anchos móvil, tablet y escritorio; comprobar que no haya desbordamiento horizontal, que controles importantes sigan accesibles y que las áreas seguras no tapen contenido. Repetir al menos una vista en navegador móvil real antes de dar el caso por aprobado.
    - Caso 45: **Grafo y tablero actualizados.** Confirmar que cada estado de materia usa su icono SVG correspondiente, que los controles de progreso conservan las acciones de avanzar/revertir y que etiquetas/aristas no se superponen en planes con varias correlativas.
+   - Caso 46: **Ayuda FAQ local.** En `/faq`, comprobar que los chips y el envío por Enter muestran respuestas de `FAQS`, que las respuestas relacionadas ofrecen navegación, que una consulta sin coincidencias muestra orientación y que el aviso informa que la búsqueda es local y no usa IA.
 
-> Los casos 43–45 se incorporan al plan, pero requieren ejecución manual; no se marcarán como aprobados hasta registrar evidencia. La regresión de `nameOverride` del caso 40 permanece abierta.
+> Los casos 43–45 requieren ejecución manual y la regresión de `nameOverride` del caso 40 permanece abierta. El Caso 46 tuvo una verificación de humo en navegador con sesión simulada; no se probó con el backend real.
 
 ## Plan de Ejecución
 
@@ -138,12 +140,12 @@ Garantizar que la aplicación web (React) y su API REST (Node/Express + MongoDB 
 4. Registrar los resultados en el [Documento de Seguimiento de Testing](./Test-Cases.md), incluyendo errores o comportamientos inesperados.
 5. Repetir las pruebas tras cada corrección para confirmar estabilidad y consistencia.
 
-## Resultados de la Última Ejecución Registrada (06/11/2026, v2.8)
+## Resultados de la Última Ejecución Registrada (06/11/2026, v2.9)
 
-- **Backend:** `npm test` 43/43 y `npm run test:jest -- --runInBand` 24/24 (4 suites).
-- **Frontend:** `test:faq` 5/5, `test:status` 3/3, `test:graph` 3/3, `test:layout` 3/3 y `test:subjects` 4/4. `npm run build` correcto. `npm run lint` terminó sin errores y con una advertencia en `PlanGraph.tsx:791` por dependencias de `useMemo`.
-- **Incidencia corregida:** `nameOverride` ya se refleja en las vistas de consulta y se cubre su precedencia con pruebas unitarias frontend/backend.
-- **No ejecutado en esta corrida:** pruebas E2E, `validar`, golden, cobertura PDF y verificación manual de responsive/administración. No se verificó la operación completa de edición en lote del caso 40.
+- **Frontend (FAQ):** `npm run test:faq` 6/6 y `npm run build` correcto. `npm run lint` terminó sin errores y con una advertencia existente en `PlanGraph.tsx:791` por dependencias de `useMemo`.
+- **Antecedente de la corrida anterior:** `nameOverride` ya se refleja en las vistas de consulta y su precedencia tiene pruebas unitarias frontend/backend.
+- **FAQ (Caso 46):** verificación de humo en navegador con sesión simulada: se probó un chip de sugerencia, envío por Enter, respuesta relacionada y enlace a `/progreso`, respuesta sin coincidencias, aviso de privacidad y vista móvil de 390 px sin desbordamiento horizontal. No fue una prueba E2E contra backend ni en dispositivo físico.
+- **No ejecutado en esta corrida:** pruebas backend, E2E, `validar`, golden, cobertura PDF ni la verificación manual de los casos 40 y 43–45. La búsqueda unitaria de FAQ valida `faqSearch`, no la interfaz conversacional completa.
 
 > Los resultados históricos de corridas anteriores se conservan como evidencia de esas fechas; no sustituyen esta ejecución ni implican que las pruebas E2E se hayan repetido.
 
