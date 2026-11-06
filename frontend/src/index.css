@@ -58,6 +58,7 @@ html,
 body,
 #root {
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 body {
@@ -202,6 +203,7 @@ a {
 .app-root {
   display: flex;
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .app-main {
@@ -499,7 +501,7 @@ a {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px max(16px, env(safe-area-inset-right)) 10px max(16px, env(safe-area-inset-left));
+  padding: max(10px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 10px max(16px, env(safe-area-inset-left));
   background: var(--gradify-sidebar-bg);
   backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--gradify-border);
@@ -531,10 +533,15 @@ a {
 /* ───────────── Auth layout ───────────── */
 .auth-app {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px 16px;
+  padding:
+    max(24px, env(safe-area-inset-top))
+    max(16px, env(safe-area-inset-right))
+    max(24px, env(safe-area-inset-bottom))
+    max(16px, env(safe-area-inset-left));
   background-image:
     radial-gradient(ellipse 60% 45% at 85% 10%, rgba(34, 211, 238, 0.14), transparent 60%),
     radial-gradient(ellipse 65% 50% at 8% 95%, rgba(var(--gradify-brand-rgb), 0.16), transparent 62%),
@@ -1608,7 +1615,7 @@ a {
 
 @media (max-width: 575.98px) {
   .app-content {
-    padding: 16px 14px 4px;
+    padding: 16px max(14px, env(safe-area-inset-right)) 4px max(14px, env(safe-area-inset-left));
   }
   .auth-card__brand {
     flex-direction: column;
@@ -1626,7 +1633,7 @@ a {
     display: none;
   }
   .footer {
-    padding: 18px 12px;
+    padding: 18px max(12px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
   }
 }
 
@@ -1989,4 +1996,34 @@ a {
   width: 100%;
   font-size: 1rem;
   text-overflow: ellipsis;
+}
+
+@media (max-width: 575.98px) {
+  .form-control,
+  .form-select {
+    font-size: 16px;
+  }
+}
+
+@media (pointer: coarse) {
+  .btn,
+  .sidebar__link,
+  .m-topbar__burger,
+  .theme-toggle {
+    min-height: 44px;
+  }
+
+  .btn {
+    padding-block: 0.625rem;
+  }
+
+  .m-topbar__burger {
+    width: 44px;
+  }
+
+  .form-control,
+  .form-select {
+    min-height: 44px;
+    font-size: 16px;
+  }
 }
