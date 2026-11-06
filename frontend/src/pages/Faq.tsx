@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import Form from 'react-bootstrap/Form';
 import { Link } from 'react-router-dom';
 import { IconHelp } from '../components/icons';
@@ -6,8 +6,7 @@ import { FAQS, type Faq } from '../data/faq';
 import { faqSearch } from '../utils/faqSearch';
 import './Faq.css';
 
-interface ConversationTurn {
-  id: number;
+interface ActiveAnswer {
   query: string;
   answers: Faq[];
 }
@@ -21,23 +20,16 @@ const suggestedQuestions: { question: Faq; label: string }[] = [
 
 export default function Faq() {
   const [query, setQuery] = useState('');
-  const [turns, setTurns] = useState<ConversationTurn[]>([]);
-  const [nextId, setNextId] = useState(0);
-  const threadEndRef = useRef<HTMLDivElement>(null);
+  const [activeAnswer, setActiveAnswer] = useState<ActiveAnswer | null>(null);
 
-  useEffect(() => {
-    threadEndRef.current?.scrollIntoView({ block: 'nearest' });
-  }, [turns]);
-
-  function ask(question: string) {
+  function ask(question: string, answers?: Faq[]) {
     const trimmed = question.trim();
     if (!trimmed) return;
 
-    setTurns(current => [
-      ...current,
-      { id: nextId, query: trimmed, answers: faqSearch(FAQS, trimmed) },
-    ]);
-    setNextId(id => id + 1);
+    setActiveAnswer({
+      query: trimmed,
+      answers: answers ?? faqSearch(FAQS, trimmed),
+    });
     setQuery('');
   }
 
@@ -45,6 +37,26 @@ export default function Faq() {
     event.preventDefault();
     ask(query);
   }
+
+  function askSuggested(question: Faq) {
+    ask(question.question, [question]);
+  }
+
+  function renderAnswer(answer: Faq) {
+    return (
+      <article className="faq-chat__bubble" key={answer.id}>
+        <h2>{answer.question}</h2>
+        <p>{answer.answer}</p>
+        {answer.link && (
+          <Link className="faq-chat__link" to={answer.link}>
+            Ir a la sección relacionada <span aria-hidden="true">→</span>
+          </Link>
+        )}
+      </article>
+    );
+  }
+
+  const relatedAnswers = activeAnswer?.answers.slice(1) ?? [];
 
   return (
     <section className="faq-chat" aria-labelledby="faq-title">
@@ -75,7 +87,7 @@ export default function Faq() {
               <button
                 className="faq-chat__chip"
                 key={question.id}
-                onClick={() => ask(question.question)}
+                onClick={() => askSuggested(question)}
                 type="button"
               >
                 {label}
@@ -84,32 +96,26 @@ export default function Faq() {
           </div>
         </div>
 
-        {turns.map(turn => (
-          <div className="faq-chat__turn" key={turn.id}>
+        {activeAnswer && (
+          <div className="faq-chat__turn">
             <div className="faq-chat__message faq-chat__user">
-              <p>{turn.query}</p>
+              <p>{activeAnswer.query}</p>
             </div>
-
-            {turn.answers.length > 0 ? (
-              <div className="faq-chat__message faq-chat__message--assistant">
-                <span className="faq-chat__avatar" aria-hidden="true"><IconHelp size={20} /></span>
+            <div className="faq-chat__message faq-chat__message--assistant">
+              <span className="faq-chat__avatar" aria-hidden="true"><IconHelp size={20} /></span>
+              {activeAnswer.answers.length > 0 ? (
                 <div className="faq-chat__answers">
-                  {turn.answers.map(answer => (
-                    <article className="faq-chat__bubble" key={answer.id}>
-                      <h2>{answer.question}</h2>
-                      <p>{answer.answer}</p>
-                      {answer.link && (
-                        <Link className="faq-chat__link" to={answer.link}>
-                          Ir a la sección relacionada <span aria-hidden="true">→</span>
-                        </Link>
-                      )}
-                    </article>
-                  ))}
+                  {renderAnswer(activeAnswer.answers[0])}
+                  {relatedAnswers.length > 0 && (
+                    <details className="faq-chat__related">
+                      <summary>Ver respuestas relacionadas ({relatedAnswers.length})</summary>
+                      <div className="faq-chat__answers">
+                        {relatedAnswers.map(renderAnswer)}
+                      </div>
+                    </details>
+                  )}
                 </div>
-              </div>
-            ) : (
-              <div className="faq-chat__message faq-chat__message--assistant">
-                <span className="faq-chat__avatar" aria-hidden="true"><IconHelp size={20} /></span>
+              ) : (
                 <div className="faq-chat__bubble">
                   <h2>No encontré una respuesta exacta</h2>
                   <p>
@@ -117,11 +123,10 @@ export default function Faq() {
                     la ayuda disponible.
                   </p>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
-        ))}
-        <div ref={threadEndRef} />
+        )}
       </div>
 
       <footer className="faq-chat__composer">

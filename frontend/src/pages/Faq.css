@@ -162,6 +162,27 @@
   gap: 10px;
 }
 
+.faq-chat__related {
+  max-width: 690px;
+  color: var(--gradify-text);
+}
+
+.faq-chat__related summary {
+  width: fit-content;
+  color: var(--gradify-brand);
+  font-weight: 650;
+  cursor: pointer;
+  text-underline-offset: 3px;
+}
+
+.faq-chat__related summary:hover {
+  text-decoration: underline;
+}
+
+.faq-chat__related .faq-chat__answers {
+  margin-top: 10px;
+}
+
 .faq-chat__link {
   display: inline-flex;
   align-items: center;
@@ -251,7 +272,8 @@
 
 .faq-chat__chip:focus-visible,
 .faq-chat__send:focus-visible,
-.faq-chat__link:focus-visible {
+.faq-chat__link:focus-visible,
+.faq-chat__related summary:focus-visible {
   outline: 3px solid rgba(var(--gradify-brand-rgb), 0.32);
   outline-offset: 2px;
 }
