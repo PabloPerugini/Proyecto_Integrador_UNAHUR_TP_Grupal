@@ -9,6 +9,7 @@ const {
   cleanRequiresList,
   findCycle,
 } = require("./correlativas.service");
+const { planSubjectName } = require("../utils/planSubjectName");
 
 function httpError(message, statusCode = 400) {
   const error = new Error(message);
@@ -27,7 +28,7 @@ async function parseAndMatch(studyPlanId, buffer) {
   }
   const dbSubjects = items.map((ps) => ({
     code: ps.code,
-    name: ps.subject?.name || ps.code,
+    name: planSubjectName(ps),
   }));
   let parsed;
   try {

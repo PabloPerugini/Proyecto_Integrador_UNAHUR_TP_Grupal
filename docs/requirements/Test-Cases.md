@@ -1,12 +1,12 @@
 # Documento de Seguimiento de Testing
 
 **Proyecto:** Gradify — Grafo Interactivo de Correlatividades y Seguimiento de Progreso Académico
-**Versión:** 2.5
-**Fecha:** 2026-10-20
+**Versión:** 2.7
+**Fecha:** 2026-11-06
 **Sponsor Organización:** Universidad Nacional de Hurlingham (UNAHUR) — Licenciatura en Informática
 **Autor:** Equipo del proyecto integrador
 **Tutor:** Prof. Alejandra Pinto
-**Release:** Septiembre 2026
+**Release:** Diciembre 2026
 
 ---
 
@@ -139,6 +139,7 @@ Scripts E2E reescritos a la API nueva (`lib/testAuth.js`: usuario propio + Beare
 | BUG-018 | Las extracciones ya cacheadas (v2) seguían devolviendo 0 materias del intermedio aunque el código nuevo ya clasificaba: subir el mismo PDF devolvía la respuesta vieja sin refrescar. | Resuelto 16/10 | `PARSER_VERSION` v2 → **v3** en `pdfExtractionCacheService` (la clave de caché es `fileHash + parserVersion`): las extracciones anteriores dejan de reutilizarse y el primer re-upload vuelve a parsear y clasificar. |
 | BUG-019 | Un fallo transitorio de la IA (429/cuota) durante el preview quedaba congelado en la extracción cacheada: el preview reutilizado (`cached: true`) ya no reintentaba la clasificación del intermedio y el plan quedaba sin marcar de forma permanente. | Resuelto 16/10 | El camino `REUSE` del preview ahora reintenta la clasificación si el extracto tiene título intermedio sin marcar (`tryClassifyIntermediate`), propaga el `aiProvider` y **refresca la caché** (`refreshPdfExtraction`, que actualiza un extracto `COMPLETADA`). Verificado en E2E v2.4: Diseño Industrial pasó de 0 a **18 marcadas / 109 créditos** sobre la caché existente y el segundo preview mantuvo `cached: true` con el mismo resultado. |
 | BUG-020 | El controlador de institutos (`academicUnit.controllers`) llamaba `academicUnitService.updatedAcademicUnit` y `getAcademicUnitById`, nombres **inexistentes** en el servicio (los reales son `updateAcademicUnit`/`findAcademicUnitById`): editar un instituto por API respondía `400` siempre (`TypeError` capturado) y el detalle por id, `500`. | Resuelto 16/10 | Se corrigieron ambos nombres; verificado en E2E v2.5: `PATCH /academic-units/:id` de color y nombre → `200` persistido y `withCounts` coherente (14/14). |
+| BUG-021 | El nombre por plan (`PlanSubject.nameOverride`) no se mostraba en las vistas de consulta aunque se persistía. | Resuelto (06/11) | Frontend y backend priorizan el override, con fallback al nombre del catálogo y luego al código. Cubierto por pruebas unitarias frontend y backend; pendiente la verificación manual de los flujos completos. |
 
 ## Corrida 8 (14/10/2026, v2.3: institutos, tecnicatura, articulación y correlativas bloqueantes)
 
@@ -202,9 +203,11 @@ Registro anticipado de las dos tandas posteriores a la corrida 10 (CHANGELOG 1.2
 | Caso | Qué verifica | Estado |
 | ---- | ------------ | ------ |
 | 39 | Quitar plan archiva (`404` si ya no existe); reinscripción reactiva con progreso conservado | 🟡 pendiente de ejecutar |
-| 40 | `nameOverride` persiste y prevalece; lote solo con filas modificadas; código duplicado bloquea | 🟡 pendiente de ejecutar |
+| 40 | `nameOverride` persiste y prevalece; lote solo con filas modificadas; código duplicado bloquea | 🟡 parcial: precedencia cubierta por regresión automatizada; falta ejecutar el flujo completo de edición en lote |
 | 41 | Registro/Mi cuenta validan por campo (2–50, email ≤ 254, contraseña 6–72, nick ≥ 3) y el backend lo replica | 🟡 pendiente de ejecutar |
 | 42 | Home sin *Ver materias/Qué puedo cursar/Mi avance*; detalle necesario solo en Mi progreso/grafo | 🟡 pendiente de ejecutar |
+
+**Regresión automatizada (06/11/2026):** `npm test` backend pasó 43/43; `test:faq` 5/5, `test:status` 3/3, `test:graph` 3/3, `test:layout` 3/3 y `test:subjects` 4/4. La prioridad de `nameOverride` está cubierta en ambas capas. Esto no sustituye la verificación manual del guardado en lote del caso 40 ni de los casos 39, 41 y 42.
 
 ---
 

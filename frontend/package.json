@@ -14,6 +14,7 @@
     "test:graph": "node --experimental-strip-types --test tests/graphHighlight.test.mjs",
     "test:layout": "node --experimental-strip-types --test tests/academicEdgeLayout.test.mjs",
     "test:faq": "node --experimental-strip-types --test tests/faqSearch.test.mjs",
+    "test:subjects": "node --experimental-strip-types --test tests/planSubjectName.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

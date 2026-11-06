@@ -4,13 +4,12 @@ Aplicación web hecha con React + Vite + TypeScript. Consume la API del backend 
 
 ## Requisitos
 
-- Node.js 18+
+- Node.js 22+
 
 ## Instalación y ejecución
 
 ```bash
 npm install
-cp .env.Ejemplo .env   # (o crear .env con VITE_API_URL)
 
 # Desarrollo
 npm run dev
@@ -20,24 +19,36 @@ npm run build
 
 # Lint
 npm run lint
+
+# Pruebas unitarias
+npm run test:faq
+npm run test:status
+npm run test:graph
+npm run test:layout
+npm run test:subjects
 ```
 
-> Variable de entorno: `VITE_API_URL` (por defecto `http://localhost:3000`), apunta al backend.
+> Variable opcional: `VITE_API_URL` (por defecto `http://localhost:3000`), apunta al backend. No hay un `.env.Ejemplo` propio del frontend; si necesitás cambiar la URL, creá `.env` con esa variable.
+
+> Los tests cubren búsqueda FAQ, estados de progreso, resaltado del grafo, trazado de aristas y nombre visible por plan (`nameOverride`).
 
 ## Estructura
 
 ```
 src/
 ├── api/           # Cliente HTTP y llamadas al backend (client.ts + por recurso)
+├── assets/        # Iconos y recursos gráficos
 ├── components/    # Componentes reutilizables (Sidebar, Footer, ...)
 ├── context/       # Contextos (ThemeContext, CareerContext, ...)
+├── data/          # Datos estáticos de la aplicación
 ├── hooks/         # Custom hooks
+├── layouts/       # Layouts compartidos
 ├── pages/         # Páginas / rutas de la aplicación
+├── styles/        # Estilos compartidos y responsive
 ├── types/         # Tipos TypeScript
+├── utils/         # Funciones auxiliares
 ├── App.tsx        # Rutas y proveedores
-├── main.tsx       # Punto de entrada (monta Bootstrap + App)
-├── App.css
-└── index.css
+└── main.tsx       # Punto de entrada (monta Bootstrap + App)
 ```
 
 ## Tecnologías

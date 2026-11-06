@@ -7,6 +7,7 @@ const UserStudyPlan = require("../models/userStudyPlan");
 const SubjectProgress = require("../models/subjectProgress");
 const { buildGraph } = require("./graph.service");
 const { buildSugerencias } = require("./sugerencias.service");
+const { planSubjectName } = require("../utils/planSubjectName");
 
 const STATUS_ES = {
   APROBADA: "Aprobada",
@@ -24,7 +25,7 @@ async function loadPlanData(studyPlanId, userId) {
   );
   const subjects = items.map((ps) => ({
     code: codeById.get(String(ps._id)),
-    name: ps.subject?.name?.trim() || ps.code?.trim() || "Materia sin nombre",
+    name: planSubjectName(ps),
     year: ps.year ?? null,
     cuatrimestre: ps.period ?? null,
     duration: ps.duration || "CUATRIMESTRAL",

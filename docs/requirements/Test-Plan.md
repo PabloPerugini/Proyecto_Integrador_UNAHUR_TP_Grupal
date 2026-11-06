@@ -1,12 +1,12 @@
 # Plan de Pruebas
 
 **Proyecto:** Gradify — Grafo Interactivo de Correlatividades y Seguimiento de Progreso Académico
-**Versión:** 2.6
-**Fecha:** 20/10/2026
+**Versión:** 2.8
+**Fecha:** 06/11/2026
 **Sponsor Organización:** Universidad Nacional de Hurlingham (UNAHUR) — Licenciatura en Informática
 **Autor:** Equipo del proyecto integrador
 **Tutor:** Prof. Alejandra Pinto
-**Release:** Septiembre 2026
+**Release:** Diciembre 2026
 
 ---
 
@@ -25,7 +25,8 @@ Garantizar que la aplicación web (React) y su API REST (Node/Express + MongoDB 
 - Verificación de la identificación del progreso (JWT: `401` sin token; `403`/`404` sin permiso del dueño o ADMIN).
 - Verificación del manejo centralizado de errores (`400` IDs/validaciones/archivos, `404` inexistente, `409` duplicados, `500` genérico) y de que el proceso no se cae.
 - Verificación de planes extensos y de formatos inesperados.
-- Verificación de la interfaz: navegación (AppShell, roles, 403/404), estados de materia, camino crítico, pestañas Lic/Tec, promedio/CSV, accesibilidad básica y comportamiento de `ErrorBoundary`.
+- Verificación de la interfaz: navegación (AppShell, roles, 403/404), estados de materia, camino crítico, pestañas Lic/Tec, promedio/CSV, accesibilidad básica, comportamiento de `ErrorBoundary` y adaptación responsive en móvil/tablet/escritorio.
+- Regresión visual de iconos SVG por estado, controles de progreso y administración de universidades/materias.
 
 ## Herramientas para el Testing
 
@@ -38,7 +39,7 @@ Garantizar que la aplicación web (React) y su API REST (Node/Express + MongoDB 
 - Pruebas manuales exploratorias de los flujos de la aplicación (subir PDF, explorar grafo, marcar progreso).
 
 ### Verificación estática y de compilación
-**Descripción:** chequeo de sintaxis del backend con `node --check` sobre `src/` y verificación del frontend con las herramientas del proyecto (`eslint`, `tsc -b` y `vite build`). Se ejecutan antes de cada entrega. Suite de unitarios: **`npm test`** (`node --test`, 0 dependencias, **32 tests** en 6 archivos: `unitarios`, `sugerencias`, `rn04`, `registro`, `seguridad`, `intermedio`).
+**Descripción:** chequeo de sintaxis del backend con `node --check` sobre `src/` y verificación del frontend con (`eslint`, `tsc -b` y `vite build`). Backend: **`npm test`** (`node --test`) y **`npm run test:jest`**. Frontend: `test:faq`, `test:status`, `test:graph`, `test:layout` y `test:subjects`.
 
 **Funcionalidades principales:**
 - Detectar errores de sintaxis en el backend sin necesidad de levantar el entorno.
@@ -57,7 +58,7 @@ Garantizar que la aplicación web (React) y su API REST (Node/Express + MongoDB 
 
 1. **Salud y documentación**
    - Caso 1: **Salud.** `GET /health` → `200` con `{ "status": "ok" }` y `GET /` → `200` con el índice de la API.
-   - Caso 2: **Swagger.** Abrir `/api-docs` y verificar que el documento carga y que los paths listados son los reales (v2.0: users, careers, plan-imports, study-plans, user-study-plans, universities, academic-units).
+   - Caso 2: **Swagger.** Abrir `/api-docs` y verificar que el documento carga y que los paths listados son los reales (OpenAPI 3.0.3, versión 2.1.0).
 
 2. **Cuentas y catálogo**
    - Caso 2 bis: **Registro/login.** `POST /users/register` (nickName, firstName, lastName, email, password min 6) → `201`; duplicado → `409`; `POST /users/login` → `200` con JWT; credenciales mal → `401`.
@@ -86,18 +87,18 @@ Garantizar que la aplicación web (React) y su API REST (Node/Express + MongoDB 
    - Caso 15: **Publicación.** `PATCH /study-plans/:id` (`status: "published"`); `GET /study-plans` lista propios (ADMIN ve todos).
    - Caso 16: **Edición y borrado.** `PATCH` materia (incluye `prerequisites` con anti-ciclos); `DELETE` materia referenciada o con progreso → `409`; `DELETE /study-plans/:id` → `200` con `removed:{subjects,enrollments,progress,imports}` (409 con otros inscriptos no-ADMIN).
 
-6. **Manejo de errores**
+7. **Manejo de errores**
    - Caso 17: **JSON inválido.** `POST /careers` con cuerpo mal formado → `400` "JSON inválido en el cuerpo de la solicitud".
    - Caso 18: **Validaciones de Mongoose.** Enviar datos inválidos (p. ej. sin `code` en una materia) → `400` con los mensajes de validación.
    - Caso 19: **Error interno.** Provocar un error inesperado → `500` con mensaje genérico, el detalle queda registrado en el servidor y el proceso sigue vivo.
 
-7. **Interfaz**
+8. **Interfaz**
    - Caso 20: **Navegación.** Recorrer `/` → `/cargar` → `/admin` → `/grafo` → `/tablero` → `/progreso` → una ruta inexistente (404), verificando que cada una renderiza dentro de su layout (usuario o administrador).
    - Caso 21: **Estados en el grafo.** Cambiar el estado de una materia habilitada y verificar el cambio de color, el desbloqueo de las sucesoras y la actualización de la barra de progreso y del camino crítico.
    - Caso 22: **Errores en la interfaz.** Detener el backend y realizar una acción → mensaje "No se pudo conectar con el servidor" sin que la pantalla se rompa (`ErrorBoundary`).
    - Caso 23: **Accesibilidad.** Verificar que los selectores y campos de *Mi progreso* y *Admin* tengan `aria-label` descriptivos, que la zona de arrastre sea operable por teclado (`role="button"`), que los loaders usen `role="status"`, que los mensajes usen `role="alert"` y que las barras de progreso expongan `role="progressbar"`.
 
-8. **Catálogo, tecnicatura y administración (v2.3)**
+9. **Catálogo, tecnicatura y administración (v2.3)**
    - Caso 24: **Catálogo por instituto.** `GET /academic-units?withCounts=1` devuelve `careerCount`; `GET /careers?unit=<id>` filtra por instituto; `GET /careers?includeArchived=1` solo devuelve archivadas a un ADMIN.
    - Caso 25: **Articulación.** `PATCH /careers/:id` con `continuesIn` valida IDs existentes y rechaza la autorreferencia (`400`); el catálogo muestra "Continúa en …".
    - Caso 26: **Tecnicatura intermedia.** `GET /study-plans/:id/intermediate` devuelve `subjects`, `closed` y `externalRequires`; un plan sin título intermedio → `404`. En Grafo/Tablero/Progreso, la pestaña Tecnicatura acota la vista y avisa si no hay materias marcadas.
@@ -106,23 +107,28 @@ Garantizar que la aplicación web (React) y su API REST (Node/Express + MongoDB 
    - Caso 29: **Mi cuenta / logout.** `PATCH /users/:nickName` actualiza el perfil; `POST /users/logout` invalida el JWT (`tokenVersion++`) y el token previo deja de servir (`401`).
    - Caso 30: **Admin de usuarios y archivadas.** `GET /users` y `PATCH /users/:nickName` (rol) solo ADMIN; Catálogo → Carreras: el interruptor **“Ver archivadas”** lista `isArchived` y permite restaurarlas.
 
-9. **Tecnicatura en lote, tipo de carrera e IA acotada (v2.4)**
+10. **Tecnicatura en lote, tipo de carrera e IA acotada (v2.4)**
    - Caso 31: **Aviso de tecnicatura incompleta.** Subir un plan que declara título intermedio pero cuyo PDF no tabula el subconjunto (p. ej. Lic. en Nutrición) → el preview devuelve `intermediateTitle` con 0 materias marcadas y muestra el aviso; en *Editar plan* el aviso persiste hasta marcar materias.
    - Caso 32: **Marcado en lote.** `PATCH /study-plans/:id/subjects/intermediate` con `{intermediate: true}` → `{matched, modified}` con todo el plan; con `{intermediate: true, year: 1}` → solo ese año; con `ids` → solo esas materias; `intermediate` no booleano → `400`; en *Editar plan*, la barra "Marcar/Desmarcar + alcance" refleja el contador de marcadas.
    - Caso 33: **Propuesta de IA revisable.** Con IA configurada y un plan con título intermedio sin materias marcadas (p. ej. Diseño Industrial), el preview devuelve `intermediateClassified: true` con el subconjunto propuesto y `creditsIntermediate` recalculado; la columna *Tec* permite corregirlo antes de guardar. Una propuesta incoherente (1–3 materias, filas ACA o tramo > 3 años) se descarta sin marcar nada (`names: []`).
    - Caso 34: **Tipo de carrera.** `POST /careers` con `careerType: "Tecnicatura"` → `201`; valor fuera del enum → `400`; `PATCH` con `careerType: null` lo limpia; en el Home la carrera muestra el chip **🎓 Tecnicatura**.
-   - Caso 35: **Caché de extractos v3.** Subir dos veces el mismo PDF: la segunda responde `cached: true` con el mismo resultado (incluida la clasificación del intermedio); las extracciones v2 dejan de reutilizarse.
+   - Caso 35: **Caché de extractos (versión vigente v5).** Subir dos veces el mismo PDF: la segunda responde `cached: true` con el mismo resultado (incluida la clasificación del intermedio); solo se reutilizan extracciones con el mismo `PARSER_VERSION`.
 
-10. **Panel admin completo y correlativas regularizadas (v2.5)**
+11. **Panel admin completo y correlativas regularizadas (v2.5)**
    - Caso 36: **Institutos: editar, color y borrar.** `PATCH /academic-units/:id` con `{name}` o `{color: "#ff8800"}` → `200` persistido (visible en `GET /academic-units?withCounts=1`); color no hex (`"rojo"`) → `400`; `DELETE` con carreras asignadas o subunidades → `409` con mensaje; sin dependencias → `200`. En la pestaña *Institutos*, el swatch de color autoguarda (debounce) y Editar/Eliminar operan con confirmación.
    - Caso 37: **Carreras: editar, archivar y borrar.** `PATCH /careers/:id` actualiza nombre/tipo/universidad/instituto (quitar el instituto → `academicUnit: null`); *Archivar* la oculta del catálogo (restaurable con **“Ver archivadas”** en Catálogo → Carreras); `DELETE` sin planes → `200` y con planes → `409`.
    - Caso 38: **Correlativas regularizadas por defecto.** El confirm del plan y `saveCorrelativas` guardan `requiredStatus: "REGULARIZADA"` cuando no se indica otro: una correlativa regularizada **habilita** avanzar; exigir `APROBADA` bloquea hasta aprobar. En *Editar plan*, las correlativas nuevas se agregan con ese default, el select prioriza "Alcanza regularizada" y el control por plan aplica el requisito a todas las correlativas.
 
-11. **Inicio limpio, baja reversible, edición de materias y validaciones (v2.6)**
+12. **Inicio limpio, responsive, administración y validaciones (v2.8)**
    - Caso 39: **Baja reversible de planes.** En el Home, *Quitar plan* pide confirmación; con progreso, `DELETE /user-study-plans/:id` archiva la inscripción (`archivedAt`, devuelve `200` y el plan desaparece de la lista); al volver a inscribirse al mismo plan, `POST /user-study-plans` **reactiva la inscripción conservando el progreso** (`archivedAt: null`); sin progreso, la inscripción se borra y un segundo `DELETE` responde `404`.
-   - Caso 40: **Edición de materias en lote.** En *Editar plan*, editar solo el nombre visible de una materia guarda `nameOverride` y ese nombre prevalece en Grafo/Tablero/Progreso/Home sin cambiar el catálogo; el guardado en lote envía solo las filas modificadas (resaltadas), rechaza guardar con algún código vacío o **duplicado** (aviso y control visual) y el botón "Guardar datos del plan" queda deshabilitado sin cambios reales.
+   - Caso 40: **Edición de materias en lote.** En *Editar plan*, el nombre visible se guarda en `nameOverride` sin cambiar el catálogo; el guardado envía solo filas modificadas, rechaza códigos vacíos o duplicados y se deshabilita sin cambios. Grafo/Tablero/Progreso/Home priorizan el override; la precedencia tiene prueba unitaria, pero resta validar manualmente el flujo de guardado en lote.
    - Caso 41: **Validaciones reutilizables de cuenta/registro.** En Registro y en Mi cuenta: nombre/apellido 2–50 caracteres con solo letras/espacios/guiones; email ≤ 254 (normalizado a minúsculas); contraseña 6–72 con confirmación coincidente; nickName ≥ 3. El frontend valida por campo (blur) y el backend rechaza con `400` por las mismas cotas (Joi); nombre con un dígito → `400` en ambos lados.
    - Caso 42: **Home limpio.** La portada de un usuario con inscripciones muestra solo filas de planes (estado "Inscripto", materias, años, créditos, chip de tecnicatura), pestañas y "Sumar otra carrera"; no renderiza *Ver materias*, *Qué puedo cursar* ni *Mi avance* (el detalle perezoso restante es el accordion de tecnicatura en las tarjetas del catálogo).
+   - Caso 43: **Alta de materias y baja de universidad.** Como ADMIN, crear una materia para un plan y comprobar que aparece en su lista; intentar borrar una universidad con entidades dependientes y verificar que la operación se rechaza con un mensaje claro; borrar una universidad sin dependencias y verificar que se elimina.
+   - Caso 44: **Responsive y áreas seguras.** Revisar Home, Grafo, Tablero, Mi progreso y Administración en anchos móvil, tablet y escritorio; comprobar que no haya desbordamiento horizontal, que controles importantes sigan accesibles y que las áreas seguras no tapen contenido. Repetir al menos una vista en navegador móvil real antes de dar el caso por aprobado.
+   - Caso 45: **Grafo y tablero actualizados.** Confirmar que cada estado de materia usa su icono SVG correspondiente, que los controles de progreso conservan las acciones de avanzar/revertir y que etiquetas/aristas no se superponen en planes con varias correlativas.
+
+> Los casos 43–45 se incorporan al plan, pero requieren ejecución manual; no se marcarán como aprobados hasta registrar evidencia. La regresión de `nameOverride` del caso 40 permanece abierta.
 
 ## Plan de Ejecución
 
@@ -132,16 +138,14 @@ Garantizar que la aplicación web (React) y su API REST (Node/Express + MongoDB 
 4. Registrar los resultados en el [Documento de Seguimiento de Testing](./Test-Cases.md), incluyendo errores o comportamientos inesperados.
 5. Repetir las pruebas tras cada corrección para confirmar estabilidad y consistencia.
 
-## Resultados de la Última Ejecución (16/10/2026, v2.5)
+## Resultados de la Última Ejecución Registrada (06/11/2026, v2.8)
 
-Verificación de la tanda v2.5 (panel ADMIN: institutos con color y CRUD con guardas, edición/archivado/borrado de carreras, articulación buscable; correlativas importadas `REGULARIZADA` por defecto) sobre el **stack Docker** (API :3000, Mongo :27018). Sin cambios de parser: golden/masiva/salud no se re-ejecutan y siguen vigentes los de la corrida 9.
+- **Backend:** `npm test` 43/43 y `npm run test:jest -- --runInBand` 24/24 (4 suites).
+- **Frontend:** `test:faq` 5/5, `test:status` 3/3, `test:graph` 3/3, `test:layout` 3/3 y `test:subjects` 4/4. `npm run build` correcto. `npm run lint` terminó sin errores y con una advertencia en `PlanGraph.tsx:791` por dependencias de `useMemo`.
+- **Incidencia corregida:** `nameOverride` ya se refleja en las vistas de consulta y se cubre su precedencia con pruebas unitarias frontend/backend.
+- **No ejecutado en esta corrida:** pruebas E2E, `validar`, golden, cobertura PDF y verificación manual de responsive/administración. No se verificó la operación completa de edición en lote del caso 40.
 
-- **Backend unitarios:** `npm test` **32/32** (la tanda no cambió ni sumó unitarios).
-- **E2E admin por API (14/14):** `401` sin token en `POST /academic-units`; alta de universidad e instituto con `color: "#12ab34"`; color inválido → `400`; `PATCH` color (`#ff8800`) y nombre → `200`; carrera creada en el instituto → `GET /academic-units?withCounts=1` con `color` y `careerCount=1`; `DELETE` instituto con carreras → `409`; editar carrera (`careerType` + quitar/poner instituto) → `200`; borrados carrera → instituto → universidad → `200`. Usuario temporal y datos de prueba eliminados; la base quedó idéntica (2 usuarios, 1 universidad, 4 institutos, 63 carreras).
-- **Correlativas en base scratch (5/5):** `saveCorrelativas` graba `requiredStatus: "REGULARIZADA"`; una correlativa regularizada **habilita** el avance; al exigir `APROBADA`, regularizada no alcanza; aprobada sí habilita.
-- **Frontend:** `tsc -b` (strict) + `eslint` sin errores.
-
-> **Pendiente (19–20/10, v2.6):** la tanda de Inicio limpio + baja reversible (CHANGELOG 1.22/1.23) y la de edición de materias + validaciones reutilizables (Casos 39–42) **no tienen corrida registrada todavía**; queda pendiente ejecutarlos sobre la app (Home, *Quitar plan* → reinscripción, *Editar plan* en lote y los formularios de Registro/Mi cuenta). Con la baja reversible, `GET /user-study-plans` solo lista inscripciones con `archivedAt: null`.
+> Los resultados históricos de corridas anteriores se conservan como evidencia de esas fechas; no sustituyen esta ejecución ni implican que las pruebas E2E se hayan repetido.
 
 ## Resultados de la Ejecución v2.4 (16/10/2026)
 

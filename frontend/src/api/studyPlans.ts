@@ -1,4 +1,7 @@
 import { request, uploadPdf } from './client';
+import { planSubjectName as subjectName } from '../utils/planSubjectName';
+
+export { subjectName };
 
 export interface CareerRef {
   _id: string;
@@ -143,10 +146,6 @@ export interface ProgressInput {
   origin?: string | null;
 }
 
-export function subjectName(subject: PlanSubject): string {
-  const name = subject.subject && typeof subject.subject === 'object' ? subject.subject.name : null;
-  return (typeof name === 'string' && name.trim()) || subject.code?.trim() || 'Materia sin nombre';
-}
 export function careerName(plan: StudyPlan): string {
   return plan.career && typeof plan.career === 'object' ? plan.career.name || 'Carrera sin nombre' : 'Carrera no disponible';
 }

@@ -23,7 +23,15 @@ npm run dev
 Una vez iniciado:
 
 - API en `http://localhost:3000`
-- Documentación Swagger en `http://localhost:3000/api-docs` (v2.0, ~30 paths)
+- Documentación Swagger en `http://localhost:3000/api-docs` (OpenAPI 3.0.3, versión 2.1.0)
+
+## Pruebas
+
+```bash
+npm test                 # 43 pruebas unitarias con node:test
+npm run test:jest        # 24 pruebas Jest
+npm run validar          # validaciones integrales; requiere servicios y corpus PDF
+```
 
 ## Estructura
 

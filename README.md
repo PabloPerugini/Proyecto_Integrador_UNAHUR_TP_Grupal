@@ -10,7 +10,8 @@ Proyecto integrador de la materia **Programación - Informática (UNAHUR)**. El 
 - Visualización del plan en tablero y en grafo de correlatividades.
 - Catálogo por instituto (Instituto → Carrera → Plan), con tecnicatura intermedia y articulación entre carreras.
 - Seguimiento del progreso por materia con baja reversible de planes (quitar un plan conserva el avance).
-- Panel de administración del catálogo, planes y materias (nombre por plan editable), con validaciones compartidas entre Registro y Mi cuenta.
+- Panel de administración del catálogo, universidades, planes y materias, con validaciones para altas y bajas protegidas.
+- Interfaz adaptable a escritorio, tablet y móvil; las vistas principales de grafo, tablero y progreso ajustan su presentación al ancho disponible.
 
 ## Estructura del repositorio
 
@@ -55,7 +56,8 @@ docker compose up --build
 
 ```bash
 cd backend
-npm test                  # unitarios (32): matcher, anti-ciclos, RN04, AR-3, registro/roles, seguridad, intermedio
+npm test                  # 43 pruebas unitarias
+npm run test:jest         # 24 pruebas Jest
 npm run validar           # todo: cobertura + golden --check + salud + masiva (necesita API + corpus)
 npm run test:cobertura    # cada PDF de files/ está en la referencia o excluido con motivo (sin API)
 npm run test:planes       # carga E2E de los 43 PDFs por la API real
@@ -73,6 +75,8 @@ histórica hermana `../files/UNAHUR-Oferta-Academica` o `PLANES_DIR` explícito.
 `test:cobertura` cierra el corpus: todo PDF que no esté en la referencia debe estar en
 `docs/testing/pdf-sin-referencia.json` con un motivo (si aparece uno sin clasificar,
 falla con la ruta exacta).
+
+Para validar el frontend, ejecutar `npm run build`, `npm run lint` y los tests `npm run test:faq`, `test:status`, `test:graph`, `test:layout` y `test:subjects` desde `frontend/`.
 
 ## Integrantes
 

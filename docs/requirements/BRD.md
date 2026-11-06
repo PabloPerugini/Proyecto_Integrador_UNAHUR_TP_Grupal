@@ -11,8 +11,8 @@
 | Institución           | Universidad Nacional de Hurlingham (UNAHUR)                          |
 | Unidad Académica      | Facultad de Informática — Proyecto Integrador Programación           |
 | Tipo de documento     | BRD — Documentación de Requerimientos de Negocio                     |
-| Versión               | 2.5                                                                   |
-| Fecha                 | 20 de octubre de 2026                                              |
+| Versión               | 2.6                                                                   |
+| Fecha                 | 6 de noviembre de 2026                                             |
 | Sponsor Operación     | Secretaría Académica / Dirección de Carrera                          |
 | Sponsor Organización  | UNAHUR                                                               |
 | Integrantes           | Perugini, Pablo; Acuña, Marcos; Masgo Sandoval, Joaquín; Renaud, Román; Remonda, Eliel; Cotera, Dylan |
@@ -43,6 +43,7 @@
 | 2.3     | 14/10/2026   | Equipo | Catálogo curado por instituto (19 carreras canónicas, `isArchived`, filtros `?unit`/`includeArchived`, `withCounts`); Home Institutos→Carreras→Planes con "qué puedo cursar" y avance perezosos; **tecnicatura intermedia** (flag `intermediate`, sub-plan virtual `/study-plans/:id/intermediate`, pestañas Lic/Tec); **articulación** entre carreras (`continuesIn` + UI admin); **correlativas que bloquean el avance** (validación en backend + pre-chequeo en Mi progreso); promedio con notas y exportar CSV; seguridad (ADMIN en import/creación, `checkOrigin` CSRF, logout invalida JWT) y versionado liviano de planes; AppShell único por rol, Mi cuenta, Admin Usuarios y Archivadas; 26 unitarios. |
 | 2.4     | 16/10/2026   | Equipo | **Tipo de carrera** (`careerType`: Licenciatura/Tecnicatura/Profesorado/Ingenieria/Otro) para distinguir el pregrado del grado en el catálogo; **título intermedio honesto**: aviso cuando el plan lo declara sin materias marcadas, **marcado en lote** (todo el plan / un año / un período) y **propuesta de IA revisable** validada contra las materias reales; chip 🎓 Tecnicatura en el catálogo; 32 unitarios. |
 | 2.5     | 20/10/2026   | Equipo | **Inicio limpio**: la portada muestra solo inscripciones y accesos (*Ver materias*, *Qué puedo cursar* y *Mi avance* pasan a Mi progreso/grafo). **Baja reversible de planes**: quitar el plan conserva el progreso (inscripción archivada) y la reinscripción lo reactiva. Archivadas integradas a **Catálogo → Carreras**. **Edición de materias** en el plan con nombre visible editable y guardado en lote. **Validaciones reutilizables** de cuenta/registro (nombre, email, contraseña y confirmación) compartidas entre Registro y Mi cuenta. |
+| 2.6     | 06/11/2026   | Equipo | Actualización del grafo y tablero (iconos SVG por estado y mejoras de disposición), navegación y adaptación responsive; administración de universidades y materias; registro de pruebas actuales. Los créditos y el detalle académico oficial por unidad/período siguen sujetos a validar con documentación institucional. |
 
 ---
 
@@ -83,7 +84,10 @@ Los planes de estudio universitarios suelen ser complejos y estar llenos de depe
 - El lector de PDF lee las tablas de planes con columna de orden/código, horas y créditos, detecta la sección del **título intermedio** y descarta las filas de totales y los títulos de sección (no se importan como materias). Cuando el PDF **no tabula** las materias del título intermedio, el sistema no inventa: avisa al administrador y ofrece marcado en lote y una propuesta de IA revisable.
 - La aplicación **NO reemplaza** la transacción de inscripción oficial (se efectúa en SIU-Guaraní); solo asiste la planificación.
 - Compatibilidad garantizada con navegadores web modernos (Chrome, Edge, Firefox).
+- La interfaz se adapta a pantallas de escritorio, tablet y móvil. Esto no equivale a certificar exhaustivamente todos los dispositivos físicos y rutas.
 - Los planes soportados siguen el modelo año/cuatrimestre con créditos numéricos (entero o vacío).
+
+> **Alcance pendiente de validar:** se almacenan créditos y período cuando están disponibles en los PDFs importados, pero falta recibir y contrastar la fuente institucional que confirme el desglose oficial por unidad académica, carrera y período. Los totales actuales no deben interpretarse como una conciliación oficial de créditos.
 
 > [!IMPORTANT]
 > La aplicación es una herramienta de **planificación y asistencia**. La inscripción formal a materias siempre se realiza en **SIU-Guaraní**.
@@ -209,10 +213,10 @@ Vista de alto nivel. El detalle por pantalla se encuentra en el **FRD, Sección 
 | Pantalla   | Descripción                                                                     |
 | ---------- | ------------------------------------------------------------------------------- |
 | SC001      | Inicio: "Mis inscripciones" (filas con acciones Grafo/Tablero/Mi progreso/Quitar plan y "Sumar otra carrera") o Institutos → Carreras → Planes, con color por instituto, búsqueda y accesos de administración. |
-| SC002      | Grafo del plan: nodos por estado, camino crítico, barra de progreso, banner de título intermedio y pestañas Licenciatura/Tecnicatura. |
-| SC003      | Tablero del plan: el mismo contenido en columnas por año/cuatrimestre, con pestañas Licenciatura/Tecnicatura.          |
+| SC002      | Grafo del plan: nodos e iconos SVG por estado, camino crítico, barra de progreso, banner de título intermedio y pestañas Licenciatura/Tecnicatura; diseño adaptable. |
+| SC003      | Tablero del plan: materias en columnas por año/cuatrimestre, con pestañas Licenciatura/Tecnicatura y diseño adaptable. |
 | SC004      | Mi progreso: estadísticas (aprobadas, créditos, avance, promedio), avance por año, edición por materia y exportación a CSV. |
-| SC005      | Cargar plan: subida del PDF oficial, que crea la carrera y sus materias (solo ADMIN). |
+| SC005      | Cargar plan: administración de universidades, institutos, carreras y materias; carga de PDF oficial y revisión antes de confirmar (solo ADMIN). |
 | SC006      | Admin del plan: edición de materias (nombre por plan y guardado en lote) y correlatividades, **marcado en lote de tecnicatura**, tipo de carrera y publicación.           |
 | SC007      | Mi cuenta: perfil (nombre, apellido, email) y cambio de contraseña.              |
 | SC008      | Usuarios (ADMIN): listado, cambio de rol USUARIO/ADMIN y baja.                   |
