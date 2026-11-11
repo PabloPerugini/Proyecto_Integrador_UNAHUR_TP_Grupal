@@ -3,7 +3,8 @@ import Form from 'react-bootstrap/Form';
 import { Link } from 'react-router-dom';
 import { IconHelp } from '../components/icons';
 import { FAQS, type Faq } from '../data/faq';
-import { faqSearch } from '../utils/faqSearch';
+import { useAuth } from '../hooks/useAuth';
+import { faqSearch, filterFaqsForRole } from '../utils/faqSearch';
 import './Faq.css';
 
 interface ActiveAnswer {
@@ -11,14 +12,17 @@ interface ActiveAnswer {
   answers: Faq[];
 }
 
-const suggestedQuestions: { question: Faq; label: string }[] = [
-  { question: FAQS[4], label: 'Mi progreso' },
-  { question: FAQS[2], label: 'Correlatividades' },
-  { question: FAQS[0], label: 'Importar un plan' },
-  { question: FAQS[7], label: 'Baja de un plan' },
+const suggestedQuestionIds = [
+  { id: 'progreso-1', label: 'Mi progreso' },
+  { id: 'correlatividades-1', label: 'Correlatividades' },
+  { id: 'correlatividades-camino-optimo', label: 'Camino óptimo' },
+  { id: 'progreso-2', label: 'Importar historia' },
 ];
 
 export default function Faq() {
+  const { user } = useAuth();
+  const role = user?.rol === 'ADMIN' ? 'ADMIN' : 'USUARIO';
+  const availableFaqs = filterFaqsForRole(FAQS, role);
   const [query, setQuery] = useState('');
   const [activeAnswer, setActiveAnswer] = useState<ActiveAnswer | null>(null);
 
@@ -28,7 +32,7 @@ export default function Faq() {
 
     setActiveAnswer({
       query: trimmed,
-      answers: answers ?? faqSearch(FAQS, trimmed),
+      answers: answers ?? faqSearch(availableFaqs, trimmed),
     });
     setQuery('');
   }
@@ -83,16 +87,19 @@ export default function Faq() {
         <div className="faq-chat__suggestions">
           <p>Consultas frecuentes</p>
           <div className="faq-chat__chips">
-            {suggestedQuestions.map(({ question, label }) => (
-              <button
-                className="faq-chat__chip"
-                key={question.id}
-                onClick={() => askSuggested(question)}
-                type="button"
-              >
-                {label}
-              </button>
-            ))}
+            {suggestedQuestionIds.map(({ id, label }) => {
+              const question = availableFaqs.find(faq => faq.id === id);
+              return question ? (
+                <button
+                  className="faq-chat__chip"
+                  key={question.id}
+                  onClick={() => askSuggested(question)}
+                  type="button"
+                >
+                  {label}
+                </button>
+              ) : null;
+            })}
           </div>
         </div>
 

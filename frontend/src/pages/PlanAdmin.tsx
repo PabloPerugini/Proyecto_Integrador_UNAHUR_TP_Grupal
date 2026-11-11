@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Badge, Button, Card, Form, Spinner, Table } from 'react-bootstrap';
 import { useNavigate, useParams } from 'react-router-dom';
 import { studyPlansApi, orderedSubjects, subjectName, careerName, prerequisiteId, type StudyPlan, type PlanSubject, type PlanPrerequisite, type CorrParseResult } from '../api/studyPlans';
@@ -32,6 +32,9 @@ export default function PlanAdmin() {
   const [status, setStatus] = useState<'draft'|'published'>('draft');
   const [intermediateTitle, setIntermediateTitle] = useState('');
   const [creditsIntermediate, setCreditsIntermediate] = useState('');
+  const [newSubject, setNewSubject] = useState({
+    name: '', code: '', year: '', period: '', credits: '0', optional: false, intermediate: false,
+  });
   const [corrResult, setCorrResult] = useState<CorrParseResult | null>(null);
   const [bulkYear, setBulkYear] = useState('');
   const [loading, setLoading] = useState(true);
@@ -161,6 +164,40 @@ export default function PlanAdmin() {
     }
     finally { setWorking(false); }
   };
+  const createSubject = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!plan || working) return;
+    if (!newSubject.name.trim() || !newSubject.code.trim()) {
+      flash('warning', 'Completá el nombre y el código de la materia.');
+      return;
+    }
+    if (codeOwners.has(newSubject.code.trim())) {
+      flash('warning', `Ya existe una materia con el código ${newSubject.code.trim()}.`);
+      return;
+    }
+    let year: number | null;
+    let period: number | null;
+    let credits: number;
+    try {
+      year = validNum(newSubject.year, 'Año', 1, 20);
+      period = validNum(newSubject.period, 'Período', 1, 12);
+      credits = validNum(newSubject.credits, 'Créditos', 0, 1000) ?? 0;
+    } catch (e) {
+      flash('warning', e instanceof Error ? e.message : 'Revisá los datos de la materia.');
+      return;
+    }
+    setWorking(true);
+    try {
+      await studyPlansApi.createSubject(plan._id, {
+        name: newSubject.name.trim(), code: newSubject.code.trim(), year, period, credits,
+        optional: newSubject.optional, intermediate: newSubject.intermediate,
+      });
+      await reloadSubjects(plan._id);
+      setNewSubject({ name: '', code: '', year: '', period: '', credits: '0', optional: false, intermediate: false });
+      flash('success', 'Materia creada y agregada al plan.');
+    } catch (e) { flashFromError(e, 'No se pudo crear la materia'); }
+    finally { setWorking(false); }
+  };
   const removeSubject = async (subject: PlanSubject) => {
     if (!plan || working || !window.confirm(`¿Eliminar ${subjectName(subject)} del plan?`)) return;
     setWorking(true);
@@ -278,6 +315,20 @@ export default function PlanAdmin() {
           {working && <Spinner size="sm" className="me-1" />}
           Guardar datos del plan
         </Button>
+      </Card.Body></Card>
+      <Card className="mb-4"><Card.Header><strong>Agregar materia</strong></Card.Header><Card.Body>
+        <Form onSubmit={event => void createSubject(event)}>
+          <div className="d-flex flex-wrap gap-3 align-items-end">
+            <Form.Group style={{ flex: '1 1 240px' }}><Form.Label>Nombre</Form.Label><Form.Control required value={newSubject.name} disabled={working} onChange={e => setNewSubject(current => ({ ...current, name: e.target.value }))} /></Form.Group>
+            <Form.Group style={{ flex: '0 1 150px' }}><Form.Label>Código</Form.Label><Form.Control required value={newSubject.code} disabled={working} onChange={e => setNewSubject(current => ({ ...current, code: e.target.value }))} /></Form.Group>
+            <Form.Group style={{ flex: '0 1 100px' }}><Form.Label>Año</Form.Label><Form.Control type="number" min={1} max={20} value={newSubject.year} disabled={working} onChange={e => setNewSubject(current => ({ ...current, year: e.target.value }))} /></Form.Group>
+            <Form.Group style={{ flex: '0 1 110px' }}><Form.Label>Período</Form.Label><Form.Control type="number" min={1} max={12} value={newSubject.period} disabled={working} onChange={e => setNewSubject(current => ({ ...current, period: e.target.value }))} /></Form.Group>
+            <Form.Group style={{ flex: '0 1 110px' }}><Form.Label>Créditos</Form.Label><Form.Control type="number" min={0} max={1000} value={newSubject.credits} disabled={working} onChange={e => setNewSubject(current => ({ ...current, credits: e.target.value }))} /></Form.Group>
+            <Form.Check label="Optativa" checked={newSubject.optional} disabled={working} onChange={e => setNewSubject(current => ({ ...current, optional: e.target.checked }))} />
+            <Form.Check label="Tecnicatura" checked={newSubject.intermediate} disabled={working} onChange={e => setNewSubject(current => ({ ...current, intermediate: e.target.checked }))} />
+            <Button type="submit" disabled={working}>{working && <Spinner size="sm" className="me-1" />}Crear materia</Button>
+          </div>
+        </Form>
       </Card.Body></Card>
       <Card className="mb-4"><Card.Header><strong>Correlatividades desde PDF</strong></Card.Header><Card.Body>
         <p className="small text-muted mb-2">Subí el PDF de correlatividades: se reconoce cada materia contra el plan (sin guardar) y después aplicás. Solo lo reconocido con requisitos se guarda; ante un ciclo no se guarda nada.</p>

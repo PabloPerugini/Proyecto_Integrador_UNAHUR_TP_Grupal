@@ -1,4 +1,8 @@
-import type { Faq } from '../data/faq';
+import type { Faq, FaqRole } from '../data/faq';
+
+export function filterFaqsForRole(faqs: Faq[], role: FaqRole): Faq[] {
+  return faqs.filter(faq => !faq.roles || faq.roles.includes(role));
+}
 
 const STOP_WORDS = new Set([
   'a', 'al', 'algo', 'ante', 'antes', 'como', 'con', 'contra', 'cual',

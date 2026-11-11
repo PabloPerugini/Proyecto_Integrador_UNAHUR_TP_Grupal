@@ -6,6 +6,14 @@ const StudyPlan = require("../models/studyPlan");
 const Subject = require("../models/subject");
 const SubjectProgress = require("../models/subjectProgress");
 
+const subjectSlug = (name) =>
+  name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+
 // Obtener todas las materias de un plan
 const getPlanSubjects = async (studyPlanId) => {
   return PlanSubject.find({
@@ -135,17 +143,27 @@ const createPlanSubject = async (planSubjectData) => {
     throw new Error("El plan de estudio no existe");
   }
 
-  const subjectExists = await Subject.findById(
-    planSubjectData.subject
-  );
-
-  if (!subjectExists) {
-    throw new Error("La materia no existe");
+  let subject;
+  if (planSubjectData.subject) {
+    subject = await Subject.findById(planSubjectData.subject);
+    if (!subject) {
+      throw new Error("La materia no existe");
+    }
+  } else {
+    const name = String(planSubjectData.name || "").trim();
+    if (!name) {
+      throw new Error("El nombre de la materia es obligatorio");
+    }
+    const slug = subjectSlug(name);
+    subject = await Subject.findOne({ slug });
+    if (!subject) {
+      subject = await Subject.create({ name, description: "", slug });
+    }
   }
 
   const alreadyExists = await PlanSubject.findOne({
     studyPlan: planSubjectData.studyPlan,
-    subject: planSubjectData.subject,
+    subject: subject._id,
   });
 
   if (alreadyExists) {
@@ -165,7 +183,7 @@ const createPlanSubject = async (planSubjectData) => {
 
   return PlanSubject.create({
     studyPlan: planSubjectData.studyPlan,
-    subject: planSubjectData.subject,
+    subject: subject._id,
     code: planSubjectData.code,
     year: planSubjectData.year,
     period: planSubjectData.period,

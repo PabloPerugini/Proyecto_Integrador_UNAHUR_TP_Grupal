@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { faqSearch } from '../src/utils/faqSearch.ts';
+import { faqSearch, filterFaqsForRole } from '../src/utils/faqSearch.ts';
+import { FAQS } from '../src/data/faq.ts';
 
 const faqs = [
   { id: '1', category: 'Importar plan', question: '¿Cómo importo un plan de estudios?', answer: 'Ve a Cargar plan y subí el PDF.', tags: ['importar', 'pdf', 'plan'], link: '/cargar' },
@@ -36,4 +37,31 @@ test('encuentra contenido acentuado con una consulta sin tildes', () => {
 
 test('una consulta compuesta solo por palabras vacías no devuelve resultados', () => {
   assert.deepStrictEqual(faqSearch(faqs, 'más que para'), []);
+});
+
+test('encuentra la respuesta sobre el camino crítico', () => {
+  const results = faqSearch(FAQS, 'camino critico');
+  assert.equal(results[0].id, 'correlatividades-camino-critico');
+});
+
+test('encuentra la respuesta sobre el camino óptimo sin tilde', () => {
+  const results = faqSearch(FAQS, 'camino optimo');
+  assert.equal(results[0].id, 'correlatividades-camino-optimo');
+});
+
+test('las preguntas de USER solo incluyen acciones disponibles para su rol', () => {
+  const userFaqs = filterFaqsForRole(FAQS, 'USUARIO');
+  const ids = userFaqs.map(faq => faq.id);
+  assert.ok(!ids.includes('importar-plan-1'));
+  assert.ok(!ids.includes('bajas-1'));
+  assert.ok(!ids.includes('admin-1'));
+  assert.ok(!ids.includes('admin-2'));
+  assert.ok(ids.includes('progreso-2'));
+  assert.ok(ids.includes('correlatividades-camino-critico'));
+});
+
+test('ADMIN conserva las preguntas exclusivas de administración', () => {
+  const adminFaqs = filterFaqsForRole(FAQS, 'ADMIN');
+  const results = faqSearch(adminFaqs, 'cómo importo un plan de estudios');
+  assert.equal(results[0].id, 'importar-plan-1');
 });

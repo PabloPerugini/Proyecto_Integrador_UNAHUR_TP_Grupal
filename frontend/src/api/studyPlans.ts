@@ -173,6 +173,15 @@ export const studyPlansApi = {
     const result = await request<{ planSubject: PlanSubject }>(`/study-plans/${planId}/subjects/${subjectId}`, { method: 'PATCH', body: JSON.stringify(data) });
     return result.planSubject;
   },
+  createSubject: async (planId: string, data: {
+    name: string; code: string; year: number | null; period: number | null;
+    credits: number; optional: boolean; intermediate: boolean;
+  }) => {
+    const result = await request<{ planSubject: PlanSubject }>(`/study-plans/${planId}/subjects`, {
+      method: 'POST', body: JSON.stringify(data),
+    });
+    return result.planSubject;
+  },
   bulkIntermediate: (planId: string, data: { intermediate: boolean; ids?: string[]; year?: number; period?: number }) =>
     request<{ matched: number; modified: number }>(`/study-plans/${planId}/subjects/intermediate`, { method: 'PATCH', body: JSON.stringify(data) }),
   deleteSubject: (planId: string, subjectId: string) => request<unknown>(`/study-plans/${planId}/subjects/${subjectId}`, { method: 'DELETE' }),

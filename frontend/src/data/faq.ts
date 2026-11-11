@@ -6,12 +6,15 @@ export type FaqCategory =
   | 'admin'
   | 'cuenta';
 
+export type FaqRole = 'ADMIN' | 'USUARIO';
+
 export interface Faq {
   id: string;
   category: FaqCategory;
   question: string;
   answer: string;
   tags: string[];
+  roles?: FaqRole[];
   link?: string;
 }
 
@@ -23,6 +26,7 @@ export const FAQS: Faq[] = [
     answer:
       'Ingresá como ADMIN a "Cargar plan", subí el PDF del plan de estudios y revisá la vista previa. Confirmá la importación y luego revisá o cargá las correlatividades del plan.',
     tags: ['importar', 'pdf', 'plan', 'cargar'],
+    roles: ['ADMIN'],
     link: '/cargar',
   },
   {
@@ -30,7 +34,7 @@ export const FAQS: Faq[] = [
     category: 'importar-plan',
     question: '¿Qué hago si el PDF no se lee?',
     answer:
-      'Asegurate de que el PDF tenga texto seleccionable y no sea un escaneo. Si el problema continúa, revisá que el archivo corresponda al plan y volvé a intentar la carga.',
+      'Asegurate de que el archivo sea un PDF con texto seleccionable y no un escaneo. Si importás un plan, verificá también que corresponda a ese plan; si importás tu historia académica, probá con el PDF descargado del sistema de alumnos.',
     tags: ['pdf', 'error', 'lectura'],
   },
   {
@@ -52,11 +56,29 @@ export const FAQS: Faq[] = [
     link: '/grafo',
   },
   {
+    id: 'correlatividades-camino-critico',
+    category: 'correlatividades',
+    question: '¿Qué muestra el camino crítico?',
+    answer:
+      'En el grafo o tablero, activa «Camino crítico» para resaltar la secuencia de materias pendientes que más tiempo requiere. Tiene en cuenta las correlatividades y supone que podés cursar materias en paralelo; las materias anuales cuentan como más tiempo que las cuatrimestrales. Si hay un ciclo entre correlativas, no se puede calcular.',
+    tags: ['camino', 'crítico', 'critico', 'tiempo', 'demora', 'secuencia', 'finalizar'],
+    link: '/grafo',
+  },
+  {
+    id: 'correlatividades-camino-optimo',
+    category: 'correlatividades',
+    question: '¿Cómo uso el camino óptimo?',
+    answer:
+      'En el grafo o tablero, activa «Camino óptimo» y elegí una materia pendiente. Se resalta la secuencia de correlativas pendientes que más tiempo requiere para llegar a aprobar esa materia, suponiendo que cursás en paralelo cuando es posible. Las materias ya aprobadas no forman parte del recorrido.',
+    tags: ['camino', 'óptimo', 'optimo', 'recorrido', 'ruta', 'materia', 'aprobar', 'correlativas'],
+    link: '/grafo',
+  },
+  {
     id: 'progreso-1',
     category: 'progreso',
     question: '¿Cómo guardo mi progreso académico?',
     answer:
-      'En "Mi progreso" podés marcar materias como Pendiente, Cursando, Regular o Aprobada, con nota y fecha. Los cambios se guardan al instante.',
+      'En "Mi progreso" podés marcar materias como Pendiente, Cursando, Regularizada o Aprobada e ingresar la nota. Después, presioná "Guardar cambios" para registrar las modificaciones.',
     tags: ['progreso', 'estado', 'nota'],
     link: '/progreso',
   },
@@ -65,7 +87,7 @@ export const FAQS: Faq[] = [
     category: 'progreso',
     question: '¿Puedo importar mi historial académico?',
     answer:
-      'Sí. Usá "Importar historial" para subir tu PDF de notas. Gradify extrae las materias y te las sugiere para confirmar.',
+      'Sí. En "Mi progreso", agregá el plan a tu cuenta y subí el PDF en "Importar historia académica". Revisá las materias aprobadas que se reconocieron y presioná "Guardar cambios" para registrarlas.',
     tags: ['historial', 'notas', 'importar'],
   },
   {
@@ -75,14 +97,15 @@ export const FAQS: Faq[] = [
     answer:
       'Solo un ADMIN puede eliminar carreras o universidades desde el catálogo. No se puede borrar una universidad que tenga institutos o carreras asociadas (se muestra un error 409).',
     tags: ['baja', 'eliminar', 'admin', '409'],
+    roles: ['ADMIN'],
     link: '/admin',
   },
   {
     id: 'bajas-2',
     category: 'bajas',
-    question: '¿Qué pasa con mi progreso si doy de baja un plan?',
+    question: '¿Qué pasa con mi progreso si quito un plan de Mi progreso?',
     answer:
-      'Dar de baja un plan lo archiva, pero conserva tu progreso. Si te volvés a inscribir, el progreso se reactiva.',
+      'Si ya registraste progreso, se conserva al quitar el plan. Si lo agregás de nuevo a tu cuenta, se recupera ese avance. Si todavía no tenías progreso registrado, se elimina la inscripción al plan.',
     tags: ['baja', 'plan', 'archivar'],
     link: '/progreso',
   },
@@ -93,6 +116,7 @@ export const FAQS: Faq[] = [
     answer:
       'Solo usuarios con rol ADMIN. Desde el panel de administración podés crear, editar y archivar universidades, institutos y carreras.',
     tags: ['admin', 'crear', 'carreras', 'institutos'],
+    roles: ['ADMIN'],
     link: '/admin',
   },
   {
@@ -102,6 +126,7 @@ export const FAQS: Faq[] = [
     answer:
       'Sí. En "Editar plan" podés editar el nombre visible de las materias del plan y guardar los cambios en lote.',
     tags: ['editar', 'materia', 'nombre'],
+    roles: ['ADMIN'],
     link: '/admin',
   },
   {

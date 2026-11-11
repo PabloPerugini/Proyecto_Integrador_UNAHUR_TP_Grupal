@@ -9,6 +9,7 @@ import MessageBanner from '../components/MessageBanner';
 import PdfDropzone from '../components/PdfDropzone';
 import { IconCheck, IconCoins } from '../components/icons';
 import { instituteColor, instituteGradientTec } from '../utils/instituteColors';
+import { matchHistorySubject } from '../utils/progressHistoryMatch';
 
 // La tabla solo permite elegir estados registrables; DISPONIBLE/BLOQUEADA son
 // estados derivados que calcula el plan (no se guardan).
@@ -22,9 +23,6 @@ interface HistoryResponse { subjects: HistorySubject[]; detectedCount?: number }
 const fmt = new Intl.NumberFormat('es-AR');
 function getId(value: string | { _id: string } | null | undefined): string | null {
   return !value ? null : typeof value === 'string' ? value : value._id;
-}
-function normalize(value: string): string {
-  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
 }
 export default function MyProgress() {
   const { careerId: selectedFromContext, setCareerId } = useCareerSelection(); // ahora representa StudyPlan
@@ -155,10 +153,8 @@ export default function MyProgress() {
       let matched = 0;
       const changes: Record<string, Draft> = { ...draft };
       for (const row of approved) {
-        const byCode = row.code?.trim() && subjects.filter(s => (s.code ?? '').trim().toLowerCase() === row.code!.trim().toLowerCase());
-        const candidates = byCode && byCode.length ? byCode : subjects.filter(s => normalize(subjectName(s)) === normalize(row.name ?? ''));
-        if (candidates.length === 1) {
-          const item = candidates[0];
+        const item = matchHistorySubject(row, subjects, subjectName);
+        if (item) {
           changes[item._id] = { status: 'APROBADA', grade: typeof row.nota === 'number' ? String(row.nota) : changes[item._id]?.grade ?? '' };
           matched++;
         }
