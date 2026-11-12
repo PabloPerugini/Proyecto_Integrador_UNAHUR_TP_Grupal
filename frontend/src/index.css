@@ -1211,7 +1211,7 @@ a {
 }
 .subject-editor__meta {
   color: var(--gradify-text-muted);
-  font-size: 0.8rem;
+  font-size: 0.9rem;
   margin-bottom: 16px;
   overflow-wrap: anywhere;
 }
@@ -1222,7 +1222,7 @@ a {
 }
 .subject-editor__fields .form-label {
   color: var(--gradify-text-muted);
-  font-size: 0.8rem;
+  font-size: 0.9rem;
   font-weight: 600;
   margin-bottom: 6px;
 }
@@ -2477,24 +2477,25 @@ a {
 .progress-subject-table .form-select { min-width: 150px; }
 .progress-subject-table .form-control { min-width: 82px; }
 .progress-year-row > th { padding: 5px 8px; border: 0; border-radius: 7px; background: rgba(var(--gradify-brand-rgb), .09); }
-.progress-year-toggle { width: 100%; display: flex; align-items: center; gap: 9px; padding: 4px 3px; border: 0; background: transparent; color: var(--gradify-text); font: inherit; font-size: .82rem; font-weight: 700; text-align: left; cursor: pointer; }
+.progress-year-toggle { width: 100%; display: flex; align-items: center; gap: 9px; padding: 4px 3px; border: 0; background: transparent; color: var(--gradify-text); font: inherit; font-size: .9rem; font-weight: 700; text-align: left; cursor: pointer; }
 .progress-year-toggle__chevron { width: 15px; height: 15px; flex: 0 0 auto; margin-left: auto; color: var(--gradify-brand); transition: transform .18s ease; }
 .progress-year-toggle__chevron--expanded { transform: rotate(180deg); }
-.progress-year-count { color: var(--gradify-text-muted); font-size: .72rem; font-weight: 500; }
+.progress-year-count { color: var(--gradify-text-muted); font-size: .8rem; font-weight: 500; }
 .progress-year-toggle:focus-visible { outline: 2px solid var(--gradify-brand); outline-offset: 2px; border-radius: 5px; }
 .progress-year-section { margin-bottom: 12px; }
 .progress-year-list { display: grid; gap: 12px; }
 .progress-year-panel { position: relative; overflow: visible; border: 1px solid var(--gradify-border); border-radius: 9px; background: var(--gradify-surface); }
 .progress-year-panel:has(.progress-status-select:focus-within) { z-index: 2; }
 .progress-year-panel + .progress-year-panel { margin-top: 12px; }
-.progress-year-panel__toggle { min-height: 38px; padding: 6px 13px; background: rgba(var(--gradify-brand-rgb), .09); display: grid; grid-template-columns: minmax(0, 1fr) 170px 64px 15px; gap: 20px; }
+.progress-year-panel__toggle { min-height: 38px; padding: 6px 13px; background: rgba(var(--gradify-brand-rgb), .09); display: grid; grid-template-columns: minmax(0, 1fr) 170px 120px 15px; gap: 14px; }
 .progress-year-heading { min-width: 0; display: flex; align-items: baseline; gap: 9px; }
-.progress-year-column-label { color: var(--gradify-text-muted); font-size: .7rem; font-weight: 600; }
+.progress-year-heading > span:first-child { font-size: 1.08rem; }
+.progress-year-column-label { color: var(--gradify-text-muted); font-size: .95rem; font-weight: 600; white-space: nowrap; }
 .progress-year-panel__toggle .progress-year-column-label:nth-of-type(3) { line-height: 1.1; }
-.progress-year-panel__toggle .progress-year-count { font-size: .68rem; }
+.progress-year-panel__toggle .progress-year-count { font-size: .86rem; }
 .progress-year-panel__toggle .progress-year-toggle__chevron { margin-left: 0; }
 .progress-year-panel__subjects { padding: 0; }
-.progress-subject-line { min-height: 42px; display: grid; grid-template-columns: minmax(0, 1fr) 170px 64px 15px; align-items: center; gap: 20px; padding: 5px 13px; border-bottom: 1px solid var(--gradify-border); }
+.progress-subject-line { min-height: 42px; display: grid; grid-template-columns: minmax(0, 1fr) 170px 120px 15px; align-items: center; gap: 14px; padding: 5px 13px; border-bottom: 1px solid var(--gradify-border); }
 .progress-subject-line:nth-child(even) { background: var(--gradify-surface-2); }
 .progress-subject-line > :last-child { grid-column: 3; }
 .progress-subject-line:last-child { border-bottom: 0; }
@@ -2523,7 +2524,7 @@ a {
 .progress-status-select__option--selected { background: rgba(var(--gradify-brand-rgb), .1); color: var(--gradify-brand); }
 .progress-status-select__trigger:focus-visible,
 .progress-status-select__option:focus-visible { outline: 2px solid var(--gradify-brand); outline-offset: 1px; }
-.progress-subject-line .form-control { width: 64px; min-width: 0; padding-inline: 6px; font-size: .78rem; }
+.progress-subject-line .form-control { width: 90px; min-width: 0; padding-inline: 8px; font-size: .88rem; }
 .progress-subject-line .form-control::placeholder { color: var(--gradify-text-muted); opacity: .85; }
 .progress-year-card-toggle { min-height: 34px; margin-bottom: 6px; padding: 6px 9px; border-radius: 7px; background: rgba(var(--gradify-brand-rgb), .09); }
 [data-bs-theme="dark"] .progress-year-row > th,
@@ -2541,8 +2542,8 @@ a {
   .subject-editor__actions .btn { flex: 1; }
 }
 @media (max-width: 1050px) {
-  .progress-year-panel__toggle { gap: 12px; grid-template-columns: minmax(0, 1fr) 150px 64px 15px; }
-  .progress-subject-line { gap: 12px; grid-template-columns: minmax(0, 1fr) 150px 64px 15px; }
+  .progress-year-panel__toggle { gap: 10px; grid-template-columns: minmax(0, 1fr) 150px 120px 15px; }
+  .progress-subject-line { gap: 10px; grid-template-columns: minmax(0, 1fr) 150px 120px 15px; }
 }
 @media (max-width: 575.98px) {
   .progress-page .page-head { margin-bottom: 16px; }

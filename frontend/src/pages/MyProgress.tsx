@@ -295,7 +295,7 @@ export default function MyProgress() {
 
       </div>
       {enrollment && <div className="card mb-4 progress-import"><div className="card-body">
-        <PdfDropzone compact onFiles={onHistory} multiple={false} text="Importar historia académica" hint="Importá tu historia académica para cargar materias automáticamente." />
+        <PdfDropzone onFiles={onHistory} multiple={false} text="Arrastrá tu historia académica acá" hint="o hacé clic para elegir el PDF de tu historia académica" />
         {historyPreview && <Alert variant="info" className="mt-3">{historyPreview.matched} aprobadas reconocidas; {historyPreview.missing} sin coincidencia. Los cambios aún no se guardaron.</Alert>}
       </div></div>}
       <div className="card mb-4 subject-editor">
