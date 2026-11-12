@@ -1,8 +1,6 @@
 import { NavLink, useMatch } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { useTheme } from '../hooks/useTheme';
 import { useCareerSelection } from '../context/CareerContext';
-import ThemeToggle from './ThemeToggle';
 import SidebarBase from './SidebarBase';
 import type { NavItem } from './SidebarBase';
 import {
@@ -20,7 +18,6 @@ import {
 // sección Administración solo si rol==='ADMIN'.
 // Los guards de ruta (ProtectedRoute/AdminRoute) siguen separados.
 export default function AppSidebar() {
-  const { theme } = useTheme();
   const { user } = useAuth();
   const isUsersRoute = useMatch('/admin/users/*') !== null;
   const { careerId } = useCareerSelection();
@@ -79,13 +76,6 @@ export default function AppSidebar() {
           {renderAdminLinks()}
         </>
       )}
-
-      <div className="sidebar__link sidebar__theme" style={{ cursor: 'default' }}>
-        <span className="sidebar__theme-content">
-          <ThemeToggle />
-          <span className="sidebar__label sidebar__link-label">Modo {theme === 'dark' ? 'oscuro' : 'claro'}</span>
-        </span>
-      </div>
 
     </SidebarBase>
   );

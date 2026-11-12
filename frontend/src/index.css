@@ -2126,7 +2126,9 @@ a {
   align-items: center;
   padding: 14px 30px;
   pointer-events: none;
+  gap: 12px;
 }
+.app-topbar > .theme-toggle { pointer-events: auto; }
 .account-menu { position: relative; pointer-events: auto; }
 .account-menu__trigger {
   display: inline-flex;
