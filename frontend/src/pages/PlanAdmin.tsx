@@ -1,8 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Badge, Button, Card, Form, Spinner, Table } from 'react-bootstrap';
 import { useNavigate, useParams } from 'react-router-dom';
-import { studyPlansApi, orderedSubjects, subjectName, careerName, prerequisiteId, type StudyPlan, type PlanSubject, type PlanPrerequisite, type CorrParseResult } from '../api/studyPlans';
+import { studyPlansApi, orderedSubjects, subjectName, prerequisiteId, type StudyPlan, type PlanSubject, type PlanPrerequisite, type CorrParseResult } from '../api/studyPlans';
 import { useFlashMessage } from '../hooks/useFlashMessage';
+import { useCareerSelection } from '../context/CareerContext';
 import PageHeader from '../components/PageHeader';
 import MessageBanner from '../components/MessageBanner';
 
@@ -23,9 +24,10 @@ function validNum(value: string, label: string, min: number, max: number): numbe
 export default function PlanAdmin() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { careerId, setCareerId } = useCareerSelection();
   const { msg, flash, flashFromError, clear } = useFlashMessage();
   const [plans, setPlans] = useState<StudyPlan[]>([]);
-  const [selected, setSelected] = useState(id ?? '');
+  const selected = id ?? careerId ?? '';
   const [subjects, setSubjects] = useState<PlanSubject[]>([]);
   const [draft, setDraft] = useState<Record<string, SubjectForm>>({});
   const [name, setName] = useState('');
@@ -58,16 +60,17 @@ export default function PlanAdmin() {
   const loadPlans = async () => {
     const list = await studyPlansApi.getAll();
     setPlans(list);
-    setSelected(current => list.some(p => p._id === current) ? current : list[0]?._id ?? '');
+    const next = list.some(p => p._id === selected) ? selected : list[0]?._id ?? '';
+    if (next) setCareerId(next);
   };
   useEffect(() => { let active = true;
-    studyPlansApi.getAll().then(list => { if (!active) return; setPlans(list); setSelected(cur => list.some(p => p._id === cur) ? cur : list[0]?._id ?? ''); })
+    studyPlansApi.getAll().then(list => { if (!active) return; setPlans(list); const next = list.some(p => p._id === id) ? id! : list.some(p => p._id === careerId) ? careerId! : list[0]?._id ?? ''; if (next) setCareerId(next); if (!id && next) navigate(`/admin/${next}`, { replace: true }); })
       .catch(e => { if (active) setError(e instanceof Error ? e.message : 'Error cargando planes'); }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, []);
   useEffect(() => {
-    if (id) setSelected(id);
-  }, [id]);
+    if (id) setCareerId(id);
+  }, [id, setCareerId]);
   useEffect(() => {
     if (!selected) { setSubjects([]); return; }
     let active = true;
@@ -82,7 +85,6 @@ export default function PlanAdmin() {
   }, [selected]);
   useEffect(() => { setName(plan?.name ?? ''); setStatus(plan?.status ?? 'draft'); setIntermediateTitle(plan?.intermediateTitle ?? ''); setCreditsIntermediate(plan?.creditsIntermediate ? String(plan.creditsIntermediate) : ''); }, [plan?._id, plan?.name, plan?.status, plan?.intermediateTitle, plan?.creditsIntermediate]);
 
-  const selectPlan = (next: string) => { setSelected(next); navigate(`/admin/${next}`); };
   const modify = (subjectId: string, change: Partial<SubjectForm>) => setDraft(current => ({ ...current, [subjectId]: { ...current[subjectId], ...change } }));
   const prerequisiteSignature = (prerequisites: PlanPrerequisite[]) => prerequisites
     .map(p => `${prerequisiteId(p) ?? ''}:${p.requiredStatus}`)
@@ -293,10 +295,6 @@ export default function PlanAdmin() {
   return <div>
     <PageHeader title="Administrar planes de estudio" sub="Editá la información, las materias y las correlatividades del plan seleccionado." />
     <MessageBanner message={msg} onClose={clear} />
-    <Card className="mb-4"><Card.Body>
-      <Form.Label>Plan de estudios</Form.Label>
-      <Form.Select value={selected} onChange={e => selectPlan(e.target.value)}><option value="">Seleccioná un plan</option>{plans.map(p => <option key={p._id} value={p._id}>{p.name} — {careerName(p)}</option>)}</Form.Select>
-    </Card.Body></Card>
     {error && <div className="alert alert-danger">{error}</div>}
     {loading && <div className="text-center py-4"><Spinner animation="border" /> Cargando materias…</div>}
     {!loading && !error && !plan && <p className="text-muted">Todavía no hay planes registrados. Importá uno desde Cargar plan.</p>}

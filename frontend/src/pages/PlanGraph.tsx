@@ -16,10 +16,10 @@ import {
   type CoordinateExtent
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Alert, Badge, Button, Card, Form } from 'react-bootstrap';
+import { Alert, Badge, Button, Card } from 'react-bootstrap';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getPlanGraph } from '../api/planGraphAdapter';
-import { studyPlansApi, careerName, type StudyPlan } from '../api/studyPlans';
+import { studyPlansApi, type StudyPlan } from '../api/studyPlans';
 import type { GraphData, IntermediateProgress, SubjectStatus } from '../types';
 import { useCareerSelection } from '../context/CareerContext';
 import { useTheme } from '../hooks/useTheme';
@@ -563,15 +563,10 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
     } else if (enrollments.length > 0 && plans.some(p => p._id === enrollments[0])) {
       navigate(`/${view}/${enrollments[0]}`, { replace: true });
     } else {
-      navigate('/', { replace: true });
+      setSelectedCareerId(plans[0]._id);
+      navigate(`/${view}/${plans[0]._id}`, { replace: true });
     }
   }, [id, plans, selectedCareerId, enrollments, navigate, view]);
-
-  const changeCareer = (newId: string) => {
-    if (!newId) return;
-    setSelectedCareerId(newId);
-    navigate(`/${view}/${newId}`);
-  };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -1029,7 +1024,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
         style={{
           '--plan-highlight-color': HIGHLIGHT_COLOR,
           '--plan-in-progress-color': IN_PROGRESS_COLOR,
-          height: 'calc(100dvh - 118px)',
+          height: view === 'grafo' ? 'calc(100dvh - 118px)' : 'auto',
           display: 'flex',
           flexDirection: 'column',
           width: '100%',
@@ -1040,36 +1035,12 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
         <header className="plan-map-header">
           <div className="plan-map-heading">
             <h1 className="plan-map-heading__title">
-              {selectedPlan?.name ?? 'Plan de estudios'}
+              {view === 'grafo' ? 'Mapa de correlatividades' : 'Tablero de materias'}
             </h1>
-            <p className="plan-map-heading__subtitle">
-              {selectedPlan ? `${careerName(selectedPlan)} · ` : ''}
-              {view === 'grafo' ? 'mapa de correlatividades' : 'tablero de avance'}
-            </p>
-            {displayGraph && (
-              <p className="small text-secondary mt-1 mb-0">
-                <strong>{displayGraph.stats.total}</strong> {displayGraph.stats.total === 1 ? 'materia' : 'materias'}
-              </p>
-            )}
           </div>
         </header>
 
         <div className="plan-map-toolbar">
-          {plans.length > 0 && (
-            <Form.Select
-              size="sm"
-              className="plan-map-header__select"
-              value={id ?? ''}
-              onChange={(e) => changeCareer(e.target.value)}
-              aria-label="Cambiar plan de estudios"
-            >
-              {plans
-                .filter((p) => p._id === id || enrollments.includes(p._id))
-                .map((p) => (
-                  <option key={p._id} value={p._id}>{p.name} — {careerName(p)}</option>
-                ))}
-            </Form.Select>
-          )}
           {selectedPlan?.intermediateTitle && (
             <div className="d-flex gap-1" role="tablist" aria-label="Vista del plan">
               <Button
@@ -1222,7 +1193,12 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
             </div>
           )}
 
-          <div style={{ flex: 1, minHeight: 400, position: 'relative', height: '100%' }}>
+          <div style={{
+            flex: view === 'grafo' ? 1 : '0 0 auto',
+            minHeight: view === 'grafo' ? 400 : 0,
+            position: 'relative',
+            height: view === 'grafo' ? '100%' : 'auto',
+          }}>
             {view === 'grafo' && graph && !tecEmpty && (
               <ReactFlow
                 nodes={flowNodes}
@@ -1269,7 +1245,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
             )}
 
           {view === 'tablero' && graph && !tecEmpty && (
-            <div style={{ height: '100%', overflow: 'auto', padding: '4px 12px 20px' }}>
+            <div style={{ height: 'auto', overflow: 'visible', padding: '4px 12px 20px' }}>
               {boardGroups.map((g) => (
                 <div
                   key={g.year}

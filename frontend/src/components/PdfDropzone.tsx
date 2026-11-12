@@ -7,6 +7,7 @@ interface PdfDropzoneProps {
   text?: string;
   hint?: string;
   multiple?: boolean;
+  compact?: boolean;
 }
 
 interface PickedFile {
@@ -22,7 +23,7 @@ function formatSize(bytes: number): string {
 }
 
 // Solo PDF (el backend rechaza el resto con firma %PDF-): sin rama de imágenes.
-export default function PdfDropzone({ onFiles, disabled, text, hint, multiple = false }: PdfDropzoneProps) {
+export default function PdfDropzone({ onFiles, disabled, text, hint, multiple = false, compact = false }: PdfDropzoneProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [drag, setDrag] = useState(false);
   const [picked, setPicked] = useState<PickedFile[]>([]);
@@ -53,10 +54,10 @@ export default function PdfDropzone({ onFiles, disabled, text, hint, multiple = 
 
   return (
     <div
-      className={`dropzone${drag ? ' dropzone--drag' : ''}${disabled ? ' dropzone--disabled' : ''}`}
+      className={`dropzone${compact ? ' dropzone--compact' : ''}${drag ? ' dropzone--drag' : ''}${disabled ? ' dropzone--disabled' : ''}`}
       role="button"
       tabIndex={disabled ? -1 : 0}
-      aria-label="Subir PDF del plan de estudios"
+      aria-label={compact ? 'Importar historia académica' : 'Subir PDF del plan de estudios'}
       aria-disabled={disabled || undefined}
       onClick={() => !disabled && inputRef.current?.click()}
       onKeyDown={(e) => {
@@ -84,15 +85,22 @@ export default function PdfDropzone({ onFiles, disabled, text, hint, multiple = 
 
       <span className="dropzone__icon" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          {compact ? <><path d="M6 2.8h8l5 5V21H6a2 2 0 0 1-2-2V4.8a2 2 0 0 1 2-2Z"/><path d="M14 3v5h5M7.3 15.2h1.2c1.5 0 1.5 2.2 0 2.2H7.3v-4.1h1.2M12 13.3v4.1h1.1c2.2 0 2.2-4.1 0-4.1H12Zm4.1 0h2.4m-2.4 0v4.1m0-2h1.8"/></> : <>
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
           <path d="M7 8l5-5 5 5" />
           <path d="M12 3v12" />
+          </>}
         </svg>
       </span>
-      <p className="dropzone__text">{text ?? 'Arrastrá el PDF del plan de estudios acá'}</p>
-      <p className="dropzone__hint">
-        {hint ?? (multiple ? 'o hacé clic para elegir tus archivos · se admiten varios PDF' : 'o hacé clic para elegir el PDF')}
-      </p>
+      {compact ? <>
+        <span className="dropzone__copy"><span className="dropzone__text">{text ?? 'Importar historia académica'}</span><span className="dropzone__hint">{hint ?? 'Importá tu historia académica para cargar materias automáticamente.'}</span></span>
+        <span className="dropzone__action" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 16V4m0 0L8 8m4-4 4 4M5 14v5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>Subir PDF</span>
+      </> : <>
+        <p className="dropzone__text">{text ?? 'Arrastrá el PDF del plan de estudios acá'}</p>
+        <p className="dropzone__hint">
+          {hint ?? (multiple ? 'o hacé clic para elegir tus archivos · se admiten varios PDF' : 'o hacé clic para elegir el PDF')}
+        </p>
+      </>}
 
       {picked.length > 0 && (
         <ul className="dropzone__files">
