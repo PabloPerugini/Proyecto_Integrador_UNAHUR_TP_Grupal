@@ -36,8 +36,6 @@ interface PreviewSubject {
 
   hours?: Record<string, number | null>;
 
-  credits?: number;
-
   kind?: string;
   generic?: string | null;
 
@@ -55,8 +53,6 @@ interface PreviewResponse {
   detectedCount: number;
 
   intermediateTitle?: string | null;
-  creditsFinal?: number;
-  creditsIntermediate?: number;
 
   intermediateClassified?: boolean;
 
@@ -413,12 +409,6 @@ export default function UploadPlan() {
 
             subjects: preview.subjects,
 
-            creditsFinal:
-              preview.result.creditsFinal ?? 0,
-
-            creditsIntermediate:
-              preview.result.creditsIntermediate ?? 0,
-
             intermediateTitle:
               preview.result.intermediateTitle ?? null,
           }),
@@ -570,8 +560,8 @@ export default function UploadPlan() {
                     <strong>Atención:</strong> el plan declara
                     el título intermedio «
                     {preview.result.intermediateTitle}» pero
-                    ninguna materia quedó marcada como parte de
-                    la tecnicatura. Después de guardar vas a
+                    ninguna materia quedó marcada como parte del
+                    título intermedio. Después de guardar vas a
                     poder marcarlas en{' '}
                     <em>Administrar planes</em> con el marcado
                     en lote.
@@ -602,8 +592,8 @@ export default function UploadPlan() {
                       <th>Materia</th>
                       <th>Año</th>
                       <th>Cuatrimestre</th>
-                      <th title="Pertenece al título intermedio (tecnicatura)">
-                        Tec
+                      <th title="Pertenece al título intermedio">
+                        Título intermedio
                       </th>
                       <th>Correlatividades</th>
                     </tr>
@@ -714,7 +704,7 @@ export default function UploadPlan() {
 
                           <td className="text-center">
                             <Form.Check
-                              title="Pertenece al título intermedio (tecnicatura)"
+                              title="Pertenece al título intermedio"
                               checked={Boolean(
                                 subject.intermediate
                               )}

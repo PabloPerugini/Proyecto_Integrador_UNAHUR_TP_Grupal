@@ -1,5 +1,5 @@
 // Construye el grafo de correlatividades para el frontend (React Flow).
-// nodes: {id, code, name, year, cuatrimestre, duration, credits, status, kind, position}
+// nodes: {id, code, name, year, cuatrimestre, duration, status, kind, position}
 // edges: {id, source, target} con las correlatividades resueltas a códigos conocidos.
 
 function buildGraph({ subjects, progress = [], title = "" }) {
@@ -24,7 +24,6 @@ function buildGraph({ subjects, progress = [], title = "" }) {
       year: s.year,
       cuatrimestre: s.cuatrimestre,
       duration: s.duration,
-      credits: s.credits,
       kind: s.kind,
       optional: s.optional,
       intermediate: !!s.intermediate,
@@ -66,8 +65,7 @@ function buildGraph({ subjects, progress = [], title = "" }) {
     pendientes: nodes.length - approved.size,
     enCurso: nodes.filter((n) => n.status === "Cursando").length,
     regulares: nodes.filter((n) => n.status === "Regular").length,
-    creditsTotal: subjects.reduce((a, s) => a + (s.credits || 0), 0),
-    creditsAprobados: subjects.reduce((a, s) => a + (approved.has(s.code) ? s.credits || 0 : 0), 0),
+    libres: nodes.filter((n) => n.status === "Libre").length,
   };
 
   return { title, nodes, edges, availableNow, criticalPath, hasCycle, topologicalOrder, stats };

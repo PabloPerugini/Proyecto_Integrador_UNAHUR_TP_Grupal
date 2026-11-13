@@ -1,45 +1,71 @@
-// Gradientes con los colores oficiales de unahur.edu.ar por instituto
-// (extraídos de las páginas de cada instituto en 2026).
-// Biotecnología #219ecf · Tecnología e Ingeniería #f08100
-// Salud Comunitaria #00a79f · Educación #ea4f51.
+// Identidad UNAHUR por instituto. Los colores viven en los tokens de tema;
+// este módulo solo mapea nombres y resuelve superficies con contraste.
+import { contrastText, readToken, toHex } from './color.ts';
 
-export const INSTITUTE_COLORS: Record<string, string> = {
-  'Instituto de Biotecnología': '#219ecf',
-  'Instituto de Tecnología e Ingeniería': '#f08100',
-  'Instituto de Salud Comunitaria': '#00a79f',
-  'Instituto de Educación': '#ea4f51',
+export type InstituteKey = 'bio' | 'tech' | 'health' | 'education';
+
+export interface InstituteSurface {
+  background: string;
+  color: string;
+}
+
+// El verde de identidad institucional. No es el verde de acción.
+export const DEFAULT_INSTITUTE_COLOR = 'var(--unahur-green)';
+
+const INSTITUTE_KEYS: Record<string, InstituteKey> = {
+  'Instituto de Biotecnología': 'bio',
+  'Instituto de Tecnología e Ingeniería': 'tech',
+  'Instituto de Salud Comunitaria': 'health',
+  'Instituto de Educación': 'education',
 };
 
-export const DEFAULT_INSTITUTE_COLOR = '#238a42';
+export function instituteKey(unitName?: string | null): InstituteKey | null {
+  if (!unitName) return null;
+  return INSTITUTE_KEYS[unitName] ?? null;
+}
 
 // El color guardado en la DB (unidad académica) tiene prioridad sobre
-// el hex oficial por nombre.
-export function instituteColor(
+// el token oficial por nombre.
+export function instituteToken(
   unitName?: string | null,
   dbColor?: string | null,
 ): string {
   if (dbColor) return dbColor;
-  if (unitName && INSTITUTE_COLORS[unitName]) {
-    return INSTITUTE_COLORS[unitName];
+  const key = instituteKey(unitName);
+  return key ? `var(--unahur-${key})` : DEFAULT_INSTITUTE_COLOR;
+}
+
+export function instituteSurface(
+  unitName?: string | null,
+  dbColor?: string | null,
+  variant: 'cover' | 'soft' = 'cover',
+): InstituteSurface {
+  if (dbColor) {
+    return { background: dbColor, color: contrastText(dbColor) };
   }
-  return DEFAULT_INSTITUTE_COLOR;
+
+  const key = instituteKey(unitName);
+  if (key) {
+    const suffix = variant === 'soft' ? '-soft' : '';
+    return {
+      background: `var(--gradient-institute-${key}${suffix})`,
+      color: 'var(--color-on-institute)',
+    };
+  }
+
+  return variant === 'soft'
+    ? { background: 'var(--color-brand-soft)', color: 'var(--color-brand)' }
+    : { background: 'var(--gradient-brand)', color: 'var(--color-on-brand)' };
 }
 
-export function instituteGradient(base: string): string {
-  return (
-    `linear-gradient(135deg, ` +
-    `color-mix(in srgb, ${base} 72%, #ffffff) 0%, ` +
-    `${base} 46%, ` +
-    `color-mix(in srgb, ${base} 58%, #0b0f14) 100%)`
-  );
-}
-
-// Tono diferenciado para la tecnicatura (misma identidad, más claro).
-export function instituteGradientTec(base: string): string {
-  return (
-    `linear-gradient(135deg, ` +
-    `color-mix(in srgb, ${base} 38%, #ffffff) 0%, ` +
-    `color-mix(in srgb, ${base} 62%, #ffffff) 55%, ` +
-    `color-mix(in srgb, ${base} 78%, #0b0f14) 100%)`
-  );
+// Hex para inputs nativos (type="color"), que no aceptan var().
+// Fuera del navegador no hay tokens y devuelve ''.
+export function instituteHex(
+  unitName?: string | null,
+  dbColor?: string | null,
+): string {
+  if (dbColor) return dbColor;
+  const key = instituteKey(unitName);
+  const token = key ? `--unahur-${key}` : '--unahur-green';
+  return toHex(readToken(token)) ?? '';
 }

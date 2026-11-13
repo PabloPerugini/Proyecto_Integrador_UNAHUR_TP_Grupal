@@ -11,9 +11,9 @@
 | Institución           | Universidad Nacional de Hurlingham (UNAHUR)                          |
 | Unidad Académica      | Facultad de Informática — Proyecto Integrador Programación           |
 | Tipo de documento     | Matriz de trazabilidad — cruce BRD / FRD ↔ verificación existente    |
-| Versión               | 1.8                                                                  |
-| Fecha                 | 6 de noviembre de 2026                                              |
-| Documentos de origen  | `BRD.md` v2.7 · `FRD.md` v2.9 · `Test-Plan.md` v2.9 · `Test-Cases.md` v2.8 |
+| Versión               | 1.9                                                                  |
+| Fecha                 | 12 de noviembre de 2026                                              |
+| Documentos de origen  | `BRD.md` v2.8 · `FRD.md` v3.0 · `Test-Plan.md` v3.0 · `Test-Cases.md` v2.9 |
 | Sponsor Operación     | Secretaría Académica / Dirección de Carrera                          |
 | Sponsor Organización  | UNAHUR                                                               |
 | Integrantes           | Perugini, Pablo; Acuña, Marcos; Masgo Sandoval, Joaquín; Renaud, Román; Remonda, Eliel; Cotera, Dylan |
@@ -89,7 +89,7 @@ existe** en el repositorio, respondiendo tres preguntas:
 | ID | Regla | Verificación que lo cubre | Herramienta | Estado |
 | -- | ----- | ------------------------- | ----------- | ------ |
 | RN01 | Estado inicial: materia **bloqueada** sin requisitos previos | `test:salud` verifica la regla de control *"aristas > 0 y disponibles < total"* (Test-Cases:109); Caso 11 (`availableNow` en `GET /:id/graph`); Caso 21 (colores en la UI) | `test:salud` ✅ indirecto · Casos 11 y 21 🟡 | ⚠️ |
-| RN02 | Habilitación automática de materias sucesivas al marcar *Aprobada/Regular* | `test:salud` recalcula disponibles desde el historial; Caso 10 (desbloqueo + créditos); Caso 21 (hijos desbloqueados en pantalla) | `test:salud` ⚠️ · Casos 10 y 21 🟡 | ⚠️ |
+| RN02 | Habilitación automática de materias sucesivas al marcar *Aprobada/Regular* | `test:salud` recalcula disponibles desde el historial; Caso 10 (desbloqueo); Caso 21 (hijos desbloqueados en pantalla) | `test:salud` ⚠️ · Casos 10 y 21 🟡 | ⚠️ |
 | RN03 | Persistencia del cambio asociado a la inscripción del usuario | Caso 9 (`401` sin header) y Caso 10 (guardado); **ninguna verificación automatizada** de persistencia | Postman | 🟡 |
 | RN04 | Desmarcado: dependientes sin sustento pierden disponibilidad (el estado guardado se conserva) | `tests/rn04.test.js` (3 tests: habilitación, pérdida de sustento, stats intactos) + `graph.service.js` (aprobación efectiva transitiva) | `npm test` ✅ | ✅ |
 | RN05 | Bloqueo del avance por correlativas: no se puede cursar/regularizar/aprobar sin correlativas cumplidas | `subjectProgressService.js` valida cada `prerequisite` (`400` con el detalle); pre-chequeo en Mi progreso; Caso 27 | API + front | ✅ (backend) · 🟡 (caso UI) |
@@ -121,9 +121,9 @@ existe** en el repositorio, respondiendo tres preguntas:
 ---
 
 | US-04 | Explorar el catálogo por instituto y carrera | `withCounts` + `?unit` (estructura) + Home (Caso 24); búsqueda de carreras | Postman / navegador | 🟡 |
-| US-05 | Tecnicatura intermedia con pestañas Lic/Tec y aviso si está vacía | `GET /study-plans/:id/intermediate` (`closed`/`externalRequires`); **E2E v2.4**: sub-plan devuelve las materias marcadas y `closed`; avisos en Cargar plan/Editar plan cuando hay título sin materias (BUG-016); Caso 26 | E2E ✅ API · Caso 26 🟡 | ⚠️ |
-| US-06 | Admin marca tecnicatura y articulación | **E2E v2.4**: `PATCH /study-plans/:id/subjects/intermediate` por año/todo (`matched`/`modified`), `400` con valor no booleano, `403/404` para ajenos; `PATCH /careers/:id` valida `continuesIn` (autorreferencia 400); UI `AdminCatalog`; Caso 25 | E2E ✅ API · Caso 25 🟡 | ⚠️ |
-| US-07 | Promedio con notas y exportar CSV | Cálculo en `MyProgress` (`average`, `exportCsv`); Caso 28 | navegador | 🟡 |
+| US-05 | Título Intermedio con pestañas Licenciatura/Título Intermedio y aviso si está vacío | `GET /study-plans/:id/intermediate` (`closed`/`externalRequires`); **E2E v2.4**: sub-plan devuelve las materias marcadas y `closed`; avisos en Cargar plan/Editar plan cuando hay título sin materias (BUG-016); Caso 26 | E2E ✅ API · Caso 26 🟡 | ⚠️ |
+| US-06 | Admin marca el Título Intermedio y articulación | **E2E v2.4**: `PATCH /study-plans/:id/subjects/intermediate` por año/todo (`matched`/`modified`), `400` con valor no booleano, `403/404` para ajenos; `PATCH /careers/:id` valida `continuesIn` (autorreferencia 400); UI `AdminCatalog`; Caso 25 | E2E ✅ API · Caso 25 🟡 | ⚠️ |
+| US-07 | Promedio con notas | Cálculo en `MyProgress` (`average`); Caso 28 | navegador | 🟡 |
 | US-08 | Admin gestiona usuarios y carreras archivadas | `GET/PATCH/DELETE /users` (ADMIN) + `includeArchived`; Catálogo → Carreras “Ver archivadas”; Caso 30; unit `seguridad` (roles) | `npm test` ✅ parcial · Caso 30 🟡 | ⚠️ |
 | US-09 | Editar mi cuenta y cerrar sesión | `PATCH /users/:nickName` + `POST /users/logout` (invalida JWT); validaciones reutilizables compartidas con Registro (`userValidation.ts` + Joi); Caso 29; unit `seguridad` (`tokenVersion`) | `npm test` ✅ · Caso 29 🟡 | ⚠️ |
 | US-10 | Identificar el tipo de carrera (licenciatura/tecnicatura/profesorado/ingeniería) | **E2E v2.4**: `POST /careers` con `careerType` (`201` + persistido en `GET /careers`), valor fuera del enum `400`, `careerType: null` lo limpia; chip 🎓 Tecnicatura en el Home (Caso 31) | E2E ✅ API · Caso 31 🟡 | ⚠️ |
@@ -131,6 +131,8 @@ existe** en el repositorio, respondiendo tres preguntas:
 | US-12 | Baja reversible: quitar plan sin perder progreso y reactivar al reinscribirse | `DELETE /user-study-plans/:id` archiva con `SubjectProgress` (`archivedAt`) y sin progreso borra; reinscripción reactiva (`addUserStudyPlan`); UI muestra *Quitar plan* solo en planes inscriptos (E2E de la corriente: pendiente) | Caso 39 | 🟡 |
 | US-13 | Editar materias del plan: nombre visible por plan (`nameOverride`) y guardado en lote | `nameOverride` en modelo/servicio/front (`subjectName` prioriza el override); `saveSubjects` en lote (solo filas modificadas resaltadas, código obligatorio y sin duplicados); Caso 40 | Caso 40 | 🟡 |
 | US-14 | Consultar ayuda FAQ sin depender de IA ni servicios externos | Datos `FAQS`; los chips reemplazan la respuesta activa y `faqSearch` ordena coincidencias, con secundarias plegadas. `npm run test:faq` (6/6); Caso 46: humo manual en navegador con sesión simulada, sin E2E contra backend ni dispositivo físico | Unitario + navegador (parcial) | ⚠️ |
+| US-15 | Registrar actividades ACA y avanzar hacia los requisitos de créditos de ambos títulos | API `/user-study-plans/:id/aca-activities`; cálculo de 4 CRE por categoría para Título Intermedio, 10 por categoría para grado y 75 horas de interacción pedagógica; Caso 48 definido, pendiente de ejecución | Caso 48 | 🟡 |
+| US-16 | Marcar materias como Libre sin invalidar avances dependientes ya registrados | `LIBRE` en progreso; nuevos avances siguen sujetos a correlativas; Caso 47 definido, pendiente de ejecución | Caso 47 | 🟡 |
 
 ## 5. Matriz — Criterios de bondad (FRD §4.2)
 
@@ -143,18 +145,20 @@ existe** en el repositorio, respondiendo tres preguntas:
 | 5 | **ORDEN DE ESTADÍSTICAS** decreciente | Implementado + unitario de orden | ✅ |
 | 6 | **FUSIÓN DE CONDICIONES** (C1+C2 → C5) | Implementada + unitario de fusión C5 | ✅ |
 | 7 | **CORRELATIVIDADES** — matching exacto/compacto/difuso/prefijo con `confidence` | **`test:planes`** (ej. Biotecnología 41/41, Enfermería 39/39) y **`test:salud`** (Test-Cases:107-109); Caso 8 manual 🟡 | ✅ |
-| 8 | **TÍTULO INTERMEDIO** — `creditsIntermediate`, `intermediateTitle`, `subject.intermediate`, banner | `test:planes` valida `hasIntermediate` de la referencia (`carga-masiva.test.js:235`); **marcado en lote** `PATCH /subjects/intermediate` + aviso si está vacío (BUG-016) y **propuesta IA validada** con regresión unitaria (BUG-017) y E2E v2.4 (`intermediateClassified`, `creditsIntermediate`); Caso 3 (respuesta) y Caso 12 (banner) 🟡 | ⚠️ |
+| 8 | **TÍTULO INTERMEDIO** — `intermediateTitle`, `subject.intermediate`, banner de materias aprobadas sin créditos curriculares | `test:planes` valida `hasIntermediate` de la referencia (`carga-masiva.test.js:235`); **marcado en lote** `PATCH /subjects/intermediate` + aviso si está vacío (BUG-016) y **propuesta IA validada** con regresión unitaria (BUG-017); Casos 3 y 12 🟡 | ⚠️ |
 | 9 | **MANEJO DE ERRORES** — JSON en español, `400/404/409/500`, UI sin romperse | Casos 17, 18, 19 (HTTP) y Caso 22 (`ErrorBoundary`) | 🟡 |
 
 ---
 
 | 10 | **CORRELATIVAS BLOQUEANTES (RN05)** — no se avanza sin correlativas cumplidas | `subjectProgressService` (`400` con detalle) + pre-chequeo en Mi progreso; Caso 27 | ✅ backend · 🟡 UI |
-| 11 | **TECNICATURA INTERMEDIA** — sub-plan virtual con pestañas Lic/Tec y aviso si está vacía | `GET /study-plans/:id/intermediate` + Caso 26 | ⚠️ |
+| 11 | **TÍTULO INTERMEDIO** — sub-plan virtual con pestañas Licenciatura/Título Intermedio y aviso si está vacío | `GET /study-plans/:id/intermediate` + Caso 26 | ⚠️ |
 | 12 | **ARTICULACIÓN** — `continuesIn` entre carreras | `PATCH /careers/:id` (valida IDs y autorreferencia) + Caso 25 | 🟡 |
-| 13 | **PROMEDIO Y EXPORTACIÓN CSV** | Cálculo en `MyProgress` + Caso 28 | 🟡 |
+| 13 | **PROMEDIO** | Cálculo en `MyProgress` + Caso 28 | 🟡 |
 | 14 | **TIPO DE CARRERA** — `careerType` con chip 🎓 Tecnicatura | **E2E v2.4**: alta/listado con enum validado (`400` fuera del enum); modelos + Swagger; Caso 31 🟡 | ⚠️ |
 | 15 | **MARCADO EN LOTE Y PROPUESTA IA DEL INTERMEDIO** — sin marcas silenciosas | **E2E v2.4** + `tests/intermedio.test.js` (6 tests): ACA fuera, mínimo 4, tramo ≤ 3 años; avisos en UI; descarte de propuestas inservibles | ⚠️ |
 | 16 | **CORRELATIVAS REGULARIZADAS POR DEFECTO** — lo importado se avanza con regularizada | Verificación 5/5 en base scratch: `saveCorrelativas` graba `REGULARIZADA`; regularizada habilita cursar; exigir `APROBADA` bloquea; aprobada habilita (Caso 38) | ✅ |
+| 17 | **CRÉDITOS ACA** — 10 CRE por categoría, 4 para Título Intermedio, 10 para grado y 75 horas pedagógicas | Utilidad de cálculo y endpoints `/user-study-plans/:id/aca-activities`; Caso 48 definido, pendiente de ejecución integral | 🟡 |
+| 18 | **ESTADO LIBRE** — conserva el progreso dependiente existente, pero restringe nuevos avances | Reglas de progreso y prueba unitaria; Caso 47 definido, pendiente de ejecución integral | 🟡 |
 
 ## 6. Matriz — Requisitos de seguridad (FRD §4.3)
 
@@ -174,9 +178,9 @@ existe** en el repositorio, respondiendo tres preguntas:
 | Pantalla | Ruta | Verificación | Estado |
 | -------- | ---- | ------------ | ------ |
 | SC001 Inicio | `/` | Caso 20 (navegación) + Caso 24 (catálogo) + Caso 39 (quitar plan / reactivación) | 🟡 |
-| SC002 Grafo | `/grafo/:id` | Casos 12 (sub-plan intermedio), 21 (estados), 23 (accesibilidad), 26 (pestañas Lic/Tec) | 🟡 |
-| SC003 Tablero | `/tablero/:id` | Caso 20 + Caso 26 (pestañas Lic/Tec) | 🟡 |
-| SC004 Mi progreso | `/progreso` | Casos 9, 10 (progreso), 23 (`aria-label`), 27 (RN05), 28 (promedio/CSV) | 🟡 |
+| SC002 Grafo | `/grafo/:id` | Casos 12 (Título Intermedio), 21 (estados), 23 (accesibilidad), 26 (pestañas Licenciatura/Título Intermedio), 47 (Libre) | 🟡 |
+| SC003 Tablero | `/tablero/:id` | Caso 20 + Caso 26 (pestañas Licenciatura/Título Intermedio) | 🟡 |
+| SC004 Mi progreso | `/progreso` | Casos 9, 10 (progreso), 23 (`aria-label`), 27 (RN05), 28 (promedio), 47 (Libre), 48 (ACA) | 🟡 |
 | SC005 Cargar plan | `/cargar` | Casos 3–7 (carga) + **`test:planes`** en backend ✅; flujo de UI: Caso 20 | ⚠️ |
 | SC006 Admin | `/admin/:id` | Casos 14 (alta/duplicados), 15 (publicar), 16 (editar/borrar), 25 (continuesIn), 26 (tecnicatura), 40 (edición de materias en lote) | 🟡 |
 | SC007 Mi cuenta | `/cuenta` | Caso 29 (perfil/contraseña/logout) | 🟡 |
@@ -199,7 +203,7 @@ hasta la API; la capa de interfaz (Casos 20–23, 25–30) no tiene resultado re
 | CS-04 | Alumno 2 — sugerencias | Reglas implementadas + smoke; caso manual UI pendiente | ⚠️ |
 | CS-05 | Alumno 3 — sugerencias | Reglas implementadas + smoke; caso manual UI pendiente | ⚠️ |
 | CS-06 | Alumno explora catálogo por instituto | Caso 24 (Home Institutos→Carreras→Planes) | 🟡 |
-| CS-07 | Alumno ve tecnicatura y articulación | Caso 26 (pestañas Lic/Tec) + Caso 25 (Continúa en…) | 🟡 |
+| CS-07 | Alumno ve el Título Intermedio y articulación | Caso 26 (pestañas Licenciatura/Título Intermedio) + Caso 25 (Continúa en…) | 🟡 |
 
 ---
 
@@ -271,7 +275,7 @@ repite números idénticos (sin regresión).
 
 ### 11.4 La capa de interfaz no tiene resultados 🟠
 Casos 20–23 (navegación, estados en grafo, `ErrorBoundary`, accesibilidad) y 24–38 (flujos v2.3/v2.4/v2.5:
-catálogo, articulación, tecnicatura, RN05, promedio/CSV, cuenta, admin, avisos, marcado en lote, IA,
+catálogo, articulación, tecnicatura, RN05, promedio, cuenta, admin, avisos, marcado en lote, IA,
 tipo de carrera, caché, institutos con color, edición/archivado/borrado de carreras, correlativas
 regularizadas) definidos en `Test-Plan.md` sin resultados de interfaz registrados; los flujos
 nuevos quedaron verificados **por API** (E2E v2.4, 18 chequeos; E2E v2.5, 14 chequeos de administración
@@ -351,3 +355,4 @@ Repegada a la tabla (sin líneas en blanco intermedias).
 | 1.6 | 19/10/2026 | Equipo + agente | Inicio limpio (sin *Ver materias/Qué puedo cursar/Mi avance*), filas de inscripciones con *Quitar plan* y **baja reversible** (`archivedAt` + reactivación); archivadas integradas a **Catálogo → Carreras** (SC009 deja de ser ruta `/admin/archivadas`). Docs referenciados en US-08/US-11/SC009 y Caso 30/37. |
 | 1.7 | 20/10/2026 | Equipo + agente | **v2.6**: stories **US-12** (baja reversible) y **US-13** (`nameOverride` + guardado en lote con códigos únicos); Casos 39–40 definidos en Test-Plan (pendientes de corrida); validaciones reutilizables de cuenta/registro documentadas (US-09/SC000/SC007). Documentación: BRD 2.5 / FRD 2.6 / Test-Plan 2.6 / Test-Cases 2.5. Cobertura 15✅/27🟡/20⚠️/0❌/0⛔ (62 puntos). |
 | 1.8 | 06/11/2026 | Equipo + agente | **v2.9**: documentada la FAQ conversacional local (US-14/SC011), Caso 46 y verificación automatizada del buscador `faqSearch` (6/6) más humo manual en navegador con sesión simulada; no se hizo E2E con backend ni prueba en dispositivo físico. Fuentes: BRD 2.7 / FRD 2.9 / Test-Plan 2.9 / Test-Cases 2.8. |
+| 1.9 | 12/11/2026 | Equipo + agente | **v3.0**: US-15/US-16 documentan créditos por actividades ACA y estado Libre; Casos 47–48 definidos y pendientes; se retiran los créditos por materia de requisitos y se unifican las etiquetas de vista como “Título Intermedio”. Fuentes: BRD 2.8 / FRD 3.0 / Test-Plan 3.0 / Test-Cases 2.9. |

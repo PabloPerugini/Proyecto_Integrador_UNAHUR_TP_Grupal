@@ -1,8 +1,8 @@
 # Plan de Pruebas
 
 **Proyecto:** Gradify — Grafo Interactivo de Correlatividades y Seguimiento de Progreso Académico
-**Versión:** 2.9
-**Fecha:** 06/11/2026
+**Versión:** 3.0
+**Fecha:** 12/11/2026
 **Sponsor Organización:** Universidad Nacional de Hurlingham (UNAHUR) — Licenciatura en Informática
 **Autor:** Equipo del proyecto integrador
 **Tutor:** Prof. Alejandra Pinto
@@ -19,13 +19,14 @@ Garantizar que la aplicación web (React) y su API REST (Node/Express + MongoDB 
 - Pruebas de funcionamiento de los endpoints de la API (`/users`, `/careers`, `/universities`, `/academic-units`, `/plan-imports`, `/study-plans`, `/user-study-plans`, `/progress`, `/health`) y de la documentación en `/api-docs`.
 - Validación de la carga de PDF: plan oficial, PDF de correlativas y archivo con estructura inesperada; descarte de filas de totales y de títulos de sección.
 - Verificación del **matching clásico** de correlativas (exacto, compacto, difuso y por prefijo) y del nivel de confianza devuelto (`exact` | `compact` | `fuzzy` | `null`).
-- Verificación del **título intermedio / tecnicatura**: detección en el PDF, `creditsIntermediate` / `intermediateTitle`, materias marcadas `intermediate`, sub-plan virtual (`/study-plans/:id/intermediate`) y pestañas Lic/Tec.
+- Verificación del **Título Intermedio**: detección en el PDF, `intermediateTitle`, materias marcadas `intermediate`, sub-plan virtual (`/study-plans/:id/intermediate`) y pestañas Licenciatura/Título Intermedio; no se asignan créditos a materias curriculares.
+- Verificación del registro de actividades ACA: categorías UC/EF/Instituto, 10 CRE por categoría, 4 CRE por categoría para el Título Intermedio, 10 por categoría para el grado y 75 horas de interacción pedagógica.
 - Verificación del **catálogo por instituto** (colores, `withCounts`, filtros `?unit`/`includeArchived`) y de la **articulación** entre carreras.
-- Verificación del **bloqueo del avance por correlativas** (RN05): el backend rechaza avanzar sin correlativas cumplidas.
+- Verificación del **bloqueo del avance por correlativas** (RN05): el backend rechaza nuevos avances sin correlativas cumplidas; un estado Libre conserva el avance ya registrado en materias dependientes.
 - Verificación de la identificación del progreso (JWT: `401` sin token; `403`/`404` sin permiso del dueño o ADMIN).
 - Verificación del manejo centralizado de errores (`400` IDs/validaciones/archivos, `404` inexistente, `409` duplicados, `500` genérico) y de que el proceso no se cae.
 - Verificación de planes extensos y de formatos inesperados.
-- Verificación de la interfaz: navegación (AppShell, roles, 403/404), estados de materia, camino crítico, pestañas Lic/Tec, promedio/CSV, accesibilidad básica, comportamiento de `ErrorBoundary` y adaptación responsive en móvil/tablet/escritorio.
+- Verificación de la interfaz: navegación (AppShell, roles, 403/404), estados de materia, camino crítico, pestañas Licenciatura/Título Intermedio, promedio, créditos ACA por categoría, accesibilidad básica, comportamiento de `ErrorBoundary` y adaptación responsive en móvil/tablet/escritorio.
 - Verificación de la ayuda FAQ en `/faq`: consultas sugeridas, búsqueda local, respuestas y enlaces relacionados, mensaje sin coincidencias y aviso de privacidad (sin IA ni envío de consultas).
 - Regresión visual de iconos SVG por estado, controles de progreso y administración de universidades/materias.
 
@@ -76,11 +77,11 @@ Garantizar que la aplicación web (React) y su API REST (Node/Express + MongoDB 
 
 4. **Progreso académico**
    - Caso 9: **Sin identificación.** Rutas protegidas sin JWT → `401`; plan ajeno sin permiso → `403`/`404`.
-   - Caso 10: **Marcar progreso.** `PUT /user-study-plans/:id/progress/:subjectId` (APROBADA/REGULARIZADA/CURSANDO/PENDIENTE + nota) y verificar recálculo de disponibles y créditos.
+   - Caso 10: **Marcar progreso.** `PUT /user-study-plans/:id/progress/:subjectId` (APROBADA/REGULARIZADA/CURSANDO/PENDIENTE/LIBRE + nota) y verificar recálculo de disponibles. Los créditos de materias del plan no se calculan.
 
 5. **Grafo de correlatividades**
    - Caso 11: **Estructura.** `GET /study-plans/:id/graph` → `nodes`, `edges`, `availableNow`, `criticalPath`, `hasCycle`, `topologicalOrder` y `stats`.
-   - Caso 12: **Título intermedio.** En un plan con título intermedio, verificar `graph.intermediate` y el banner; sin título, que no se muestre.
+   - Caso 12: **Título Intermedio.** En un plan con título intermedio, verificar `graph.intermediate` y el banner de materias aprobadas; sin título, que no se muestre.
    - Caso 13: **IDs inválidos.** `GET /study-plans/abc` → `400`; ID inexistente → `404`.
 
 6. **Administración de planes**
@@ -102,16 +103,16 @@ Garantizar que la aplicación web (React) y su API REST (Node/Express + MongoDB 
 9. **Catálogo, tecnicatura y administración (v2.3)**
    - Caso 24: **Catálogo por instituto.** `GET /academic-units?withCounts=1` devuelve `careerCount`; `GET /careers?unit=<id>` filtra por instituto; `GET /careers?includeArchived=1` solo devuelve archivadas a un ADMIN.
    - Caso 25: **Articulación.** `PATCH /careers/:id` con `continuesIn` valida IDs existentes y rechaza la autorreferencia (`400`); el catálogo muestra "Continúa en …".
-   - Caso 26: **Tecnicatura intermedia.** `GET /study-plans/:id/intermediate` devuelve `subjects`, `closed` y `externalRequires`; un plan sin título intermedio → `404`. En Grafo/Tablero/Progreso, la pestaña Tecnicatura acota la vista y avisa si no hay materias marcadas.
+   - Caso 26: **Título Intermedio.** `GET /study-plans/:id/intermediate` devuelve `subjects`, `closed` y `externalRequires`; un plan sin título intermedio → `404`. En Grafo/Tablero/Progreso, la pestaña Título Intermedio acota la vista y avisa si no hay materias marcadas.
    - Caso 27: **Bloqueo por correlativas (RN05).** `PUT /user-study-plans/:id/progress/:subjectId` en una materia con correlativa pendiente → `400` con el detalle; volver a `PENDIENTE` → `200`.
-   - Caso 28: **Promedio y CSV.** En *Mi progreso*, con notas cargadas se muestra el promedio de aprobadas y "Exportar CSV" descarga el estado por materia.
+   - Caso 28: **Promedio.** En *Mi progreso*, con notas cargadas se muestra el promedio de las materias aprobadas.
    - Caso 29: **Mi cuenta / logout.** `PATCH /users/:nickName` actualiza el perfil; `POST /users/logout` invalida el JWT (`tokenVersion++`) y el token previo deja de servir (`401`).
    - Caso 30: **Admin de usuarios y archivadas.** `GET /users` y `PATCH /users/:nickName` (rol) solo ADMIN; Catálogo → Carreras: el interruptor **“Ver archivadas”** lista `isArchived` y permite restaurarlas.
 
 10. **Tecnicatura en lote, tipo de carrera e IA acotada (v2.4)**
    - Caso 31: **Aviso de tecnicatura incompleta.** Subir un plan que declara título intermedio pero cuyo PDF no tabula el subconjunto (p. ej. Lic. en Nutrición) → el preview devuelve `intermediateTitle` con 0 materias marcadas y muestra el aviso; en *Editar plan* el aviso persiste hasta marcar materias.
    - Caso 32: **Marcado en lote.** `PATCH /study-plans/:id/subjects/intermediate` con `{intermediate: true}` → `{matched, modified}` con todo el plan; con `{intermediate: true, year: 1}` → solo ese año; con `ids` → solo esas materias; `intermediate` no booleano → `400`; en *Editar plan*, la barra "Marcar/Desmarcar + alcance" refleja el contador de marcadas.
-   - Caso 33: **Propuesta de IA revisable.** Con IA configurada y un plan con título intermedio sin materias marcadas (p. ej. Diseño Industrial), el preview devuelve `intermediateClassified: true` con el subconjunto propuesto y `creditsIntermediate` recalculado; la columna *Tec* permite corregirlo antes de guardar. Una propuesta incoherente (1–3 materias, filas ACA o tramo > 3 años) se descarta sin marcar nada (`names: []`).
+   - Caso 33: **Propuesta de IA revisable.** Con IA configurada y un plan con título intermedio sin materias marcadas (p. ej. Diseño Industrial), el preview devuelve `intermediateClassified: true` con el subconjunto propuesto; la columna *Tec* permite corregirlo antes de guardar. Una propuesta incoherente (1–3 materias, filas ACA o tramo > 3 años) se descarta sin marcar nada (`names: []`). No se calculan créditos para las materias.
    - Caso 34: **Tipo de carrera.** `POST /careers` con `careerType: "Tecnicatura"` → `201`; valor fuera del enum → `400`; `PATCH` con `careerType: null` lo limpia; en el Home la carrera muestra el chip **🎓 Tecnicatura**.
    - Caso 35: **Caché de extractos (versión vigente v5).** Subir dos veces el mismo PDF: la segunda responde `cached: true` con el mismo resultado (incluida la clasificación del intermedio); solo se reutilizan extracciones con el mismo `PARSER_VERSION`.
 
@@ -124,13 +125,15 @@ Garantizar que la aplicación web (React) y su API REST (Node/Express + MongoDB 
    - Caso 39: **Baja reversible de planes.** En el Home, *Quitar plan* pide confirmación; con progreso, `DELETE /user-study-plans/:id` archiva la inscripción (`archivedAt`, devuelve `200` y el plan desaparece de la lista); al volver a inscribirse al mismo plan, `POST /user-study-plans` **reactiva la inscripción conservando el progreso** (`archivedAt: null`); sin progreso, la inscripción se borra y un segundo `DELETE` responde `404`.
    - Caso 40: **Edición de materias en lote.** En *Editar plan*, el nombre visible se guarda en `nameOverride` sin cambiar el catálogo; el guardado envía solo filas modificadas, rechaza códigos vacíos o duplicados y se deshabilita sin cambios. Grafo/Tablero/Progreso/Home priorizan el override; la precedencia tiene prueba unitaria, pero resta validar manualmente el flujo de guardado en lote.
    - Caso 41: **Validaciones reutilizables de cuenta/registro.** En Registro y en Mi cuenta: nombre/apellido 2–50 caracteres con solo letras/espacios/guiones; email ≤ 254 (normalizado a minúsculas); contraseña 6–72 con confirmación coincidente; nickName ≥ 3. El frontend valida por campo (blur) y el backend rechaza con `400` por las mismas cotas (Joi); nombre con un dígito → `400` en ambos lados.
-   - Caso 42: **Home limpio.** La portada de un usuario con inscripciones muestra solo filas de planes (estado "Inscripto", materias, años, créditos, chip de tecnicatura), pestañas y "Sumar otra carrera"; no renderiza *Ver materias*, *Qué puedo cursar* ni *Mi avance* (el detalle perezoso restante es el accordion de tecnicatura en las tarjetas del catálogo).
+   - Caso 42: **Home limpio.** La portada de un usuario con inscripciones muestra solo filas de planes (estado "Inscripto", materias, años, chip de Título Intermedio), pestañas y "Sumar otra carrera"; no renderiza *Ver materias*, *Qué puedo cursar* ni *Mi avance* (el detalle perezoso restante es el accordion del Título Intermedio en las tarjetas del catálogo). No muestra créditos por materia.
    - Caso 43: **Alta de materias y baja de universidad.** Como ADMIN, crear una materia para un plan y comprobar que aparece en su lista; intentar borrar una universidad con entidades dependientes y verificar que la operación se rechaza con un mensaje claro; borrar una universidad sin dependencias y verificar que se elimina.
    - Caso 44: **Responsive y áreas seguras.** Revisar Home, Grafo, Tablero, Mi progreso y Administración en anchos móvil, tablet y escritorio; comprobar que no haya desbordamiento horizontal, que controles importantes sigan accesibles y que las áreas seguras no tapen contenido. Repetir al menos una vista en navegador móvil real antes de dar el caso por aprobado.
    - Caso 45: **Grafo y tablero actualizados.** Confirmar que cada estado de materia usa su icono SVG correspondiente, que los controles de progreso conservan las acciones de avanzar/revertir y que etiquetas/aristas no se superponen en planes con varias correlativas.
    - Caso 46: **Ayuda FAQ local.** En `/faq`, comprobar que los cuatro chips permanecen visibles y al seleccionar uno la respuesta activa se reemplaza por la única respuesta correspondiente. Para texto libre, mostrar la mejor coincidencia y mantener las demás bajo “Ver respuestas relacionadas”. Verificar búsqueda por Enter, enlaces relacionados, respuesta sin coincidencias y aviso local sin IA.
+   - Caso 47: **Estado Libre.** Como usuario inscripto, actualizar una correlativa a `LIBRE` y comprobar que el avance previamente guardado en una materia dependiente permanece intacto. Intentar un nuevo avance que requiera esa correlativa y verificar que se rechaza; comprobar el estado y la etiqueta visible en Mi progreso/Grafo.
+   - Caso 48: **Créditos ACA.** En `/user-study-plans/:userStudyPlanId/aca-activities`, registrar y listar actividades UC, EF e Instituto con CRE y horas; comprobar que cada categoría muestra su porcentaje hacia 10 CRE y no compensa a las demás. Verificar los hitos de 4 CRE por categoría (Título Intermedio) y 10 por categoría (grado), las 75 horas de interacción pedagógica (10% mínimo) requeridas para el grado, y la validación de datos inválidos y eliminación de actividad.
 
-> Los casos 43–45 requieren ejecución manual y la regresión de `nameOverride` del caso 40 permanece abierta. El Caso 46 tuvo una verificación de humo en navegador con sesión simulada; no se probó con el backend real.
+> Los casos 43–45 requieren ejecución manual y la regresión de `nameOverride` del caso 40 permanece abierta. El Caso 46 tuvo una verificación de humo en navegador con sesión simulada; no se probó con el backend real. Los Casos 47–48 están definidos y pendientes de ejecución.
 
 ## Plan de Ejecución
 

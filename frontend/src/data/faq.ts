@@ -56,21 +56,21 @@ export const FAQS: Faq[] = [
     link: '/grafo',
   },
   {
-    id: 'correlatividades-camino-critico',
+    id: 'correlatividades-orden-sugerido',
     category: 'correlatividades',
-    question: '¿Qué muestra la ruta con más carga horaria?',
+    question: '¿Qué muestra el orden sugerido de cursada?',
     answer:
-      'En el grafo o tablero, activá «Ruta con más carga horaria» para ver la secuencia de materias pendientes conectadas por sus correlativas que suma la mayor carga horaria. Si hay un ciclo entre correlativas, no se puede calcular.',
-    tags: ['ruta', 'carga horaria', 'horas', 'camino', 'crítico', 'critico', 'secuencia', 'finalizar'],
+      'En el grafo o tablero, activá «Orden sugerido de cursada» para ver un único camino numerado, cuatrimestre a cuatrimestre: arranca en el cuatrimestre más temprano que puedas cursar y, en cada uno, elige la materia que más desbloquea. Avanza al cuatrimestre siguiente que abra camino. Si hay un ciclo entre correlativas, no se puede calcular.',
+    tags: ['orden', 'sugerido', 'cursada', 'desbloquea', 'avanzar'],
     link: '/grafo',
   },
   {
-    id: 'correlatividades-camino-optimo',
+    id: 'correlatividades-requisitos',
     category: 'correlatividades',
-    question: '¿Cómo veo la ruta para desbloquear una materia?',
+    question: '¿Cómo veo los requisitos para cursar una materia?',
     answer:
-      'En el grafo o tablero, activá «Ruta para desbloquear Materia» y elegí una materia pendiente. Se resalta la secuencia de correlativas pendientes que necesitás completar para desbloquearla. Las materias ya aprobadas no forman parte del recorrido.',
-    tags: ['camino', 'óptimo', 'optimo', 'recorrido', 'ruta', 'materia', 'aprobar', 'correlativas'],
+      'En el grafo o tablero, activá «Requisitos para cursar» y elegí una materia pendiente. Se resaltan todas sus correlativas pendientes, directas e indirectas: lo que necesitás aprobar para poder cursarla. Las materias ya aprobadas no forman parte del recorrido.',
+    tags: ['requisitos', 'cursar', 'ruta', 'recorrido', 'materia', 'aprobar', 'correlativas'],
     link: '/grafo',
   },
   {

@@ -23,7 +23,7 @@ import { request } from '../api/client';
 import { academicUnitsApi } from '../api/academicUnits';
 import { careersApi } from '../api/careers';
 import SearchSelect from './SearchSelect';
-import { instituteColor } from '../utils/instituteColors';
+import { instituteHex } from '../utils/instituteColors';
 import type { FlashMessage } from '../hooks/useFlashMessage';
 import type { AcademicUnit, Career, CareerType } from '../types';
 
@@ -42,8 +42,6 @@ const UNIT_TYPES: { value: string; label: string }[] = [
   { value: 'SEDE', label: 'Sede' },
   { value: 'OTRO', label: 'Otro' },
 ];
-
-const DEFAULT_UNIT_COLOR = '#238a42';
 
 interface University {
   _id: string;
@@ -107,12 +105,12 @@ function UnitColorPicker({
   onSave: (color: string) => void;
 }) {
   const [color, setColor] = useState(
-    unit.color ?? instituteColor(unit.name),
+    unit.color ?? instituteHex(unit.name),
   );
   const timer = useRef<number | null>(null);
 
   useEffect(() => {
-    setColor(unit.color ?? instituteColor(unit.name));
+    setColor(unit.color ?? instituteHex(unit.name));
   }, [unit._id, unit.color, unit.name]);
 
   useEffect(
@@ -162,7 +160,7 @@ export default function AdminCatalog({
   const [selectedUniversityId, setSelectedUniversityId] = useState('');
   const unitUniversityId = selectedUniversityId;
   const [unitDescription, setUnitDescription] = useState('');
-  const [unitColor, setUnitColor] = useState(DEFAULT_UNIT_COLOR);
+  const [unitColor, setUnitColor] = useState(() => instituteHex());
 
   // Edición de instituto
   const [editingUnit, setEditingUnit] = useState<AcademicUnit | null>(null);
@@ -343,7 +341,7 @@ export default function AdminCatalog({
       await loadUnits();
       setUnitName('');
       setUnitDescription('');
-      setUnitColor(DEFAULT_UNIT_COLOR);
+      setUnitColor(instituteHex());
       notify('success', `Instituto "${unit.name}" creado correctamente.`);
     } catch (err) {
       notify(

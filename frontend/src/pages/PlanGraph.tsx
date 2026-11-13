@@ -23,11 +23,13 @@ import { getPlanGraph } from '../api/planGraphAdapter';
 import { studyPlansApi, type ProgressStatus, type StudyPlan } from '../api/studyPlans';
 import type { GraphData, SubjectStatus } from '../types';
 import { useCareerSelection } from '../context/CareerContext';
+import { useTheme } from '../hooks/useTheme';
 import { yearLabel } from '../utils/subjects';
-import { statusColor, statusLabel, resolveNodeStatus } from '../utils/status';
-import { instituteColor } from '../utils/instituteColors';
+import { statusColor, statusBorder, statusLabel, resolveNodeStatus } from '../utils/status';
+import { instituteToken } from '../utils/instituteColors';
+import { readToken } from '../utils/color';
 import { getDirectSuccessorCodes, HIGHLIGHT_COLOR } from '../utils/graphHighlight';
-import { getStudyPath } from '../utils/studyPaths';
+import { getSuggestedOrder, getRequirements } from '../utils/studyPaths';
 import SubjectStatusAction from '../components/SubjectStatusAction';
 import SubjectStatusIcon from '../components/SubjectStatusIcon';
 import AcademicEdge from '../components/AcademicEdge';
@@ -40,17 +42,18 @@ interface PlanNodeData {
   progressSaving?: boolean;
   code: string;
   name: string;
+  credits: number;
   year: number | null;
   cuatrimestre?: number | null;
   duration?: string | null;
   status: SubjectStatus;
   available: boolean;
   critical: boolean;
+  criticalOrder?: number;
   optimal: boolean;
   highlightedNext: boolean;
   newlyUnlocked?: boolean;
   selectedSubject: boolean;
-  credits: number;
 }
 
 function withOptimisticSubjectStatus(graph: GraphData, code: string, status: SubjectStatus): GraphData {
@@ -60,6 +63,7 @@ function withOptimisticSubjectStatus(graph: GraphData, code: string, status: Sub
   const inProgressDelta = Number(status === 'Cursando') - Number(previous.status === 'Cursando');
   const regularDelta = Number(status === 'Regular') - Number(previous.status === 'Regular');
   const availableDelta = Number(status === 'Disponible') - Number(previous.status === 'Disponible');
+  const libreDelta = Number(status === 'Libre') - Number(previous.status === 'Libre');
   const availableNow = new Set(graph.availableNow);
   if (status === 'Disponible') availableNow.add(code);
   else availableNow.delete(code);
@@ -70,48 +74,25 @@ function withOptimisticSubjectStatus(graph: GraphData, code: string, status: Sub
     stats: {
       ...graph.stats,
       aprobadas: graph.stats.aprobadas + approvedDelta,
-      creditsAprobados: graph.stats.creditsAprobados + approvedDelta * previous.credits,
       enCurso: graph.stats.enCurso + inProgressDelta,
       regulares: graph.stats.regulares + regularDelta,
       disponibles: graph.stats.disponibles + availableDelta,
+      libres: graph.stats.libres + libreDelta,
     },
   };
 }
 
-const BORDER_WIDTH = 4;
 const DIMMED_OPACITY = 0.32;
-// Los valores de color se editan en styles/academicMapPalette.css.
-const OPTIMAL_NODE_BACKGROUND = 'var(--map-path-bg)';
-const OPTIMAL_NODE_BORDER = 'var(--map-path-border)';
-const IN_PROGRESS_COLOR = 'var(--map-in-progress-accent)';
-const UNLOCK_COLOR = 'var(--map-unlock-color)';
 const UNLOCK_HIGHLIGHT_MS = 5000;
-const GRAPH_BACKGROUND = {
-  color: 'var(--map-canvas-bg)',
-  dotsColor: 'var(--map-canvas-dot)',
-  dotsGap: 24,
-  dotsSize: 1.4,
-};
-// Configuración de las flechas
-const EDGE_COLORS = {
-  normal: 'var(--map-edge-normal)',
-  critical: 'var(--map-edge-critical)',
-  optimal: 'var(--map-edge-optimal)',
-};
-
-const STATUS_NODE_BORDER_COLORS: Record<SubjectStatus, string> = {
-  Aprobada: 'var(--map-status-approved-border)',
-  Regular: 'var(--map-status-regular-border)',
-  Cursando: 'var(--map-status-in-progress-border)',
-  Disponible: 'var(--map-status-available-border)',
-  Bloqueada: 'var(--map-status-locked-border)',
+const GRAPH_DOTS = {
+  gap: 24,
+  size: 1.4,
 };
 
 const EDGE_WIDTH = {
   normal: 1.25,
   approvedToProgress: 4,
-  critical: 3,
-  optimal: 3,
+  path: 3,
 };
 
 const ARROW_SIZE = {
@@ -119,50 +100,49 @@ const ARROW_SIZE = {
   height: 40,
 };
 function nodeBorder(
-  d: Pick<PlanNodeData, 'optimal' | 'critical' | 'available' | 'status' | 'highlightedNext' | 'newlyUnlocked'>,
+  d: Pick<PlanNodeData, 'optimal' | 'critical' | 'status' | 'highlightedNext' | 'newlyUnlocked'>,
   selected = false
 ): string {
-  const width = `${BORDER_WIDTH}px solid`;
+  if (d.newlyUnlocked) return '4px solid var(--graph-unlock)';
+  if (selected && d.status !== 'Aprobada') return '2px solid var(--graph-selection)';
+  if (d.optimal) return '4px solid var(--graph-path-requirements)';
+  if (d.critical) return '4px solid var(--graph-path-suggested)';
+  if (d.highlightedNext) return '4px solid var(--graph-path-suggested)';
 
-  if (d.optimal || d.critical) return `${width} ${OPTIMAL_NODE_BORDER}`;
-  if (selected && d.status !== 'Aprobada') return `${width} var(--map-selection-border)`;
-  if (d.newlyUnlocked) return `${width} ${UNLOCK_COLOR}`;
-  if (d.highlightedNext) return `${width} ${HIGHLIGHT_COLOR}`;
-  if (d.status === 'Aprobada' || d.status === 'Regular' || d.status === 'Cursando') return `${width} ${STATUS_NODE_BORDER_COLORS[d.status]}`;
-  if (d.available) return `${width} ${STATUS_NODE_BORDER_COLORS.Disponible}`;
-
-  return `${width} ${STATUS_NODE_BORDER_COLORS.Bloqueada}`;
+  return `2px solid ${statusBorder(d.status)}`;
 }
 
-function StatusBadges({ d }: { d: Pick<PlanNodeData, 'optimal' | 'critical'> }) {
+function StatusBadges({ d }: { d: Pick<PlanNodeData, 'optimal' | 'critical' | 'criticalOrder'> }) {
   return (
     <>
-      {d.optimal && <span className="badge" style={{ fontSize: 9, background: EDGE_COLORS.optimal, color: 'var(--map-badge-optimal-text)' }}>óptima</span>}
-      {d.critical && <span className="badge" style={{ fontSize: 9, background: 'var(--map-badge-critical-bg)', color: 'var(--map-badge-critical-text)' }}>crítico</span>}
+      {d.optimal && <span className="badge" style={{ fontSize: 9, background: 'var(--color-warning)', color: 'var(--color-ink)' }}>en tu ruta</span>}
+      {d.criticalOrder != null && <span className="badge text-bg-dark" style={{ fontSize: 9 }}>{d.criticalOrder}°</span>}
     </>
   );
 }
 
 function toPlanNodeData(
-  n: { code: string; name: string; year: number | null; cuatrimestre: number | null; duration?: string | null; status: PlanNodeData['status']; credits: number },
+  n: { code: string; name: string; year: number | null; cuatrimestre: number | null; duration?: string | null; credits: number; status: PlanNodeData['status'] },
   availableSet: Set<string>,
   criticalSet: Set<string>,
-  fastSet: Set<string>,
+  requirementsSet: Set<string>,
+  suggestedOrderIndex?: Map<string, number>,
 ): PlanNodeData {
   const status = resolveNodeStatus(n.status, availableSet.has(n.code));
   return {
     code: n.code,
     name: n.name,
+    credits: n.credits,
     year: n.year,
     cuatrimestre: n.cuatrimestre,
     duration: n.duration ?? null,
     status,
     available: status === 'Disponible',
     critical: criticalSet.has(n.code),
-    optimal: fastSet.has(n.code),
+    criticalOrder: suggestedOrderIndex?.get(n.code),
+    optimal: requirementsSet.has(n.code),
     highlightedNext: false,
     selectedSubject: false,
-    credits: n.credits,
   };
 }
 
@@ -172,17 +152,20 @@ function toPlanNodeData(
 
 function PlanNode({ data }: NodeProps<Node<Record<string, unknown>>>) {
   const d = data as unknown as PlanNodeData;
-  const pathColor = d.optimal ? EDGE_COLORS.optimal : d.critical ? EDGE_COLORS.critical : undefined;
-  const color = d.optimal || d.critical ? OPTIMAL_NODE_BACKGROUND : pathColor ?? (d.highlightedNext ? 'var(--map-next-bg)' : statusColor(d.status));
   const border = nodeBorder(d, d.selectedSubject);
+  const highlightColor = d.newlyUnlocked
+    ? 'var(--graph-unlock)'
+    : d.selectedSubject && d.status !== 'Aprobada'
+      ? 'var(--graph-selection)'
+      : d.highlightedNext ? HIGHLIGHT_COLOR : undefined;
 
   return (
     <div
-      className={`plan-node${!pathColor && d.status === 'Cursando' ? ' plan-node--in-progress' : ''}${d.highlightedNext || d.newlyUnlocked ? ' plan-node--highlighted-next' : ''}`}
+      className={`plan-node${d.status === 'Cursando' ? ' plan-node--in-progress' : ''}${d.highlightedNext || d.newlyUnlocked ? ' plan-node--highlighted-next' : ''}`}
       style={{
-        ...((d.newlyUnlocked || d.highlightedNext) ? { '--plan-highlight-color': d.newlyUnlocked ? UNLOCK_COLOR : HIGHLIGHT_COLOR } : {}),
-        background: color,
-        color: pathColor ? 'var(--map-path-text)' : 'var(--map-node-text)',
+        ...((d.newlyUnlocked || d.highlightedNext) ? { '--plan-highlight-color': d.newlyUnlocked ? 'var(--graph-unlock)' : HIGHLIGHT_COLOR } : {}),
+        background: statusColor(d.status),
+        color: 'var(--color-text)',
         outline: undefined,
         outlineOffset: 3,
         borderRadius: 12,
@@ -208,7 +191,7 @@ function PlanNode({ data }: NodeProps<Node<Record<string, unknown>>>) {
         onAdvance={d.onAdvance ? () => d.onAdvance?.(d.code) : undefined}
         onRevert={d.onAdvance ? () => d.onAdvance?.(d.code, true) : undefined}
         disabled={d.progressSaving}
-        highlightColor={d.selectedSubject && d.status !== 'Aprobada' ? 'var(--map-selection-icon)' : d.newlyUnlocked ? UNLOCK_COLOR : d.highlightedNext ? HIGHLIGHT_COLOR : undefined}
+        highlightColor={highlightColor}
       />
       <Handle
         type="target"
@@ -263,6 +246,7 @@ function YearLabel({ data }: NodeProps<Node<Record<string, unknown>>>) {
   );
 }
 
+
 const nodeTypes = { plan: PlanNode, yearLabel: YearLabel };
 const edgeTypes = { academic: AcademicEdge };
 const EMPTY_EDGES: GraphData['edges'] = [];
@@ -284,6 +268,7 @@ const GRAPH_SPACING = {
   yearGap: 140,
   rowGap: 152,
 };
+
 
 interface DetailProps {
   graph: GraphData;
@@ -456,7 +441,12 @@ function DetailPanel({ selectedNode, requires, successors, progressSaving, onSel
 }
 
 export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'grafo' | 'tablero' }) {
-  const graphBackground = GRAPH_BACKGROUND;
+  const { theme } = useTheme();
+  // theme es dependencia de los memorandos que resuelven tokens con readToken.
+  const graphBackground = {
+    color: readToken('--graph-bg'),
+    dotsColor: readToken('--graph-grid'),
+  };
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { careerId: selectedCareerId, setCareerId: setSelectedCareerId } = useCareerSelection();
@@ -465,7 +455,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
   const [tab, setTab] = useState<'lic' | 'tec'>('lic');
   const [interCodes, setInterCodes] = useState<Set<string> | null>(null);
 
-  // Subgrafo de la vista: Licenciatura completa o solo tecnicatura.
+  // Subgrafo de la vista: licenciatura completa o título intermedio.
   // Con set vacío se muestra vacío (aviso), nunca la Licenciatura.
   const displayGraph = useMemo(() => {
     if (!graph || tab === 'lic' || !interCodes) return graph;
@@ -474,15 +464,11 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
     const edges = graph.edges.filter((e) => inSet.has(e.source) && inSet.has(e.target));
     const availableNow = (graph.availableNow ?? []).filter((c) => inSet.has(c));
     const aprobadas = nodes.filter((n) => n.status === 'Aprobada');
-    const creditsTotal = nodes.reduce((a, n) => a + (n.credits ?? 0), 0);
-    const creditsAprobados = aprobadas.reduce((a, n) => a + (n.credits ?? 0), 0);
     return {
       ...graph,
       nodes,
       edges,
       availableNow,
-      criticalPath: (graph.criticalPath ?? []).filter((c) => inSet.has(c)),
-      topologicalOrder: (graph.topologicalOrder ?? []).filter((c) => inSet.has(c)),
       stats: {
         ...graph.stats,
         total: nodes.length,
@@ -491,8 +477,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
         bloqueadas: nodes.filter((n) => n.status === 'Bloqueada').length,
         enCurso: nodes.filter((n) => n.status === 'Cursando').length,
         regulares: nodes.filter((n) => n.status === 'Regular').length,
-        creditsTotal,
-        creditsAprobados,
+        libres: nodes.filter((n) => n.status === 'Libre').length,
       },
     };
   }, [graph, tab, interCodes]);
@@ -648,9 +633,9 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
       if (c.color) return c.color;
       const u = c.academicUnit;
       if (u && typeof u === 'object' && u.name)
-        return instituteColor(u.name, u.color);
+        return instituteToken(u.name, u.color);
     }
-    return graph?.color ?? 'var(--map-career-fallback)';
+    return graph?.color ?? instituteToken(null);
   }, [selectedPlan, graph]);
 
   useEffect(() => {
@@ -713,7 +698,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  // Tec sin materias marcadas: se muestra aviso en vez de canvas vacío.
+  // Título intermedio sin materias marcadas: se muestra aviso en vez de canvas vacío.
   const tecEmpty = tab === 'tec' && (displayGraph?.nodes.length ?? -1) === 0;
 
   const selectedCode = pinnedCode;
@@ -723,16 +708,20 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
   const highlightedNextCodes = useMemo(() => getDirectSuccessorCodes(
     displayGraph?.edges ?? [], selectedNode?.code ?? null,
   ), [displayGraph, selectedNode]);
-  const fastPath = useMemo(() => getStudyPath(
+  const requirementsPath = useMemo(() => getRequirements(
     displayGraph?.nodes ?? [], displayGraph?.edges ?? [], selectedCode,
   ), [displayGraph, selectedCode]);
-  const criticalPath = useMemo(() => getStudyPath(
+  const suggestedOrder = useMemo(() => getSuggestedOrder(
     displayGraph?.nodes ?? [], displayGraph?.edges ?? [],
   ), [displayGraph]);
-  const activePath = pathMode === 'critical' && criticalPath.chain.length > 0
-    ? criticalPath
-    : pathMode === 'optimal' && fastPath.chain.length > 0 ? fastPath : null;
+  const activePath = pathMode === 'critical' && suggestedOrder.chain.length > 0
+    ? suggestedOrder
+    : pathMode === 'optimal' && requirementsPath.chain.length > 0 ? requirementsPath : null;
   const activeMode = activePath ? pathMode : null;
+  // Posición de cada materia dentro del orden sugerido (1°, 2°, …).
+  const suggestedOrderIndex = useMemo(() => new Map(
+    suggestedOrder.chain.map((code, index) => [code, index + 1] as const),
+  ), [suggestedOrder]);
   const approvedPathPrerequisites = useMemo(() => {
     const codes = new Set<string>();
     if (!displayGraph || !activePath?.set.size) return codes;
@@ -844,8 +833,9 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
         : selectedNode && !related) ? DIMMED_OPACITY : 1 },
       data: node.type === 'plan' ? {
         ...node.data,
-        optimal: activeMode === 'optimal' && fastPath.set.has(node.id),
-        critical: activeMode === 'critical' && criticalPath.set.has(node.id),
+        optimal: activeMode === 'optimal' && requirementsPath.set.has(node.id),
+        critical: activeMode === 'critical' && suggestedOrder.set.has(node.id),
+        criticalOrder: activeMode === 'critical' ? suggestedOrderIndex.get(node.id) : undefined,
         highlightedNext: !activeMode && highlightedNextCodes.has(node.id),
         newlyUnlocked: !activeMode && newlyUnlockedCodes.has(node.id),
         selectedSubject: node.id === selectedCode,
@@ -858,7 +848,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
         width: layout?.yearWidths[node.id] ?? node.data.width,
       },
     };
-  }), [baseNodes, layout, fastPath.set, criticalPath.set, activeMode, activePath, approvedPathPrerequisites, highlightedNextCodes, selectedCode, selectedNode, graph?.userStudyPlanId, advanceSubject, progressSaving, newlyUnlockedCodes]);
+  }), [baseNodes, layout, requirementsPath.set, suggestedOrder.set, suggestedOrderIndex, activeMode, activePath, approvedPathPrerequisites, highlightedNextCodes, selectedCode, selectedNode, graph?.userStudyPlanId, advanceSubject, progressSaving, newlyUnlockedCodes]);
 
   const MAP_MARGINS = {
     left: 700,    // Espacio a la izquierda
@@ -994,39 +984,40 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
   const flowEdges: Edge[] = useMemo(() => {
     if (!displayGraph) return [];
 
-    const fulfilledColor = 'var(--map-edge-fulfilled)';
-    const pendingColor = EDGE_COLORS.normal;
+    // Los tokens de color cambian con el tema; aunque las aristas usan var(),
+    // la punta se resuelve con readToken y necesita este memo recalcularse.
+    void theme;
 
     return displayGraph.edges.map((e) => {
       const highlightedNext = !activeMode && e.source === selectedCode && highlightedNextCodes.has(e.target);
       const newlyUnlocked = !activeMode && e.source === unlockHighlight?.source && newlyUnlockedCodes.has(e.target);
       const sourceStatus = byCodeMap.get(e.source)?.status;
       const targetStatus = byCodeMap.get(e.target)?.status;
-      const fulfilledPrerequisite = ['Aprobada', 'Regular'].includes(sourceStatus ?? '');
+      const fulfilledPrerequisite = sourceStatus === 'Aprobada';
       const approvedToProgress = sourceStatus === 'Aprobada'
         && ['Disponible', 'Cursando'].includes(targetStatus ?? '');
+      const targetBlocked = targetStatus === 'Bloqueada';
       const onPathApprovedPrerequisite = !!activeMode
         && !!activePath?.set.has(e.target)
         && sourceStatus === 'Aprobada';
-      const onOptimal = activeMode === 'optimal' && fastPath.edgeSet.has(e.id);
-      const onCritical = activeMode === 'critical' && criticalPath.edgeSet.has(e.id);
+      const onOptimal = activeMode === 'optimal' && requirementsPath.edgeSet.has(e.id);
+      const onCritical = activeMode === 'critical' && suggestedOrder.edgeSet.has(e.id);
 
-      // Color de la línea y la punta
-      const color = newlyUnlocked ? UNLOCK_COLOR : highlightedNext
-        ? HIGHLIGHT_COLOR
-        : onPathApprovedPrerequisite ? fulfilledColor
-        : onOptimal
-        ? EDGE_COLORS.optimal
-        : onCritical
-          ? EDGE_COLORS.critical
-          : fulfilledPrerequisite ? fulfilledColor : pendingColor;
+      // Color de la línea y la punta. La punta exige un color resuelto.
+      const token = newlyUnlocked ? '--graph-unlock'
+        : highlightedNext ? '--graph-path-suggested'
+          : onPathApprovedPrerequisite ? '--graph-edge-fulfilled'
+            : onOptimal ? '--graph-path-requirements'
+              : onCritical ? '--graph-path-suggested'
+                : fulfilledPrerequisite ? '--graph-edge-fulfilled'
+                  : targetBlocked ? '--graph-edge-pending' : '--graph-edge';
+      const color = `var(${token})`;
+      const markerColor = readToken(token);
 
       // Grosor de la línea
-      const baseWidth = onOptimal
-        ? EDGE_WIDTH.optimal
-        : onCritical
-          ? EDGE_WIDTH.critical
-          : EDGE_WIDTH.normal;
+      const baseWidth = onOptimal || onCritical
+        ? EDGE_WIDTH.path
+        : EDGE_WIDTH.normal;
       const strokeWidth = approvedToProgress ? EDGE_WIDTH.approvedToProgress
         : highlightedNext ? 3
           : onPathApprovedPrerequisite ? 2.5
@@ -1050,20 +1041,22 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
           opacity: activeMode ? (onOptimal || onCritical || onPathApprovedPrerequisite ? 1 : 0.2) : selectedNode
             ? highlightedNext || newlyUnlocked ? 1 : DIMMED_OPACITY
             : approvedToProgress ? 1 : fulfilledPrerequisite ? 0.68 : 1,
-          ...(onOptimal ? { strokeDasharray: '6 3' } : {}),
+          ...(onOptimal
+            ? { strokeDasharray: '6 3' }
+            : !activeMode && targetBlocked ? { strokeDasharray: '4 4' } : {}),
         },
 
         // Estilo de la punta
         markerEnd: {
           type: MarkerType.ArrowClosed,
-          color,
+          color: markerColor,
           width: approvedToProgress ? ARROW_SIZE.width * 1.3 : ARROW_SIZE.width,
           height: approvedToProgress ? ARROW_SIZE.height * 1.3 : ARROW_SIZE.height,
           markerUnits: 'userSpaceOnUse',
         },
       };
     });
-  }, [displayGraph, fastPath, criticalPath, activeMode, activePath, selectedCode, highlightedNextCodes, selectedNode, layout, unlockHighlight, newlyUnlockedCodes, byCodeMap]);
+  }, [displayGraph, requirementsPath, suggestedOrder, activeMode, activePath, selectedCode, highlightedNextCodes, selectedNode, layout, unlockHighlight, newlyUnlockedCodes, byCodeMap, theme]);
 
 
   const boardGroups = useMemo(() => {
@@ -1075,23 +1068,19 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
       cuat: PlanNodeData[];
       total: number;
       aprobadas: number;
-      credits: number;
-      creditsAprob: number;
     }
     if (!displayGraph) return [] as YearGroup[];
-    const criticalSet = activeMode === 'critical' ? criticalPath.set : new Set<string>();
-    const optimalSet = activeMode === 'optimal' ? fastPath.set : new Set<string>();
+    const criticalSet = activeMode === 'critical' ? suggestedOrder.set : new Set<string>();
+    const optimalSet = activeMode === 'optimal' ? requirementsPath.set : new Set<string>();
     const availableSet = new Set(displayGraph.availableNow ?? []);
     const m = new Map<number, YearGroup>();
     for (const n of displayGraph.nodes) {
       const y = n.year ?? 999;
-      const g = m.get(y) ?? { year: y, c1: [], c2: [], anual: [], cuat: [], total: 0, aprobadas: 0, credits: 0, creditsAprob: 0 };
-      const data = toPlanNodeData(n, availableSet, criticalSet, optimalSet);
+      const g = m.get(y) ?? { year: y, c1: [], c2: [], anual: [], cuat: [], total: 0, aprobadas: 0 };
+      const data = toPlanNodeData(n, availableSet, criticalSet, optimalSet, activeMode === 'critical' ? suggestedOrderIndex : undefined);
       g.total += 1;
-      g.credits += n.credits ?? 0;
       if (n.status === 'Aprobada') {
         g.aprobadas += 1;
-        g.creditsAprob += n.credits ?? 0;
       }
       if (n.cuatrimestre === 1) g.c1.push(data);
       else if (n.cuatrimestre === 2) g.c2.push(data);
@@ -1112,7 +1101,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
       g.anual.sort((a, b) => a.name.localeCompare(b.name));
     }
     return out;
-  }, [displayGraph, fastPath, criticalPath, activeMode]);
+  }, [displayGraph, requirementsPath, suggestedOrder, suggestedOrderIndex, activeMode]);
 
   const requires = useMemo(() => {
     if (!selectedNode || !displayGraph) return [];
@@ -1132,16 +1121,15 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
   const renderCard = (d: PlanNodeData, selected: boolean) => {
     const isNext = highlightedNextCodes.has(d.code);
     const isRelated = isNext || d.code === selectedCode;
-    const border = isNext ? `${BORDER_WIDTH}px solid ${HIGHLIGHT_COLOR}` : nodeBorder(d, selected);
-    const pathColor = d.optimal ? EDGE_COLORS.optimal : d.critical ? EDGE_COLORS.critical : undefined;
+    const border = isNext ? '4px solid var(--graph-path-suggested)' : nodeBorder(d, selected);
     return (
       <button
         key={d.code}
-        className={!pathColor && d.status === 'Cursando' ? 'plan-node--in-progress' : undefined}
+        className={d.status === 'Cursando' ? 'plan-node--in-progress' : undefined}
         onClick={() => setPinnedCode((prev) => (prev === d.code ? null : d.code))}
         style={{
-          background: d.optimal || d.critical ? OPTIMAL_NODE_BACKGROUND : pathColor ?? (isNext ? 'var(--map-next-bg)' : statusColor(d.status)),
-          color: pathColor ? 'var(--map-path-text)' : 'var(--map-node-text)',
+          background: statusColor(d.status),
+          color: 'var(--color-text)',
           opacity: activePath ? activePath.set.has(d.code) || approvedPathPrerequisites.has(d.code) ? 1 : DIMMED_OPACITY : selectedNode && !isRelated ? DIMMED_OPACITY : 1,
           outline: undefined,
           outlineOffset: 3,
@@ -1152,7 +1140,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
           maxWidth: 240,
           flex: '1 1 200px',
           textAlign: 'left',
-          boxShadow: d.status === 'Cursando' ? undefined : 'var(--map-board-node-shadow)',
+          boxShadow: d.status === 'Cursando' ? undefined : 'var(--shadow-sm)',
           cursor: 'pointer',
         }}
       >
@@ -1160,10 +1148,10 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
           <span style={{ fontWeight: 700, fontSize: 12, lineHeight: 1.25 }}>{d.name}</span>
           <SubjectStatusIcon status={d.status} className="board-subject-status-icon" />
         </div>
-        <div style={{ fontSize: 11, color: pathColor ? 'var(--map-path-text)' : 'var(--map-node-muted)', marginTop: 3 }}>
+        <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 3 }}>
           {d.code} · {d.credits} cr · {statusLabel(d.status)}
         </div>
-        <div style={{ fontSize: 10, color: pathColor ? 'var(--map-path-text)' : 'var(--map-node-muted)', marginTop: 3 }}>
+        <div style={{ fontSize: 10, color: 'var(--color-text-muted)', marginTop: 3 }}>
           <StatusBadges d={d} />
         </div>
       </button>
@@ -1176,7 +1164,8 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
         className={`plan-graph${view === 'grafo' ? ' plan-graph--map' : ''}`}
         style={{
           '--plan-highlight-color': HIGHLIGHT_COLOR,
-          '--plan-in-progress-color': IN_PROGRESS_COLOR,
+          '--plan-in-progress-color': 'var(--status-cursando-solid)',
+          height: view === 'grafo' ? 'calc(100dvh - 118px)' : 'auto',
           display: 'flex',
           flexDirection: 'column',
           width: '100%',
@@ -1208,7 +1197,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
                   Licenciatura
                 </Button>
               </OverlayTrigger>
-              <OverlayTrigger placement="bottom" overlay={<Tooltip id="plan-degree-tec-tooltip">Muestra solo las materias que forman parte de la tecnicatura.</Tooltip>}>
+              <OverlayTrigger placement="bottom" overlay={<Tooltip id="plan-degree-tec-tooltip">Muestra solo las materias que forman parte del título intermedio.</Tooltip>}>
                 <Button
                   className="plan-degree-switch__option"
                   size="sm"
@@ -1217,28 +1206,28 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
                   variant={tab === 'tec' ? 'primary' : 'outline-primary'}
                   onClick={() => { setTab('tec'); setPinnedCode(null); setPathMode(null); }}
                 >
-                  Tecnicatura
+                  Título Intermedio
                 </Button>
               </OverlayTrigger>
             </div>
           )}
 
-          <div className={view === 'grafo' ? 'plan-map-toolbar__paths' : 'd-flex flex-wrap align-items-center gap-2 ms-auto'} role="group" aria-label="Navegación del plan">
-            {(view !== 'grafo' || displayGraph) && <>
-              <OverlayTrigger placement="bottom" overlay={<Tooltip id="plan-critical-toolbar-tooltip">Resalta el camino pendiente con mayor carga horaria total. Si empatan, prioriza el que tiene más materias.</Tooltip>}>
+          <div className="d-flex flex-wrap align-items-center gap-2 ms-auto" role="group" aria-label="Navegación del plan">
+            {view !== 'grafo' && <>
+              <OverlayTrigger placement="bottom" overlay={<Tooltip id="plan-critical-toolbar-tooltip">Traza un solo camino, cuatrimestre a cuatrimestre, priorizando la materia que más desbloquea.</Tooltip>}>
                 <Button
                   className="plan-map-action plan-map-action--critical"
                   variant={activeMode === 'critical' ? 'warning' : 'outline-secondary'}
                   size="sm"
                   aria-pressed={activeMode === 'critical'}
                   aria-describedby="plan-path-help"
-                  disabled={criticalPath.chain.length === 0}
+                  disabled={suggestedOrder.chain.length === 0}
                   onClick={() => setPathMode(mode => mode === 'critical' ? null : 'critical')}
                 >
-                  Ruta con más carga horaria
+                  Orden sugerido de cursada
                 </Button>
               </OverlayTrigger>
-              <OverlayTrigger placement="bottom" overlay={<Tooltip id="plan-optimal-toolbar-tooltip">Elegí una materia para ver las correlativas que necesitás aprobar antes.</Tooltip>}>
+              <OverlayTrigger placement="bottom" overlay={<Tooltip id="plan-optimal-toolbar-tooltip">Elegí una materia para ver todas las correlativas que necesitás aprobar para cursarla.</Tooltip>}>
                 <Button
                   className="plan-map-action plan-map-action--optimal"
                   variant={pathMode === 'optimal' ? 'warning' : 'outline-secondary'}
@@ -1248,56 +1237,112 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
                   disabled={!displayGraph?.nodes.length}
                   onClick={() => setPathMode(mode => mode === 'optimal' ? null : 'optimal')}
                 >
-                  Ruta para desbloquear Materia
+                  Requisitos para cursar
                 </Button>
               </OverlayTrigger>
             </>}
           </div>
         </div>
 
-        </div>
+        {view === 'grafo' && displayGraph && <div className="plan-progress-summary">
+          <div className="plan-progress-summary__stats" aria-label="Resumen de estados">
+            {([
+              { status: 'Aprobada', label: '', count: displayGraph.stats.aprobadas, tone: 'approved' },
+              { status: 'Cursando', label: 'Cursando', count: displayGraph.stats.enCurso, tone: 'in-progress' },
+              { status: 'Disponible', label: displayGraph.stats.disponibles === 1 ? 'Disponible' : 'Disponibles', count: displayGraph.stats.disponibles, tone: 'available' },
+              { status: 'Bloqueada', label: '', count: displayGraph.stats.bloqueadas, tone: 'locked' },
+              { status: 'Regular', label: 'Regulares', count: displayGraph.stats.regulares, tone: 'regular' },
+            ] as const).map(item => {
+              const stat = <span key={item.status} className={`plan-progress-summary__stat plan-progress-summary__stat--${item.tone}`}>
+                <SubjectStatusIcon status={item.status} showTooltip={false} /><strong>{item.count}</strong>{item.label && <> {item.label}</>}
+              </span>;
+              if (item.status === 'Aprobada' || item.status === 'Bloqueada') {
+                const approved = item.status === 'Aprobada';
+                return (
+                  <OverlayTrigger
+                    key={item.status}
+                    placement="top"
+                    overlay={<Tooltip id={`plan-status-${item.tone}-tooltip`} className={`status-legend-tooltip status-legend-tooltip--${item.tone}`}>{approved ? 'Aprobadas' : 'Bloqueadas'}</Tooltip>}
+                  >
+                    {stat}
+                  </OverlayTrigger>
+                );
+              }
+              return stat;
+            })}
+          </div>
+          <div className="plan-progress-summary__actions" role="group" aria-label="Rutas de correlatividades">
+            <OverlayTrigger placement="bottom" overlay={<Tooltip id="plan-optimal-legend-tooltip">Elegí una materia para ver todas las correlativas que necesitás aprobar para cursarla.</Tooltip>}>
+              <Button
+                className="plan-map-action plan-map-action--optimal"
+                variant={pathMode === 'optimal' ? 'warning' : 'outline-secondary'}
+                size="sm"
+                aria-pressed={pathMode === 'optimal'}
+                aria-describedby="plan-path-help"
+                disabled={!displayGraph.nodes.length}
+                onClick={() => setPathMode(mode => mode === 'optimal' ? null : 'optimal')}
+              >
+                Requisitos para cursar
+              </Button>
+            </OverlayTrigger>
+            <OverlayTrigger placement="bottom" overlay={<Tooltip id="plan-critical-legend-tooltip">Traza un solo camino, cuatrimestre a cuatrimestre, priorizando la materia que más desbloquea.</Tooltip>}>
+              <Button
+                className="plan-map-action plan-map-action--critical"
+                variant={activeMode === 'critical' ? 'warning' : 'outline-secondary'}
+                size="sm"
+                aria-pressed={activeMode === 'critical'}
+                aria-describedby="plan-path-help"
+                disabled={suggestedOrder.chain.length === 0}
+                onClick={() => setPathMode(mode => mode === 'critical' ? null : 'critical')}
+              >
+                Orden sugerido de cursada
+              </Button>
+            </OverlayTrigger>
+          </div>
+        </div>}
 
         {err && <Alert variant="danger" className="mx-3">{err}</Alert>}
         {progressError && <Alert variant="warning" className="mx-3" dismissible onClose={() => setProgressError(null)}>{progressError}</Alert>}
-        {criticalPath.hasCycle && <Alert variant="warning" className="mx-3 py-1 small">Hay un ciclo entre las correlativas pendientes. No se puede calcular la ruta con más carga horaria.</Alert>}
+        {suggestedOrder.hasCycle && <Alert variant="warning" className="mx-3 py-1 small">Hay un ciclo entre las correlativas pendientes. No se puede calcular el orden sugerido de cursada.</Alert>}
         <div id="plan-path-help" className="mx-3 mb-2 small" role="status">
           {activePath ? (
             <>
               <div
-                className="rounded px-3 py-2"
-                style={{ background: 'var(--map-route-notice-bg)', borderLeft: `3px solid ${EDGE_COLORS.critical}` }}
+                className={activeMode === 'critical' ? 'rounded px-3 py-2' : undefined}
+                style={activeMode === 'critical' ? { background: 'color-mix(in srgb, var(--graph-path-suggested) 12%, transparent)', borderLeft: '3px solid var(--graph-path-suggested)' } : undefined}
               >
                 <div>
-                  <strong>{activeMode === 'critical' ? 'Ruta con más carga horaria.' : 'Ruta para desbloquear Materia.'}</strong>{' '}
+                  <strong>{activeMode === 'critical' ? 'Orden sugerido de cursada.' : `Requisitos para cursar ${selectedNode?.name}.`}</strong>{' '}
                   {activeMode === 'critical'
-                    ? 'Resalta el recorrido pendiente con mayor carga horaria total.'
-                    : 'Muestra las correlativas que necesitás completar para aprobar la materia elegida.'}
+                    ? 'Traza un solo camino: arranca en el cuatrimestre más temprano que puedas cursar y, en cada cuatrimestre, elige la materia que más desbloquea. Avanza al cuatrimestre siguiente que abra camino hasta el final del plan.'
+                    : requirementsPath.set.size <= 1
+                      ? 'Esta materia no tiene correlativas pendientes. Podés cursarla cuando quieras.'
+                      : 'Resalta todas las correlativas pendientes, directas e indirectas, que necesitás aprobar para poder cursar la materia elegida.'}
                 </div>
                 <div className="text-muted">Volvé a pulsar el botón activo para quitar el resaltado.</div>
               </div>
             </>
           ) : pathMode === 'optimal' ? (
-            <div className="rounded px-3 py-2" style={{ background: 'var(--map-route-notice-bg)', borderLeft: `3px solid ${EDGE_COLORS.critical}` }}>
-              <div>
-                <strong>Ruta para desbloquear Materia activada.</strong>{' '}
-                {displayGraph?.nodes.every(node => node.status === 'Aprobada')
-                  ? 'Ya aprobaste todas las materias de esta vista. No quedan recorridos pendientes.'
-                  : selectedNode?.status === 'Aprobada'
-                    ? `Ya aprobaste ${selectedNode.name}. Elegí otra materia para ver cómo llegar a aprobarla.`
-                    : fastPath.hasCycle
-                      ? 'Las correlativas de esta materia forman un ciclo y no permiten calcular el recorrido. Podés elegir otra materia.'
-                      : `Hacé clic en una materia ${view === 'grafo' ? 'del mapa' : 'del tablero'} para ver las correlativas que necesitás completar hasta aprobarla.`}
-              </div>
-              <div className="text-muted">Volvé a pulsar el botón activo para quitar el resaltado.</div>
+            <div className="rounded px-3 py-2" style={{ background: 'color-mix(in srgb, var(--graph-path-requirements) 12%, transparent)', borderLeft: '3px solid var(--graph-path-requirements)' }}>
+              <strong>Modo «Requisitos para cursar» activado.</strong>{' '}
+              {displayGraph?.nodes.every(node => node.status === 'Aprobada')
+                ? 'Ya aprobaste todas las materias de esta vista. No quedan recorridos pendientes.'
+                : selectedNode?.status === 'Aprobada'
+                  ? `Ya aprobaste ${selectedNode.name}. Elegí otra materia para ver cómo llegar a aprobarla.`
+                  : requirementsPath.hasCycle
+                    ? 'Las correlativas de esta materia forman un ciclo y no permiten calcular el recorrido. Podés elegir otra materia.'
+                    : `Hacé clic en una materia ${view === 'grafo' ? 'del mapa' : 'del tablero'} para ver todos los requisitos que necesitás aprobar para poder cursarla.`}
+              {' '}Para salir, volvé a pulsar «Requisitos para cursar».
             </div>
           ) : null}
         </div>
         {view === 'grafo' && layoutError && <Alert variant="warning" className="mx-3">No se pudieron optimizar las flechas. Se muestran conexiones ortogonales simples. {layoutError}</Alert>}
         {id && !selectedPlan && plans.length > 0 && <Alert variant="warning" className="mx-3">Seleccioná un plan válido. Los enlaces antiguos de carrera ya no corresponden al grafo.</Alert>}
         {displayGraph && displayGraph.edges.length === 0 && <Alert variant="info" className="mx-3 py-1 small">No hay correlatividades vinculadas todavía. Podés agregarlas desde Administrar plan.</Alert>}
+
         {tecEmpty && (
           <Alert variant="warning" className="mx-3">
-            La tecnicatura de este plan todavía no tiene materias marcadas.
+            El título intermedio de este plan todavía no tiene materias marcadas.
             El administrador las marca desde Editar plan.
           </Alert>
         )}
@@ -1312,62 +1357,6 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
               position: 'relative',
             }}
           >
-            {view === 'grafo' && displayGraph && <div className="plan-progress-summary">
-              <div className="plan-progress-summary__stats" aria-label="Resumen de estados">
-                {([
-                  { status: 'Aprobada', label: '', count: displayGraph.stats.aprobadas, tone: 'approved' },
-                  { status: 'Bloqueada', label: '', count: displayGraph.stats.bloqueadas, tone: 'locked' },
-                  { status: 'Cursando', label: 'Cursando', count: displayGraph.stats.enCurso, tone: 'in-progress' },
-                  { status: 'Disponible', label: displayGraph.stats.disponibles === 1 ? 'Disponible' : 'Disponibles', count: displayGraph.stats.disponibles, tone: 'available' },
-                  { status: 'Regular', label: 'Regulares', count: displayGraph.stats.regulares, tone: 'regular' },
-                ] as const).map(item => {
-                  const stat = <span key={item.status} className={`plan-progress-summary__stat plan-progress-summary__stat--${item.tone}`}>
-                    <SubjectStatusIcon status={item.status} showTooltip={false} /><strong>{item.count}</strong>{item.label && <> {item.label}</>}
-                  </span>;
-                  if (item.status === 'Aprobada' || item.status === 'Bloqueada') {
-                    const approved = item.status === 'Aprobada';
-                    return (
-                      <OverlayTrigger
-                        key={item.status}
-                        placement="top"
-                        overlay={<Tooltip id={`plan-status-${item.tone}-tooltip`} className={`status-legend-tooltip status-legend-tooltip--${item.tone}`}>{approved ? 'Aprobadas' : 'Bloqueadas'}</Tooltip>}
-                      >
-                        {stat}
-                      </OverlayTrigger>
-                    );
-                  }
-                  return stat;
-                })}
-              </div>
-              <div className="plan-progress-summary__actions" role="group" aria-label="Rutas de correlatividades">
-                <OverlayTrigger placement="bottom" overlay={<Tooltip id="plan-optimal-legend-tooltip">Elegí una materia para ver las correlativas que necesitás aprobar antes.</Tooltip>}>
-                  <Button
-                    className="plan-map-action plan-map-action--optimal"
-                    variant={pathMode === 'optimal' ? 'warning' : 'outline-secondary'}
-                    size="sm"
-                    aria-pressed={pathMode === 'optimal'}
-                    aria-describedby="plan-path-help"
-                    disabled={!displayGraph.nodes.length}
-                    onClick={() => setPathMode(mode => mode === 'optimal' ? null : 'optimal')}
-                  >
-                    Ruta para desbloquear Materia
-                  </Button>
-                </OverlayTrigger>
-                <OverlayTrigger placement="bottom" overlay={<Tooltip id="plan-critical-legend-tooltip">Resalta el camino pendiente con mayor carga horaria total. Si empatan, prioriza el que tiene más materias.</Tooltip>}>
-                  <Button
-                    className="plan-map-action plan-map-action--critical"
-                    variant={activeMode === 'critical' ? 'warning' : 'outline-secondary'}
-                    size="sm"
-                    aria-pressed={activeMode === 'critical'}
-                    aria-describedby="plan-path-help"
-                    disabled={criticalPath.chain.length === 0}
-                    onClick={() => setPathMode(mode => mode === 'critical' ? null : 'critical')}
-                  >
-                    Ruta con más carga horaria
-                  </Button>
-                </OverlayTrigger>
-              </div>
-            </div>}
             {view === 'grafo' && graph && !tecEmpty && (
               <ReactFlow
                 className="plan-graph-canvas"
@@ -1405,8 +1394,8 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
                 </ViewportPortal>
                 <Background
                   variant={BackgroundVariant.Dots}
-                  gap={GRAPH_BACKGROUND.dotsGap}
-                  size={GRAPH_BACKGROUND.dotsSize}
+                  gap={GRAPH_DOTS.gap}
+                  size={GRAPH_DOTS.size}
                   color={graphBackground.dotsColor}
                   bgColor={graphBackground.color}
                 />
@@ -1453,8 +1442,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
                       {yearLabel(g.year)}
                     </div>
                     <div className="small text-muted">
-                      {g.total} materias · {g.aprobadas} aprobadas ·{' '}
-                      {g.creditsAprob}/{g.credits} créditos
+                      {g.total} materias · {g.aprobadas} aprobadas
                     </div>
                     {g.aprobadas === g.total && g.total > 0 && (
                       <span className="badge text-bg-success ms-auto">año completo</span>

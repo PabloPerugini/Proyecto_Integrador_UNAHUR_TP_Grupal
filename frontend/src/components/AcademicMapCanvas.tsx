@@ -22,6 +22,7 @@ import {
   type AcademicMapSubject,
 } from '../utils/academicMapLayout';
 import { routeAcademicMapEdges } from '../utils/academicMapRouting';
+import { readToken } from '../utils/color';
 import './AcademicMap.css';
 
 interface AcademicMapCanvasProps {
@@ -114,7 +115,7 @@ export default function AcademicMapCanvas({
       zIndex: 0,
       markerEnd: {
         type: MarkerType.ArrowClosed,
-        color: typeof edge.style?.stroke === 'string' ? edge.style.stroke : 'var(--map-edge-normal)',
+        color: typeof edge.style?.stroke === 'string' ? edge.style.stroke : readToken('--graph-edge'),
         width: 14,
         height: 14,
         markerUnits: 'userSpaceOnUse',

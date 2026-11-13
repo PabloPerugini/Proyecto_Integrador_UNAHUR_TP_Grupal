@@ -11,8 +11,8 @@
 | Institución           | Universidad Nacional de Hurlingham (UNAHUR)                          |
 | Unidad Académica      | Facultad de Informática — Proyecto Integrador Programación           |
 | Tipo de documento     | BRD — Documentación de Requerimientos de Negocio                     |
-| Versión               | 2.7                                                                   |
-| Fecha                 | 6 de noviembre de 2026                                             |
+| Versión               | 2.8                                                                   |
+| Fecha                 | 12 de noviembre de 2026                                            |
 | Sponsor Operación     | Secretaría Académica / Dirección de Carrera                          |
 | Sponsor Organización  | UNAHUR                                                               |
 | Integrantes           | Perugini, Pablo; Acuña, Marcos; Masgo Sandoval, Joaquín; Renaud, Román; Remonda, Eliel; Cotera, Dylan |
@@ -45,6 +45,7 @@
 | 2.5     | 20/10/2026   | Equipo | **Inicio limpio**: la portada muestra solo inscripciones y accesos (*Ver materias*, *Qué puedo cursar* y *Mi avance* pasan a Mi progreso/grafo). **Baja reversible de planes**: quitar el plan conserva el progreso (inscripción archivada) y la reinscripción lo reactiva. Archivadas integradas a **Catálogo → Carreras**. **Edición de materias** en el plan con nombre visible editable y guardado en lote. **Validaciones reutilizables** de cuenta/registro (nombre, email, contraseña y confirmación) compartidas entre Registro y Mi cuenta. |
 | 2.6     | 06/11/2026   | Equipo | Actualización del grafo y tablero (iconos SVG por estado y mejoras de disposición), navegación y adaptación responsive; administración de universidades y materias; registro de pruebas actuales. Los créditos y el detalle académico oficial por unidad/período siguen sujetos a validar con documentación institucional. |
 | 2.7     | 06/11/2026   | Equipo | Se incorpora una ayuda de preguntas frecuentes en formato conversacional guiado, con búsqueda local sobre respuestas predefinidas y sin IA ni envío de consultas a servicios externos. |
+| 2.8     | 12/11/2026   | Equipo | Se reemplazan los créditos curriculares por el seguimiento de actividades ACA y se documentan sus metas para Título Intermedio y grado, el estado Libre con conservación del avance previo y la etiqueta “Título Intermedio”. |
 
 ---
 
@@ -81,14 +82,14 @@ Los planes de estudio universitarios suelen ser complejos y estar llenos de depe
 
 ### 2.4 Restricciones
 
-- La ingesta se basa en la estructura del PDF del plan de estudios exportado por **SIU-Guaraní** (tolera campos vacíos como créditos/puntaje).
-- El lector de PDF lee las tablas de planes con columna de orden/código, horas y créditos, detecta la sección del **título intermedio** y descarta las filas de totales y los títulos de sección (no se importan como materias). Cuando el PDF **no tabula** las materias del título intermedio, el sistema no inventa: avisa al administrador y ofrece marcado en lote y una propuesta de IA revisable.
+- La ingesta se basa en la estructura del PDF del plan de estudios exportado por **SIU-Guaraní**.
+- El lector de PDF lee los datos de las materias y detecta la sección del **Título Intermedio**; los créditos que aparezcan asociados a materias curriculares se descartan. Las actividades ACA y sus créditos se registran por separado. Cuando el PDF **no tabula** las materias del Título Intermedio, el sistema no inventa: avisa al administrador y ofrece marcado en lote y una propuesta de IA revisable.
 - La aplicación **NO reemplaza** la transacción de inscripción oficial (se efectúa en SIU-Guaraní); solo asiste la planificación.
 - Compatibilidad garantizada con navegadores web modernos (Chrome, Edge, Firefox).
 - La interfaz se adapta a pantallas de escritorio, tablet y móvil. Esto no equivale a certificar exhaustivamente todos los dispositivos físicos y rutas.
-- Los planes soportados siguen el modelo año/cuatrimestre con créditos numéricos (entero o vacío).
+- Los planes soportados siguen el modelo año/cuatrimestre; las horas de las materias pueden conservarse, pero sus créditos no se usan en la aplicación.
 
-> **Alcance pendiente de validar:** se almacenan créditos y período cuando están disponibles en los PDFs importados, pero falta recibir y contrastar la fuente institucional que confirme el desglose oficial por unidad académica, carrera y período. Los totales actuales no deben interpretarse como una conciliación oficial de créditos.
+> **Créditos ACA:** la aplicación sigue la distribución definida para este proyecto: 30 CRE en total, 10 por categoría (UC: unidades curriculares no incluidas en el plan; EF: experiencias formativas diversas; Instituto: según su definición); 12 CRE para el Título Intermedio (4 por categoría) y 18 CRE adicionales para el grado (hasta 10 por categoría), con al menos 75 horas de interacción pedagógica (10% mínimo del total ACA) para completar el grado.
 
 > [!IMPORTANT]
 > La aplicación es una herramienta de **planificación y asistencia**. La inscripción formal a materias siempre se realiza en **SIU-Guaraní**.
@@ -97,7 +98,7 @@ Los planes de estudio universitarios suelen ser complejos y estar llenos de depe
 
 - El formato del PDF "Plan de Estudios" de SIU-Guaraní se mantiene estable durante el ciclo lectivo.
 - El progreso se guarda asociado a la cuenta del usuario (registro/login con JWT, roles USUARIO/ADMIN).
-- Los planes de las carreras soportadas siguen el modelo año/cuatrimestre con créditos numéricos (entero o vacío).
+- Los planes de las carreras soportadas siguen el modelo año/cuatrimestre. Los créditos ACA se administran por actividades, no por materias del plan.
 
 ### 2.6 Dependencias
 
@@ -125,11 +126,13 @@ El alcance incluye:
 - Lógica backend de validación de correlatividades (matching clásico: exacto, compacto, difuso y por prefijo) junto con camino crítico, orden topológico y detección de ciclos.
 - Seguimiento del progreso por materia y por plan, asociado a la cuenta del usuario, **con bloqueo del avance cuando falta una correlativa**.
 - Carga de planes y de historiales académicos desde PDF, con edición de materias, correlatividades y publicación del plan (solo `ADMIN`).
-- Soporte del **título intermedio / tecnicatura** (créditos, materias, sub-plan virtual y pestañas Licenciatura/Tecnicatura), con **marcado en lote** y **aviso** cuando queda sin materias marcadas.
+- Soporte del **Título Intermedio** (materias, sub-plan virtual y pestañas Licenciatura/Título Intermedio), con **marcado en lote** y **aviso** cuando queda sin materias marcadas.
 - **Tipo de carrera** (`careerType`) para distinguir licenciaturas, tecnicaturas, profesorados e ingenierías en el catálogo (chip 🎓 Tecnicatura).
 - **Articulación** entre carreras (`continuesIn`): el trayecto continúa en otra carrera (p. ej. tecnicatura → licenciatura).
 - Motor de sugerencias de inscripción basado en reglas de negocio (C1–C6, R0–R6): `GET /study-plans/:id/sugerencias` + sección en Mi progreso (ver FRD §3.1.2).
-- Panel de estadísticas del progreso del estudiante (porcentaje de avance, créditos, **promedio** y exportación a **CSV**).
+- Panel de estadísticas del progreso del estudiante (porcentaje de avance y **promedio**) y seguimiento separado de créditos ACA por actividad y categoría.
+- Registro de actividades ACA: 30 CRE repartidos en UC, EF e Instituto (10 CRE por categoría); el Título Intermedio requiere 4 CRE por categoría (12 en total) y el grado requiere 10 CRE por categoría (18 adicionales) y 75 horas de interacción pedagógica.
+- Estado **Libre** para materias cuya regularidad se perdió; el avance ya registrado en materias dependientes se conserva, y las nuevas actualizaciones siguen sujetas a las correlativas.
 - Administración de usuarios (roles USUARIO/ADMIN y baja) y restauración de carreras archivadas desde el catálogo, más **Mi cuenta** (perfil y contraseña).
 - **Baja reversible** de la inscripción al plan: el estudiante puede quitar un plan sin perder su progreso y retomarlo más tarde con el avance intacto.
 - Ayuda de preguntas frecuentes guiada, con consultas sugeridas y búsqueda local de respuestas existentes, sin IA ni servicios externos.
@@ -215,11 +218,11 @@ Vista de alto nivel. El detalle por pantalla se encuentra en el **FRD, Sección 
 | Pantalla   | Descripción                                                                     |
 | ---------- | ------------------------------------------------------------------------------- |
 | SC001      | Inicio: "Mis inscripciones" (filas con acciones Grafo/Tablero/Mi progreso/Quitar plan y "Sumar otra carrera") o Institutos → Carreras → Planes, con color por instituto, búsqueda y accesos de administración. |
-| SC002      | Grafo del plan: nodos e iconos SVG por estado, camino crítico, barra de progreso, banner de título intermedio y pestañas Licenciatura/Tecnicatura; diseño adaptable. |
-| SC003      | Tablero del plan: materias en columnas por año/cuatrimestre, con pestañas Licenciatura/Tecnicatura y diseño adaptable. |
-| SC004      | Mi progreso: estadísticas (aprobadas, créditos, avance, promedio), avance por año, edición por materia y exportación a CSV. |
+| SC002      | Grafo del plan: nodos e iconos SVG por estado, camino crítico, barra de progreso, banner de Título Intermedio y pestañas Licenciatura/Título Intermedio; diseño adaptable. |
+| SC003      | Tablero del plan: materias en columnas por año/cuatrimestre, con pestañas Licenciatura/Título Intermedio y diseño adaptable. |
+| SC004      | Mi progreso: estadísticas (aprobadas, avance y promedio), avance por año, edición de estados y seguimiento de créditos ACA por categoría. |
 | SC005      | Cargar plan: administración de universidades, institutos, carreras y materias; carga de PDF oficial y revisión antes de confirmar (solo ADMIN). |
-| SC006      | Admin del plan: edición de materias (nombre por plan y guardado en lote) y correlatividades, **marcado en lote de tecnicatura**, tipo de carrera y publicación.           |
+| SC006      | Admin del plan: edición de materias (nombre por plan y guardado en lote) y correlatividades, **marcado en lote del Título Intermedio**, tipo de carrera y publicación.           |
 | SC007      | Mi cuenta: perfil (nombre, apellido, email) y cambio de contraseña.              |
 | SC008      | Usuarios (ADMIN): listado, cambio de rol USUARIO/ADMIN y baja.                   |
 | SC009      | Carreras archivadas (ADMIN, dentro de Catálogo → Carreras): listado con “Ver archivadas” y restauración. |
@@ -240,9 +243,12 @@ Vista de alto nivel. El detalle por pantalla se encuentra en el **FRD, Sección 
 | Criterio de aceptación  | Condiciones que la funcionalidad debe cumplir para darse por completada y aprobada.                    |
 | SIU-Guaraní             | Sistema informático utilizado por la universidad para la gestión de expedientes académicos y actas. La app importa su reporte "Plan de Estudios". |
 | Instituto               | Unidad académica de la UNAHUR (Biotecnología, Tecnología e Ingeniería, Salud Comunitaria, Educación), con color oficial propio. |
-| Tecnicatura intermedia  | Título intermedio del plan, modelado como sub-plan virtual (materias `intermediate` + `intermediateTitle`/`creditsIntermediate`). |
+| Título Intermedio       | Título intermedio del plan, modelado como sub-plan virtual (materias `intermediate` + `intermediateTitle`); no utiliza créditos por materia. |
+| Crédito ACA (CRE)       | Unidad de crédito de una actividad curricular acreditable, registrada en UC, EF o Instituto (según la definición del Instituto de Tecnología e Ingeniería); no equivale a créditos de una materia del plan. |
+| UC                      | Unidades curriculares no incluidas en el plan de estudios, acreditables como actividades ACA. |
+| EF                      | Experiencias formativas diversas acreditables como actividades ACA. |
 | Tipo de carrera         | `Career.careerType` (Licenciatura/Tecnicatura/Profesorado/Ingenieria/Otro) para distinguir el pregrado del grado en el catálogo. |
-| Marcado en lote         | Marcar/desmarcar el flag de tecnicatura de muchas materias a la vez (todo el plan, un año o un período). |
+| Marcado en lote         | Marcar/desmarcar el flag de Título Intermedio de muchas materias a la vez (todo el plan, un año o un período). |
 | Articulación            | `Career.continuesIn`: carrera en la que un trayecto puede continuar (p. ej. tecnicatura → licenciatura). |
 | Baja reversible         | Al quitar un plan con progreso, la inscripción se archiva (`archivedAt`) y conserva el avance; reinscribirse al mismo plan la reactiva sin perder nada. |
 | Carrera archivada       | Carrera con `isArchived` que no se muestra en el catálogo salvo opt-in de `ADMIN`; se puede restaurar. |

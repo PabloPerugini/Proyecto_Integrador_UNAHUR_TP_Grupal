@@ -1,6 +1,5 @@
 const UserProgress = require("../models/userprogress");
 const { SUBJECT_STATUS } = require("../models/userprogress");
-const Subject = require("../models/subject");
 const { parseAcademicHistory } = require("../services/pdfParser.service");
 const AppError = require("../utils/AppError");
 
@@ -100,22 +99,11 @@ const getProgress = async (req, res, next) => {
 
 async function buildSummary(careerId, userId) {
   if (!careerId) return null;
-  const [subjects, progress] = await Promise.all([
-    Subject.find({ careerId }).select("code credits"),
-    UserProgress.find({ careerId, userId }).select("subjectCode status credits"),
+  const [total, aprobadas] = await Promise.all([
+    UserProgress.countDocuments({ careerId, userId }),
+    UserProgress.countDocuments({ careerId, userId, status: "Aprobada" }),
   ]);
-  const byCode = new Map(subjects.map((s) => [s.code, s]));
-  const creditsTotal = subjects.reduce((a, s) => a + (s.credits || 0), 0);
-  let creditsAprobados = 0;
-  let aprobadas = 0;
-  for (const p of progress) {
-    if (p.status === "Aprobada") {
-      aprobadas++;
-      const s = byCode.get(p.subjectCode);
-      creditsAprobados += s ? s.credits || 0 : 0;
-    }
-  }
-  return { creditsTotal, creditsAprobados, aprobadas, total: subjects.length };
+  return { aprobadas, total };
 }
 
 module.exports = { parseHistory, saveProgress, getProgress };

@@ -5,7 +5,7 @@
   min-height: calc(100dvh - 112px);
   margin: 0 auto;
   padding: 18px 24px 24px;
-  color: var(--gradify-text);
+  color: var(--color-text);
 }
 
 .faq-chat__header {
@@ -25,7 +25,7 @@
 
 .faq-chat__header p {
   margin: 0;
-  color: var(--gradify-text-muted);
+  color: var(--color-text-muted);
 }
 
 .faq-chat__local {
@@ -34,10 +34,10 @@
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  border: 1px solid var(--gradify-border);
+  border: 1px solid var(--color-border);
   border-radius: 999px;
-  background: var(--gradify-surface);
-  color: var(--gradify-text-muted);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
   font-size: 0.78rem;
   white-space: nowrap;
 }
@@ -46,8 +46,8 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--gradify-brand);
-  box-shadow: 0 0 0 3px rgba(var(--gradify-brand-rgb), 0.12);
+  background: var(--color-brand);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-brand) 12%, transparent);
 }
 
 .faq-chat__thread {
@@ -75,17 +75,17 @@
   height: 36px;
   place-items: center;
   border-radius: 12px;
-  background: var(--gradify-brand);
-  color: #fff;
+  background: var(--color-brand-solid);
+  color: var(--color-on-brand);
 }
 
 .faq-chat__bubble {
   max-width: 690px;
   padding: 15px 18px;
-  border: 1px solid var(--gradify-border);
+  border: 1px solid var(--color-border);
   border-radius: 4px 16px 16px;
-  background: var(--gradify-surface);
-  box-shadow: 0 3px 12px rgba(16, 24, 40, 0.035);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
   line-height: 1.55;
 }
 
@@ -113,7 +113,7 @@
 
 .faq-chat__suggestions > p {
   margin: 0 0 10px;
-  color: var(--gradify-text-muted);
+  color: var(--color-text-muted);
   font-size: 0.76rem;
   font-weight: 650;
 }
@@ -126,10 +126,10 @@
 
 .faq-chat__chip {
   padding: 9px 13px;
-  border: 1px solid var(--gradify-border);
+  border: 1px solid var(--color-border);
   border-radius: 999px;
-  background: var(--gradify-surface);
-  color: var(--gradify-text);
+  background: var(--color-surface);
+  color: var(--color-text);
   font: inherit;
   font-size: 0.86rem;
   cursor: pointer;
@@ -138,8 +138,8 @@
 
 .faq-chat__chip:hover {
   transform: translateY(-1px);
-  border-color: var(--gradify-brand);
-  background: rgba(var(--gradify-brand-rgb), 0.06);
+  border-color: var(--color-brand);
+  background: color-mix(in srgb, var(--color-brand-solid) 6%, transparent);
 }
 
 .faq-chat__user {
@@ -147,8 +147,8 @@
   max-width: min(76%, 580px);
   padding: 13px 17px;
   border-radius: 16px 4px 16px 16px;
-  background: var(--gradify-brand);
-  color: #fff;
+  background: var(--color-brand-solid);
+  color: var(--color-on-brand);
   line-height: 1.5;
 }
 
@@ -164,12 +164,12 @@
 
 .faq-chat__related {
   max-width: 690px;
-  color: var(--gradify-text);
+  color: var(--color-text);
 }
 
 .faq-chat__related summary {
   width: fit-content;
-  color: var(--gradify-brand);
+  color: var(--color-brand);
   font-weight: 650;
   cursor: pointer;
   text-underline-offset: 3px;
@@ -187,7 +187,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: var(--gradify-brand);
+  color: var(--color-brand);
   font-weight: 650;
   text-decoration: none;
   text-underline-offset: 3px;
@@ -203,7 +203,7 @@
   bottom: 0;
   margin-top: auto;
   padding: 14px 0 max(12px, env(safe-area-inset-bottom));
-  background: var(--gradify-app-bg);
+  background: var(--color-bg);
 }
 
 .faq-chat__form {
@@ -211,10 +211,10 @@
   align-items: center;
   gap: 10px;
   padding: 7px 8px 7px 16px;
-  border: 1px solid var(--gradify-border);
+  border: 1px solid var(--color-border);
   border-radius: 16px;
-  background: var(--gradify-surface);
-  box-shadow: 0 8px 24px rgba(16, 24, 40, 0.08);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
 }
 
 .faq-chat__input.form-control {
@@ -223,7 +223,7 @@
   border: 0;
   background: transparent;
   box-shadow: none;
-  color: var(--gradify-text);
+  color: var(--color-text);
   font: inherit;
 }
 
@@ -233,7 +233,7 @@
 }
 
 .faq-chat__input.form-control::placeholder {
-  color: var(--gradify-text-muted);
+  color: var(--color-text-muted);
 }
 
 .faq-chat__send {
@@ -244,13 +244,13 @@
   place-items: center;
   border: 0;
   border-radius: 12px;
-  background: var(--gradify-brand);
-  color: #fff;
+  background: var(--color-brand-solid);
+  color: var(--color-on-brand);
   cursor: pointer;
 }
 
 .faq-chat__send:hover:not(:disabled) {
-  background: var(--gradify-brand-2);
+  background: var(--color-brand-strong);
 }
 
 .faq-chat__send:disabled {
@@ -265,7 +265,7 @@
 
 .faq-chat__privacy {
   margin: 9px 0 0;
-  color: var(--gradify-text-muted);
+  color: var(--color-text-muted);
   font-size: 0.74rem;
   text-align: center;
 }
@@ -274,7 +274,7 @@
 .faq-chat__send:focus-visible,
 .faq-chat__link:focus-visible,
 .faq-chat__related summary:focus-visible {
-  outline: 3px solid rgba(var(--gradify-brand-rgb), 0.32);
+  outline: 3px solid color-mix(in srgb, var(--color-brand) 32%, transparent);
   outline-offset: 2px;
 }
 

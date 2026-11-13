@@ -39,14 +39,14 @@ test('una consulta compuesta solo por palabras vacías no devuelve resultados', 
   assert.deepStrictEqual(faqSearch(faqs, 'más que para'), []);
 });
 
-test('encuentra la respuesta sobre el camino crítico', () => {
-  const results = faqSearch(FAQS, 'camino critico');
-  assert.equal(results[0].id, 'correlatividades-camino-critico');
+test('encuentra la respuesta sobre el orden sugerido', () => {
+  const results = faqSearch(FAQS, 'orden sugerido');
+  assert.equal(results[0].id, 'correlatividades-orden-sugerido');
 });
 
-test('encuentra la respuesta sobre el camino óptimo sin tilde', () => {
-  const results = faqSearch(FAQS, 'camino optimo');
-  assert.equal(results[0].id, 'correlatividades-camino-optimo');
+test('encuentra la respuesta sobre los requisitos para cursar', () => {
+  const results = faqSearch(FAQS, 'requisitos cursar');
+  assert.equal(results[0].id, 'correlatividades-requisitos');
 });
 
 test('las preguntas de USER solo incluyen acciones disponibles para su rol', () => {
@@ -57,7 +57,7 @@ test('las preguntas de USER solo incluyen acciones disponibles para su rol', () 
   assert.ok(!ids.includes('admin-1'));
   assert.ok(!ids.includes('admin-2'));
   assert.ok(ids.includes('progreso-2'));
-  assert.ok(ids.includes('correlatividades-camino-critico'));
+  assert.ok(ids.includes('correlatividades-orden-sugerido'));
 });
 
 test('ADMIN conserva las preguntas exclusivas de administración', () => {

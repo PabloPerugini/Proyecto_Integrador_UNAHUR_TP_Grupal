@@ -4,6 +4,7 @@ const mongoose = require("mongoose");
 const UserStudyPlan = require("../models/userStudyPlan");
 const StudyPlan = require("../models/studyPlan");
 const SubjectProgress = require("../models/subjectProgress");
+const AcaActivity = require("../models/acaActivity");
 
 // Crear un error con código HTTP
 const createError = (statusCode, message) => {
@@ -101,11 +102,12 @@ const removeUserStudyPlan = async (userId, studyPlanId) => {
 
   // Si hay progreso, la baja es reversible: se archiva y se conserva
   // el avance por si la persona vuelve a inscribirse al mismo plan.
-  const hasProgress = await SubjectProgress.exists({
-    userStudyPlan: userStudyPlan._id,
-  });
+  const [hasProgress, hasAcaActivities] = await Promise.all([
+    SubjectProgress.exists({ userStudyPlan: userStudyPlan._id }),
+    AcaActivity.exists({ userStudyPlan: userStudyPlan._id }),
+  ]);
 
-  if (hasProgress) {
+  if (hasProgress || hasAcaActivities) {
     userStudyPlan.archivedAt = new Date();
     await userStudyPlan.save();
     return userStudyPlan;

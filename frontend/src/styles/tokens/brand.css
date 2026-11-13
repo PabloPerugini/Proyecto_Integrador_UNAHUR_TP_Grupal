@@ -1,0 +1,11 @@
+/* Identidad UNAHUR: solo marca institucional.
+   El verde de acción vive en la rampa --palette-brand-* de primitives.css. */
+:root {
+  --unahur-green: #238a42;
+  --unahur-amber: #ffb020;
+
+  --unahur-bio: #219ecf;
+  --unahur-tech: #f08100;
+  --unahur-health: #00a79f;
+  --unahur-education: #ea4f51;
+}

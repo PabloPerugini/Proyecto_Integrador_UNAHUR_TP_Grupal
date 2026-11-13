@@ -37,7 +37,7 @@ router.get(
   authStudyPlanViewer,
   studyPlanController.getSugerencias
 );
-// Tecnicatura intermedia como sub-plan virtual (solo lectura: viewer).
+// Título intermedio como sub-plan virtual (solo lectura: viewer).
 router.get(
   "/:id/intermediate",
   authUser,

@@ -46,11 +46,11 @@ function selectTableText(pages) {
 
 const SYSTEM = `Sos un lector de planes de estudios universitarios (UNAHUR, Argentina).
 Del texto extraído de un PDF oficial tenés que identificar la TABLA DE ESTRUCTURA del plan
-(columnas tipo: Nro/Asignatura/Campo/Carga horaria/Créditos, o Código/Unidad curricular/Horas/CRE)
+(columnas tipo: Nro/Asignatura/Campo/Carga horaria, o Código/Unidad curricular/Horas)
 e ignorar el resto (fundamentación, contenidos mínimos, anexos, equivalencias).
 Respondé SOLO con un objeto JSON válido, sin markdown ni texto extra, con esta forma exacta:
-{"subjects":[{"name":"...","year":1,"cuatrimestre":1,"duration":"C","hours":{"his":0,"hit":64,"hite":0,"hip":0,"htat":61,"ht":125},"credits":5,"intermediate":false}],"creditsFinal":0,"intermediateTitle":null}
-Reglas: name = nombre limpio de la materia (sin números de orden ni siglas de campo); year = año (1-7) o null si no se deduce; cuatrimestre = 1-2 o null; duration "C" (cuatrimestral) salvo que diga anual; hours con las cargas que figuren (0 si no); credits el de la fila; intermediate true solo si la fila pertenece a la sección del título intermedio; creditsFinal = suma de créditos del plan (0 si no se sabe); intermediateTitle = nombre del título intermedio si figura ("Técnico/a ..." / null). No inventes materias: solo las que aparecen en la tabla.`;
+{"subjects":[{"name":"...","year":1,"cuatrimestre":1,"duration":"C","hours":{"his":0,"hit":64,"hite":0,"hip":0,"htat":61,"ht":125},"intermediate":false}],"intermediateTitle":null}
+Reglas: name = nombre limpio de la materia (sin números de orden ni siglas de campo); year = año (1-7) o null si no se deduce; cuatrimestre = 1-2 o null; duration "C" (cuatrimestral) salvo que diga anual; hours con las cargas que figuren (0 si no); intermediate true solo si la fila pertenece a la sección del título intermedio; intermediateTitle = nombre del título intermedio si figura ("Técnico/a ..." / null). No inventes materias: solo las que aparecen en la tabla.`;
 
 const numOr = (v, fallback = 0) => {
   const n = Number(v);
@@ -89,7 +89,6 @@ function validateSubjects(raw, { expectedMin, expectedMax }) {
         htat: numOr(h.htat),
         ht: numOr(h.ht),
       },
-      credits: numOr(s?.credits),
       kind: isAca ? "ACA" : "Materia",
       generic: isAca ? "ACA" : null,
       optional: isAca || /^AU[_ ]/i.test(name),
@@ -128,8 +127,6 @@ async function extractPlanWithAI(buffer, { careerHint, expectedMin, expectedMax 
     subjects,
     intermediateTitle:
       raw.intermediateTitle != null ? String(raw.intermediateTitle).trim() || null : null,
-    creditsFinal: subjects.reduce((acc, s) => acc + (s.credits || 0), 0),
-    creditsIntermediate: 0,
     provider,
   };
 }

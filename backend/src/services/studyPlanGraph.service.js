@@ -13,6 +13,7 @@ const STATUS_ES = {
   APROBADA: "Aprobada",
   REGULARIZADA: "Regular",
   CURSANDO: "Cursando",
+  LIBRE: "Libre",
   PENDIENTE: "Pendiente",
 };
 
@@ -29,7 +30,6 @@ async function loadPlanData(studyPlanId, userId) {
     year: ps.year ?? null,
     cuatrimestre: ps.period ?? null,
     duration: ps.duration || "CUATRIMESTRAL",
-    credits: ps.credits ?? 0,
     kind: ps.kind || "Materia",
     optional: !!ps.optional,
     intermediate: !!ps.intermediate,

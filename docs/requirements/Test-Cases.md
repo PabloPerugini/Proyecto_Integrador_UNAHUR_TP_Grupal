@@ -1,8 +1,8 @@
 # Documento de Seguimiento de Testing
 
 **Proyecto:** Gradify — Grafo Interactivo de Correlatividades y Seguimiento de Progreso Académico
-**Versión:** 2.8
-**Fecha:** 2026-11-06
+**Versión:** 2.9
+**Fecha:** 2026-11-12
 **Sponsor Organización:** Universidad Nacional de Hurlingham (UNAHUR) — Licenciatura en Informática
 **Autor:** Equipo del proyecto integrador
 **Tutor:** Prof. Alejandra Pinto
@@ -153,7 +153,7 @@ Verificación de los cambios posteriores a la corrida 7 (catálogo curado por in
 | Articulación | `continuesIn` valida IDs y rechaza autorreferencia; se muestra "Continúa en …" | ✅ |
 | Tecnicatura intermedia | `GET /study-plans/:id/intermediate` (`closed`/`externalRequires`); pestañas Lic/Tec; aviso si está vacía | ✅ |
 | Correlativas (RN05) | El backend rechaza avanzar sin correlativas (`400`); el front pre-chequea | ✅ |
-| Promedio / CSV | Promedio de aprobadas con nota + export CSV | ✅ |
+| Promedio | Promedio de aprobadas con nota | ✅ |
 | Seguridad | `checkOrigin` CSRF; logout invalida JWT; import/creación solo ADMIN | ✅ (unit `seguridad`) |
 | Admin | Usuarios (rol/baja) y Archivadas en Catálogo → Carreras (restaurar) | ✅ (estructura) |
 
@@ -228,3 +228,9 @@ Registro anticipado de las dos tandas posteriores a la corrida 10 (CHANGELOG 1.2
 - `npm run test:faq`: 6/6; esta suite cubre `faqSearch`, no la interfaz conversacional completa.
 - Build y lint de frontend correctos; lint reporta una advertencia existente en `PlanGraph.tsx:791`.
 - Verificación de humo en navegador con sesión simulada: los cuatro chips permanecen visibles y cada selección reemplaza la respuesta activa. La búsqueda escrita muestra la primera coincidencia y pliega el resto en “Ver respuestas relacionadas”. También se verificaron envío por Enter, enlace relacionado, respuesta sin coincidencias y aviso de privacidad; a 390 px no hubo desbordamiento horizontal. No equivale a una prueba E2E contra backend ni a validación en dispositivo físico.
+
+## Requisitos nuevos (12/11/2026, v2.9) — pendientes de ejecución
+
+- **Caso 47 — Estado Libre:** está definido en el [Plan de Pruebas](./Test-Plan.md); falta verificar que se conserven avances dependientes ya registrados y se rechacen nuevos avances sin correlativas válidas.
+- **Caso 48 — Créditos ACA:** está definido en el [Plan de Pruebas](./Test-Plan.md); falta probar el alta/listado/eliminación de actividades, los porcentajes por categoría y los hitos de ambos títulos.
+- No se registran resultados de ejecución para estos dos casos en esta versión.

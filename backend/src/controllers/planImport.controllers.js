@@ -115,9 +115,6 @@ const tryClassifyIntermediate = async (parsed, originalname) => {
       }
     }
 
-    parsed.creditsIntermediate = parsed.subjects
-      .filter((s) => s && s.intermediate && s.kind !== "ACA")
-      .reduce((acc, s) => acc + (s.credits || 0), 0);
     parsed.intermediateClassified = true;
 
     return { classified: true, provider: provider || null };
@@ -160,6 +157,9 @@ const previewPlanPdf = async (req, res) => {
     // reintenta acá y se refresca el extracto guardado (BUG-019).
     if (cache.action === "REUSE") {
       const result = { ...cache.result };
+      result.subjects = (result.subjects || []).map(({ credits, ...subject }) => subject);
+      delete result.creditsFinal;
+      delete result.creditsIntermediate;
       const cls = await tryClassifyIntermediate(
         result,
         req.file.originalname
@@ -242,12 +242,9 @@ const previewPlanPdf = async (req, res) => {
     // 5. Preparar el resultado
     const result = {
       sourceKind: parsed.sourceKind,
-      subjects: parsed.subjects,
+      subjects: parsed.subjects.map(({ credits, ...subject }) => subject),
       detectedCount: parsed.subjects.length,
       intermediateTitle: parsed.intermediateTitle ?? null,
-      creditsFinal: parsed.creditsFinal ?? 0,
-      creditsIntermediate:
-        parsed.creditsIntermediate ?? 0,
       intermediateClassified,
       aiFallback,
       aiProvider,

@@ -216,7 +216,7 @@ const getSugerencias = async (req, res) => {
   }
 };
 
-// Vista tecnicatura intermedia como sub-plan virtual cerrado.
+// Vista del título intermedio como sub-plan virtual cerrado.
 const getIntermediate = async (req, res) => {
   try {
     const { id } = req.params;
@@ -234,7 +234,7 @@ const getIntermediate = async (req, res) => {
 
     if (!view) {
       return res.status(404).json({
-        message: "El plan no tiene tecnicatura intermedia",
+        message: "El plan no tiene título intermedio",
       });
     }
 
@@ -242,7 +242,7 @@ const getIntermediate = async (req, res) => {
 
   } catch (error) {
     return res.status(500).json({
-      message: "Error al calcular la tecnicatura intermedia",
+      message: "Error al calcular el título intermedio",
     });
   }
 };

@@ -135,7 +135,6 @@ function normalizeSubject(item, index) {
     ),
     duration: normalizeDuration(item.duration),
     hours,
-    credits: numberOrNull(item.credits, `créditos de ${name}`) ?? 0,
     optional: item.optional === true,
     intermediate: item.intermediate === true,
     // Texto libre de correlativas del preview (solo memoria: se resuelve
@@ -267,14 +266,6 @@ async function confirmPlanImport(userId, data, { isAdmin = false } = {}) {
         data.durationYears,
         "duración del plan"
       ) ?? 0,
-      creditsFinal: numberOrNull(
-        data.creditsFinal,
-        "créditos finales"
-      ) ?? 0,
-      creditsIntermediate: numberOrNull(
-        data.creditsIntermediate,
-        "créditos intermedios"
-      ) ?? 0,
       intermediateTitle: text(data.intermediateTitle) || null,
       status: official ? "published" : "draft",
       createdBy: official ? null : userId,
@@ -309,7 +300,6 @@ async function confirmPlanImport(userId, data, { isAdmin = false } = {}) {
         period: item.period,
         duration: item.duration,
         hours: item.hours,
-        credits: item.credits,
         optional: item.optional,
         intermediate: item.intermediate,
         prerequisites: [],

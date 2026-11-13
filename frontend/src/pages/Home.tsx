@@ -22,7 +22,7 @@ import PageLoader from '../components/PageLoader';
 import EmptyState from '../components/EmptyState';
 
 import { IconCap, IconBoard } from '../components/icons';
-import { instituteColor, instituteGradient, instituteGradientTec } from '../utils/instituteColors';
+import { instituteSurface, instituteToken, type InstituteSurface } from '../utils/instituteColors';
 
 function unitNameOfCareer(career: Career): string | null {
   const unit = career.academicUnit;
@@ -52,10 +52,10 @@ function unitColorOfPlanCareer(plan: StudyPlan): string | null {
   return null;
 }
 
-function careerCoverColor(career: Career): string {
-  return (
-    career.color ||
-    instituteColor(unitNameOfCareer(career), unitColorOfCareer(career))
+function careerCoverSurface(career: Career | null): InstituteSurface {
+  return instituteSurface(
+    career ? unitNameOfCareer(career) : null,
+    career ? career.color || unitColorOfCareer(career) : null,
   );
 }
 
@@ -75,7 +75,7 @@ type Step = 'mine' | 'units' | 'careers' | 'plans';
 function PlanCard({
   entry,
   careerName,
-  careerColor,
+  career,
   enrollmentId,
   onEnroll,
   onOpen,
@@ -83,7 +83,7 @@ function PlanCard({
 }: {
   entry: PlanEntry;
   careerName: string;
-  careerColor: string;
+  career: Career | null;
   enrollmentId: string | null;
   onEnroll: (planId: string) => void;
   onOpen: (planId: string, path: string) => void;
@@ -91,6 +91,12 @@ function PlanCard({
 }) {
   const { plan, subjects } = entry;
   const published = plan.status === 'published';
+  const coverSurface = careerCoverSurface(career);
+  const tecSurface = instituteSurface(
+    career ? unitNameOfCareer(career) : null,
+    career ? career.color || unitColorOfCareer(career) : null,
+    'soft',
+  );
 
   const [inter, setInter] = useState<IntermediateView | null | undefined>(undefined);
   const [working, setWorking] = useState(false);
@@ -112,10 +118,7 @@ function PlanCard({
 
       <div
         className="career-card__cover"
-        style={{
-          background:
-            `linear-gradient(135deg, ${careerColor} 0%, color-mix(in srgb, ${careerColor} 52%, #0b0f14) 100%)`,
-        }}
+        style={coverSurface}
       >
         <span
           className={
@@ -158,35 +161,29 @@ function PlanCard({
             </span>
           )}
 
-          {(plan.creditsFinal ?? 0) > 0 && (
-            <span className="chip">
-              {plan.creditsFinal} créditos
-            </span>
-          )}
-
           {plan.intermediateTitle && (
-            <span className="chip" title="Incluye tecnicatura intermedia" style={{ background: instituteGradientTec(careerColor), color: '#fff', border: 'none' }}>
+            <span className="chip" title="Incluye título intermedio" style={{ ...tecSurface, border: 'none' }}>
               🎓 {plan.intermediateTitle}
             </span>
           )}
         </div>
 
-        {/* TECNICATURA INTERMEDIA */}
+        {/* TÍTULO INTERMEDIO */}
 
         {plan.intermediateTitle && (
           <details className="mt-3" onToggle={(e) => { if ((e.target as HTMLDetailsElement).open) void loadIntermediate(); }}>
             <summary style={{ cursor: 'pointer', fontWeight: 600 }}>
-              Tecnicatura: {plan.intermediateTitle}
+              Título intermedio: {plan.intermediateTitle}
               {intermediateCount > 0 ? ` (${intermediateCount})` : ''}
             </summary>
 
             {inter === undefined && (
-              <p className="text-muted small mt-2">Cargando tecnicatura…</p>
+              <p className="text-muted small mt-2">Cargando título intermedio…</p>
             )}
 
             {inter === null && (
               <p className="text-warning small mt-2">
-                No se pudo consultar la tecnicatura.
+                No se pudo consultar el título intermedio.
               </p>
             )}
 
@@ -194,20 +191,19 @@ function PlanCard({
               <div className="mt-2" style={{ maxHeight: 280, overflowY: 'auto' }}>
                 {inter.total === 0 ? (
                   <p className="text-muted small mt-2">
-                    La tecnicatura todavía no tiene materias marcadas.
+                    El título intermedio todavía no tiene materias marcadas.
                   </p>
                 ) : (
                 <>
                 <p className="small mb-1">
                   {inter.total} materias
-                  {(inter.creditsIntermediate ?? 0) > 0 && ` · ${inter.creditsIntermediate} créditos`}
                   {' · '}
                   {inter.closed ? 'correlativas cerradas ✅' : 'revisar correlativas ⚠️'}
                 </p>
 
                 {!inter.closed && (
                   <p className="text-warning small">
-                    Algunas materias piden correlativas fuera de la tecnicatura.
+                    Algunas materias piden correlativas fuera del título intermedio.
                   </p>
                 )}
 
@@ -315,12 +311,11 @@ function EnrolledPlanCard({
           {showCareer && <span>{careerName}</span>}
           {subjectCount !== null && <span>{subjectCount} materias</span>}
           {(plan.durationYears ?? 0) > 0 && <span>{plan.durationYears} años</span>}
-          {(plan.creditsFinal ?? 0) > 0 && <span>{plan.creditsFinal} créditos</span>}
         </div>
 
         {plan.intermediateTitle && (
           <span className="chip chip--success plan-row__tec" title={`Incluye ${plan.intermediateTitle}`}>
-            🎓 Tecnicatura intermedia
+            🎓 Título intermedio
           </span>
         )}
       </div>
@@ -353,12 +348,12 @@ function planCareerName(plan: StudyPlan): string {
 
 function planCareerColor(plan: StudyPlan): string {
   if (plan.career && typeof plan.career === 'object') {
-    return (
-      plan.career.color ||
-      instituteColor(unitNameOfPlanCareer(plan), unitColorOfPlanCareer(plan))
+    return instituteToken(
+      unitNameOfPlanCareer(plan),
+      plan.career.color || unitColorOfPlanCareer(plan),
     );
   }
-  return instituteColor(null);
+  return instituteToken(null);
 }
 
 // =========================================
@@ -660,7 +655,7 @@ export default function Home() {
               <article key={unit._id} className="career-card">
                 <div
                   className="career-card__cover"
-                  style={{ background: instituteGradient(instituteColor(unit.name, unit.color)) }}
+                  style={instituteSurface(unit.name, unit.color)}
                 >
                   <span className="career-card__cover-icon"><IconCap /></span>
                   <span className="career-card__cover-title">{unit.name}</span>
@@ -710,7 +705,7 @@ export default function Home() {
                 <article key={career._id} className="career-card">
                   <div
                     className="career-card__cover"
-                    style={{ background: instituteGradient(careerCoverColor(career)) }}
+                    style={careerCoverSurface(career)}
                   >
                     <span className="career-card__cover-icon"><IconBoard /></span>
                     <span className="career-card__cover-title">{career.name}</span>
@@ -811,7 +806,7 @@ export default function Home() {
                 key={entry.plan._id}
                 entry={entry}
                 careerName={selectedCareer?.name ?? 'Carrera asociada'}
-                careerColor={selectedCareer ? careerCoverColor(selectedCareer) : '#238a42'}
+                career={selectedCareer}
                 enrollmentId={enrollmentIdFor(entry.plan._id)}
                 onEnroll={handleEnroll}
                 onOpen={handleOpen}

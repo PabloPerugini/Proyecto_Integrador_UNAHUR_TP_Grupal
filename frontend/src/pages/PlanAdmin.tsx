@@ -8,11 +8,11 @@ import PageHeader from '../components/PageHeader';
 import MessageBanner from '../components/MessageBanner';
 
 interface SubjectForm {
-  name: string; code: string; year: string; period: string; credits: string; optional: boolean; intermediate: boolean;
+  name: string; code: string; year: string; period: string; optional: boolean; intermediate: boolean;
   prerequisites: PlanPrerequisite[];
 }
 function fromSubject(s: PlanSubject): SubjectForm {
-  return { name: subjectName(s), code: s.code ?? '', year: s.year == null ? '' : String(s.year), period: s.period == null ? '' : String(s.period), credits: String(s.credits ?? 0), optional: Boolean(s.optional), intermediate: Boolean(s.intermediate),
+  return { name: subjectName(s), code: s.code ?? '', year: s.year == null ? '' : String(s.year), period: s.period == null ? '' : String(s.period), optional: Boolean(s.optional), intermediate: Boolean(s.intermediate),
     prerequisites: (s.prerequisites ?? []).map(p => ({ planSubject: prerequisiteId(p) ?? '', requiredStatus: p.requiredStatus })).filter(p => Boolean(p.planSubject)) };
 }
 function validNum(value: string, label: string, min: number, max: number): number | null {
@@ -33,25 +33,21 @@ export default function PlanAdmin() {
   const [name, setName] = useState('');
   const [status, setStatus] = useState<'draft'|'published'>('draft');
   const [intermediateTitle, setIntermediateTitle] = useState('');
-  const [creditsIntermediate, setCreditsIntermediate] = useState('');
   const [newSubject, setNewSubject] = useState({
-    name: '', code: '', year: '', period: '', credits: '0', optional: false, intermediate: false,
+    name: '', code: '', year: '', period: '', optional: false, intermediate: false,
   });
   const [corrResult, setCorrResult] = useState<CorrParseResult | null>(null);
   const [bulkYear, setBulkYear] = useState('');
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const plan = plans.find(p => p._id === selected);  const enteredCreditsIntermediate = intermediateTitle.trim()
-    ? Number(creditsIntermediate || '0')
-    : 0;
+  const plan = plans.find(p => p._id === selected);
   
   const planHasChanges = Boolean(
     plan && (
       name.trim() !== plan.name.trim() ||
       status !== plan.status ||
-      intermediateTitle.trim() !== (plan.intermediateTitle ?? '').trim() ||
-      enteredCreditsIntermediate !== (plan.creditsIntermediate ?? 0)
+      intermediateTitle.trim() !== (plan.intermediateTitle ?? '').trim()
     ),
   );
   const intermediateCount = subjects.filter(s => s.intermediate).length;
@@ -83,7 +79,7 @@ export default function PlanAdmin() {
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [selected]);
-  useEffect(() => { setName(plan?.name ?? ''); setStatus(plan?.status ?? 'draft'); setIntermediateTitle(plan?.intermediateTitle ?? ''); setCreditsIntermediate(plan?.creditsIntermediate ? String(plan.creditsIntermediate) : ''); }, [plan?._id, plan?.name, plan?.status, plan?.intermediateTitle, plan?.creditsIntermediate]);
+  useEffect(() => { setName(plan?.name ?? ''); setStatus(plan?.status ?? 'draft'); setIntermediateTitle(plan?.intermediateTitle ?? ''); }, [plan?._id, plan?.name, plan?.status, plan?.intermediateTitle]);
 
   const modify = (subjectId: string, change: Partial<SubjectForm>) => setDraft(current => ({ ...current, [subjectId]: { ...current[subjectId], ...change } }));
   const prerequisiteSignature = (prerequisites: PlanPrerequisite[]) => prerequisites
@@ -105,7 +101,6 @@ export default function PlanAdmin() {
       || edit.code.trim() !== (subject.code ?? '').trim()
       || edit.year.trim() !== (subject.year == null ? '' : String(subject.year))
       || edit.period.trim() !== (subject.period == null ? '' : String(subject.period))
-      || edit.credits.trim() !== String(subject.credits ?? 0)
       || edit.optional !== Boolean(subject.optional)
       || edit.intermediate !== Boolean(subject.intermediate)
       || prerequisiteSignature(edit.prerequisites) !== prerequisiteSignature(subject.prerequisites ?? []);
@@ -119,7 +114,6 @@ export default function PlanAdmin() {
         name: name.trim(),
         status,
         intermediateTitle: intermediateTitle.trim() || null,
-        creditsIntermediate: intermediateTitle.trim() ? (validNum(creditsIntermediate || '0', 'Créditos tecnicatura', 0, 10000) ?? 0) : 0,
       });
       await loadPlans();
       flash('success', 'Datos del plan guardados.');
@@ -153,7 +147,7 @@ export default function PlanAdmin() {
         if (!edit) continue;
         await studyPlansApi.updateSubject(plan._id, subject._id, {
           nameOverride: edit.name.trim(), code: edit.code.trim(), year: validNum(edit.year, 'Año', 1, 20), period: validNum(edit.period, 'Período', 1, 12),
-          credits: validNum(edit.credits, 'Créditos', 0, 1000) ?? 0, optional: edit.optional, intermediate: edit.intermediate,
+          optional: edit.optional, intermediate: edit.intermediate,
           prerequisites: edit.prerequisites.map(p => ({ planSubject: prerequisiteId(p) || '', requiredStatus: p.requiredStatus })),
         });
         saved += 1;
@@ -179,11 +173,9 @@ export default function PlanAdmin() {
     }
     let year: number | null;
     let period: number | null;
-    let credits: number;
     try {
       year = validNum(newSubject.year, 'Año', 1, 20);
       period = validNum(newSubject.period, 'Período', 1, 12);
-      credits = validNum(newSubject.credits, 'Créditos', 0, 1000) ?? 0;
     } catch (e) {
       flash('warning', e instanceof Error ? e.message : 'Revisá los datos de la materia.');
       return;
@@ -191,11 +183,11 @@ export default function PlanAdmin() {
     setWorking(true);
     try {
       await studyPlansApi.createSubject(plan._id, {
-        name: newSubject.name.trim(), code: newSubject.code.trim(), year, period, credits,
+        name: newSubject.name.trim(), code: newSubject.code.trim(), year, period,
         optional: newSubject.optional, intermediate: newSubject.intermediate,
       });
       await reloadSubjects(plan._id);
-      setNewSubject({ name: '', code: '', year: '', period: '', credits: '0', optional: false, intermediate: false });
+      setNewSubject({ name: '', code: '', year: '', period: '', optional: false, intermediate: false });
       flash('success', 'Materia creada y agregada al plan.');
     } catch (e) { flashFromError(e, 'No se pudo crear la materia'); }
     finally { setWorking(false); }
@@ -232,7 +224,7 @@ export default function PlanAdmin() {
       });
       await reloadSubjects(plan._id);
       flash('success', `${intermediate ? 'Marcadas' : 'Desmarcadas'} ${result.modified} materia(s)${bulkYear ? ` de ${bulkYear}º año` : ''}.`);
-    } catch (e) { flashFromError(e, 'No se pudo actualizar la tecnicatura'); }
+    } catch (e) { flashFromError(e, 'No se pudo actualizar el título intermedio'); }
     finally { setWorking(false); }
   };
   const setAllRequiredStatus = async (requiredStatus: 'REGULARIZADA' | 'APROBADA') => {
@@ -304,8 +296,7 @@ export default function PlanAdmin() {
         <Form.Group className="mb-3"><Form.Label>Estado del plan</Form.Label><Form.Select value={status} onChange={e => setStatus(e.target.value as 'draft'|'published')}>
           <option value="draft">Borrador</option><option value="published">Publicado</option>
         </Form.Select><Form.Text muted>Publicar el borrador no lo convierte en un plan oficial; conserva su propietario.</Form.Text></Form.Group>
-        <Form.Group className="mb-3"><Form.Label>Título intermedio (tecnicatura, opcional)</Form.Label><Form.Control value={intermediateTitle} onChange={e => setIntermediateTitle(e.target.value)} placeholder="Ej. Técnico/a Universitario/a en…" /></Form.Group>
-        {intermediateTitle.trim() && <Form.Group className="mb-3"><Form.Label>Créditos de la tecnicatura</Form.Label><Form.Control type="number" min={0} value={creditsIntermediate} onChange={e => setCreditsIntermediate(e.target.value)} /></Form.Group>}
+        <Form.Group className="mb-3"><Form.Label>Título intermedio (opcional)</Form.Label><Form.Control value={intermediateTitle} onChange={e => setIntermediateTitle(e.target.value)} placeholder="Ej. Técnico/a Universitario/a en…" /></Form.Group>
         <Button
           disabled={working || !name.trim() || !planHasChanges}
           onClick={() => void savePlan()}
@@ -321,9 +312,8 @@ export default function PlanAdmin() {
             <Form.Group style={{ flex: '0 1 150px' }}><Form.Label>Código</Form.Label><Form.Control required value={newSubject.code} disabled={working} onChange={e => setNewSubject(current => ({ ...current, code: e.target.value }))} /></Form.Group>
             <Form.Group style={{ flex: '0 1 100px' }}><Form.Label>Año</Form.Label><Form.Control type="number" min={1} max={20} value={newSubject.year} disabled={working} onChange={e => setNewSubject(current => ({ ...current, year: e.target.value }))} /></Form.Group>
             <Form.Group style={{ flex: '0 1 110px' }}><Form.Label>Período</Form.Label><Form.Control type="number" min={1} max={12} value={newSubject.period} disabled={working} onChange={e => setNewSubject(current => ({ ...current, period: e.target.value }))} /></Form.Group>
-            <Form.Group style={{ flex: '0 1 110px' }}><Form.Label>Créditos</Form.Label><Form.Control type="number" min={0} max={1000} value={newSubject.credits} disabled={working} onChange={e => setNewSubject(current => ({ ...current, credits: e.target.value }))} /></Form.Group>
             <Form.Check label="Optativa" checked={newSubject.optional} disabled={working} onChange={e => setNewSubject(current => ({ ...current, optional: e.target.checked }))} />
-            <Form.Check label="Tecnicatura" checked={newSubject.intermediate} disabled={working} onChange={e => setNewSubject(current => ({ ...current, intermediate: e.target.checked }))} />
+            <Form.Check label="Título intermedio" checked={newSubject.intermediate} disabled={working} onChange={e => setNewSubject(current => ({ ...current, intermediate: e.target.checked }))} />
             <Button type="submit" disabled={working}>{working && <Spinner size="sm" className="me-1" />}Crear materia</Button>
           </div>
         </Form>
@@ -347,7 +337,7 @@ export default function PlanAdmin() {
         <p className="small text-muted">Las materias importadas se editan aquí. Los nombres pertenecen al catálogo general de materias; en esta pantalla se editan sus datos propios del plan.</p>
         {intermediateTitle.trim() && intermediateCount === 0 && subjects.length > 0 && (
           <div className="alert alert-warning py-2">
-            <strong>Atención:</strong> el plan declara el título intermedio «{intermediateTitle.trim()}» pero ninguna materia está marcada como parte de la tecnicatura. Marcá las que correspondan en la columna <em>Tec</em> o usá el marcado en lote.
+            <strong>Atención:</strong> el plan declara el título intermedio «{intermediateTitle.trim()}» pero ninguna materia está marcada como parte de ese título. Marcá las que correspondan en la columna <em>Título intermedio</em> o usá el marcado en lote.
           </div>
         )}
         <div className="d-flex flex-wrap gap-2 align-items-center mb-3">
@@ -355,9 +345,9 @@ export default function PlanAdmin() {
             <option value="">Todas las materias</option>
             {bulkYears.map(y => <option key={y} value={y}>{y}º año</option>)}
           </Form.Select>
-          <Button size="sm" variant="outline-primary" disabled={working || !subjects.length} onClick={() => void applyBulkIntermediate(true)}>Marcar tecnicatura</Button>
+          <Button size="sm" variant="outline-primary" disabled={working || !subjects.length} onClick={() => void applyBulkIntermediate(true)}>Marcar título intermedio</Button>
           <Button size="sm" variant="outline-secondary" disabled={working || !subjects.length} onClick={() => void applyBulkIntermediate(false)}>Desmarcar</Button>
-          <span className="small text-muted">{intermediateCount} de {subjects.length} materias marcadas como tecnicatura</span>
+          <span className="small text-muted">{intermediateCount} de {subjects.length} materias marcadas para el título intermedio</span>
         </div>
         <div className="d-flex flex-wrap gap-2 align-items-center mb-3">
           <span className="small text-muted">Requisito de correlativas del plan:</span>
@@ -365,16 +355,15 @@ export default function PlanAdmin() {
           <Button size="sm" variant="outline-secondary" disabled={working || !subjects.some(s => (s.prerequisites ?? []).length)} onClick={() => void setAllRequiredStatus('APROBADA')}>Deben estar aprobadas</Button>
           <span className="small text-muted">Aplica el requisito a todas las correlativas del plan (después se ajusta materia por materia).</span>
         </div>
-        <div className="table-responsive"><Table size="sm" striped hover><thead><tr><th>Materia</th><th>Código</th><th>Año</th><th>Período</th><th>Créditos</th><th>Optativa</th><th title="Pertenece a la tecnicatura intermedia">Tec</th><th>Correlatividades</th><th>Acciones</th></tr></thead><tbody>
+        <div className="table-responsive"><Table size="sm" striped hover><thead><tr><th>Materia</th><th>Código</th><th>Año</th><th>Período</th><th>Optativa</th><th title="Pertenece al título intermedio">Título intermedio</th><th>Correlatividades</th><th>Acciones</th></tr></thead><tbody>
           {subjects.map(s => {
             const v = draft[s._id]; if (!v) return null;
             return <tr key={s._id} className={isSubjectDirty(s) ? 'table-warning' : undefined}><td style={{ minWidth: 190 }}><Form.Control size="sm" value={v.name} aria-label={`Nombre de ${subjectName(s)}`} onChange={e => modify(s._id, { name: e.target.value })} /></td>
               <td><Form.Control size="sm" style={{ minWidth: 90 }} value={v.code} isInvalid={duplicateCodes.has(v.code.trim())} aria-invalid={duplicateCodes.has(v.code.trim())} onChange={e => modify(s._id, { code: e.target.value })} /><Form.Control.Feedback type="invalid">Código repetido.</Form.Control.Feedback></td>
               <td><Form.Control size="sm" type="number" min={1} style={{ width: 72 }} value={v.year} onChange={e => modify(s._id, { year: e.target.value })} /></td>
               <td><Form.Control size="sm" type="number" min={1} style={{ width: 72 }} value={v.period} onChange={e => modify(s._id, { period: e.target.value })} /></td>
-              <td><Form.Control size="sm" type="number" min={0} style={{ width: 85 }} value={v.credits} onChange={e => modify(s._id, { credits: e.target.value })} /></td>
               <td><Form.Check type="checkbox" checked={v.optional} onChange={e => modify(s._id, { optional: e.target.checked })} /></td>
-              <td><Form.Check type="checkbox" title="Pertenece a la tecnicatura intermedia" checked={v.intermediate} onChange={e => modify(s._id, { intermediate: e.target.checked })} /></td>
+              <td><Form.Check type="checkbox" title="Pertenece al título intermedio" checked={v.intermediate} onChange={e => modify(s._id, { intermediate: e.target.checked })} /></td>
               <td style={{ minWidth: 260 }}><details><summary style={{ cursor: 'pointer' }}>{v.prerequisites.length} requisito(s)</summary><div className="p-2 border rounded mt-2" style={{ maxHeight: 240, overflowY: 'auto', minWidth: 260 }}>
                 {subjects.filter(other => other._id !== s._id).map(other => {
                   const required = v.prerequisites.find(p => prerequisiteId(p) === other._id);

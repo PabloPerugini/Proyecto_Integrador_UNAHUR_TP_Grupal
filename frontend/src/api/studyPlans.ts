@@ -59,7 +59,6 @@ export interface IntermediateSubject {
   code: string;
   name: string;
   year: number | null;
-  credits: number;
   requires: string[];
   externalRequires: string[];
 }
@@ -67,7 +66,6 @@ export interface IntermediateView {
   planId: string;
   planName: string;
   intermediateTitle: string;
-  creditsIntermediate: number;
   closed: boolean;
   total: number;
   subjects: IntermediateSubject[];
@@ -82,8 +80,6 @@ export interface StudyPlan {
   career: string | CareerRef | null;
   resolution?: string;
   durationYears?: number;
-  creditsFinal?: number;
-  creditsIntermediate?: number;
   intermediateTitle?: string | null;
   status: 'draft' | 'published';
   createdBy?: string | { _id: string } | null;
@@ -111,7 +107,6 @@ export interface PlanSubject {
   year?: number | null;
   period?: number | null;
   duration?: 'CUATRIMESTRAL' | 'SEMESTRAL' | 'ANUAL' | 'TRIMESTRAL' | 'OTRA';
-  credits?: number;
   hours?: Record<string, number | null>;
   optional?: boolean;
   intermediate?: boolean;
@@ -123,11 +118,28 @@ export interface UserStudyPlan {
   studyPlan: string | StudyPlan | null;
   createdAt?: string;
 }
+export type AcaActivityCategory = 'UC' | 'EF' | 'INSTITUTO';
+export interface AcaActivity {
+  _id: string;
+  userStudyPlan: string;
+  title: string;
+  category: AcaActivityCategory;
+  credits: number;
+  interactionHours: number;
+  createdAt?: string;
+}
+export interface AcaActivityInput {
+  title: string;
+  category: AcaActivityCategory;
+  credits: number;
+  interactionHours: number;
+}
 export type ProgressStatus =
   | 'PENDIENTE'
   | 'CURSANDO'
   | 'REGULARIZADA'
-  | 'APROBADA';
+  | 'APROBADA'
+  | 'LIBRE';
 export type ResolvedProgressStatus = ProgressStatus | 'DISPONIBLE' | 'BLOQUEADA';
 export interface SubjectProgress {
   _id: string;
@@ -174,7 +186,7 @@ export const studyPlansApi = {
   },
   createSubject: async (planId: string, data: {
     name: string; code: string; year: number | null; period: number | null;
-    credits: number; optional: boolean; intermediate: boolean;
+    optional: boolean; intermediate: boolean;
   }) => {
     const result = await request<{ planSubject: PlanSubject }>(`/study-plans/${planId}/subjects`, {
       method: 'POST', body: JSON.stringify(data),
@@ -202,6 +214,18 @@ export const studyPlansApi = {
   remove: (studyPlanId: string) =>
     request<{ message: string }>(`/user-study-plans/${encodeURIComponent(studyPlanId)}`, { method: 'DELETE' }),
   getProgress: (userStudyPlanId: string) => request<SubjectProgress[]>(`/user-study-plans/${userStudyPlanId}/progress`),
+  getAcaActivities: async (userStudyPlanId: string) => {
+    const result = await request<{ activities: AcaActivity[] }>(`/user-study-plans/${userStudyPlanId}/aca-activities`);
+    return result.activities;
+  },
+  createAcaActivity: async (userStudyPlanId: string, data: AcaActivityInput) => {
+    const result = await request<{ activity: AcaActivity }>(`/user-study-plans/${userStudyPlanId}/aca-activities`, {
+      method: 'POST', body: JSON.stringify(data),
+    });
+    return result.activity;
+  },
+  deleteAcaActivity: (userStudyPlanId: string, activityId: string) =>
+    request<{ message: string }>(`/user-study-plans/${userStudyPlanId}/aca-activities/${activityId}`, { method: 'DELETE' }),
   saveProgress: async (userStudyPlanId: string, subjectId: string, data: ProgressInput) => {
     const result = await request<{ progress: SubjectProgress }>(`/user-study-plans/${userStudyPlanId}/progress/${subjectId}`, {
       method: 'PUT', body: JSON.stringify(data),

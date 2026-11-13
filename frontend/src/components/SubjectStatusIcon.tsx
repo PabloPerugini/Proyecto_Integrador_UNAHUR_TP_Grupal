@@ -5,6 +5,7 @@ import { tintStatusSvg } from '../utils/graphHighlight';
 import aprobadaIcon from '../assets/subject-status/aprobada.svg?raw';
 import regularIcon from '../assets/subject-status/regular.svg?raw';
 import cursandoIcon from '../assets/subject-status/cursando.svg?raw';
+import libreIcon from '../assets/subject-status/libre.svg?raw';
 import bloqueadaIcon from '../assets/subject-status/bloqueada.svg?raw';
 import disponibleIcon from '../assets/subject-status/disponible.svg?raw';
 import './SubjectStatusIcon.css';
@@ -13,18 +14,19 @@ const STATUS_ICONS: Record<SubjectStatus, string> = {
   Aprobada: aprobadaIcon,
   Regular: regularIcon,
   Cursando: cursandoIcon,
+  Libre: libreIcon,
   Disponible: disponibleIcon,
   Bloqueada: bloqueadaIcon,
 };
 
 const STATUS_ICON_COLORS: Record<SubjectStatus, string> = {
-  Aprobada: 'var(--map-status-approved-icon)',
-  Regular: 'var(--map-status-regular-icon)',
-  Cursando: 'var(--map-status-in-progress-icon)',
-  Disponible: 'var(--map-status-available-icon)',
-  Bloqueada: 'var(--map-status-locked-icon)',
+  Aprobada: 'var(--status-aprobada-solid)',
+  Regular: 'var(--status-regular-solid)',
+  Cursando: 'var(--status-cursando-solid)',
+  Libre: 'var(--status-libre-solid)',
+  Disponible: 'var(--status-disponible-solid)',
+  Bloqueada: 'var(--status-bloqueada-solid)',
 };
-
 interface SubjectStatusIconProps {
   status: SubjectStatus;
   className?: string;

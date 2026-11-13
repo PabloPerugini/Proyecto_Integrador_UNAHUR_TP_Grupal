@@ -1,0 +1,12 @@
+/* Tokens de componente que se setean inline o varían por contexto. */
+:root {
+  --plan-highlight-color: var(--graph-path-suggested);
+  --map-island-color: var(--unahur-green);
+  --map-island-base: 6%;
+  --map-island-step: 0%;
+  --map-island-mix: calc(var(--map-island-base) + var(--map-island-step));
+}
+
+[data-bs-theme="dark"] {
+  --map-island-base: 12%;
+}

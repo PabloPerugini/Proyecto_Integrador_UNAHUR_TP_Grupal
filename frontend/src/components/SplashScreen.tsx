@@ -140,7 +140,7 @@ export default function SplashScreen({ fading, onFinish }: SplashScreenProps) {
           </li>
           <li>
             <IconChart />
-            <span>Seguí tu avance, créditos y aprobadas</span>
+            <span>Seguí tu avance, tus actividades ACA y materias aprobadas</span>
           </li>
         </ul>
 

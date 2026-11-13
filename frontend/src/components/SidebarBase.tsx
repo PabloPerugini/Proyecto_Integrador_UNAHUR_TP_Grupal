@@ -17,17 +17,17 @@ export interface NavItem {
 interface SidebarBaseProps {
   nav: NavItem[];
   sectionLabel: string;
+  sectionContent?: ReactNode;
   brandTo: string;
   mobileTitle?: string;
   children?: ReactNode;
-  topContent?: ReactNode;
 }
 
 function GradifyMark() {
   return <GradifyLogo className="sidebar__brand-logo" />;
 }
 
-export default function SidebarBase({ nav, sectionLabel, brandTo, mobileTitle, children, topContent }: SidebarBaseProps) {
+export default function SidebarBase({ nav, sectionLabel, sectionContent, brandTo, mobileTitle, children }: SidebarBaseProps) {
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(() => {
     try { return localStorage.getItem('gradify-sidebar-collapsed') === 'true'; }
@@ -82,9 +82,9 @@ export default function SidebarBase({ nav, sectionLabel, brandTo, mobileTitle, c
         </NavLink>
         </div>
 
-        {topContent}
         <nav className="sidebar__nav" id="desktop-navigation" aria-label="Navegación principal">
           <div className="sidebar__section">{sectionLabel}</div>
+          {sectionContent}
           {renderLinks()}
           {children}
         </nav>
@@ -115,9 +115,9 @@ export default function SidebarBase({ nav, sectionLabel, brandTo, mobileTitle, c
           </Offcanvas.Title>
         </Offcanvas.Header>
         <Offcanvas.Body className="d-flex flex-column">
-          {topContent}
           <nav className="sidebar__nav">
             <div className="sidebar__section">{sectionLabel}</div>
+            {sectionContent}
             {renderLinks(() => setOpen(false))}
             {children}
           </nav>

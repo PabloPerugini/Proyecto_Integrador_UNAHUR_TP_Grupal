@@ -141,7 +141,6 @@ paths:
                 detectedCount: 19
                 subjects: []
                 intermediateTitle: "Técnico/a Universitario/a en Programación"
-                creditsIntermediate: 120
                 intermediateClassified: false
                 aiFallback: false
                 aiProvider: null
@@ -469,7 +468,7 @@ paths:
             type: string
       responses:
         "200":
-          description: Lista de avances (PENDIENTE/CURSANDO/REGULARIZADA/APROBADA + nota)
+          description: Lista de avances (PENDIENTE/CURSANDO/REGULARIZADA/APROBADA/LIBRE + nota)
 
   /user-study-plans/{userStudyPlanId}/progress/{planSubjectId}:
     put:
@@ -497,12 +496,85 @@ paths:
               properties:
                 status:
                   type: string
-                  enum: [PENDIENTE, CURSANDO, REGULARIZADA, APROBADA]
+                  enum: [PENDIENTE, CURSANDO, REGULARIZADA, APROBADA, LIBRE]
                 grade:
                   type: number
       responses:
         "200":
           description: Progreso guardado
+
+  /user-study-plans/{userStudyPlanId}/aca-activities:
+    get:
+      tags:
+        - UserStudyPlans
+      summary: Listar actividades ACA de mi inscripción
+      parameters:
+        - name: userStudyPlanId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Actividades con categoría, CRE y horas de interacción pedagógica
+    post:
+      tags:
+        - UserStudyPlans
+      summary: Registrar una actividad ACA
+      parameters:
+        - name: userStudyPlanId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, category, credits]
+              properties:
+                title:
+                  type: string
+                  maxLength: 150
+                category:
+                  type: string
+                  enum: [UC, EF, INSTITUTO]
+                credits:
+                  type: number
+                  exclusiveMinimum: 0
+                interactionHours:
+                  type: number
+                  minimum: 0
+                  default: 0
+      responses:
+        "201":
+          description: Actividad ACA registrada
+        "400":
+          description: Datos inválidos
+
+  /user-study-plans/{userStudyPlanId}/aca-activities/{activityId}:
+    delete:
+      tags:
+        - UserStudyPlans
+      summary: Eliminar una actividad ACA
+      parameters:
+        - name: userStudyPlanId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: activityId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Actividad ACA eliminada
+        "404":
+          description: Actividad ACA no encontrada
 
   /progress/parse-history:
     post:

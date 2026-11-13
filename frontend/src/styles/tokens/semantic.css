@@ -1,0 +1,227 @@
+/* Roles semánticos y mapeo de Bootstrap. */
+:root {
+  color-scheme: light;
+
+  --color-bg: var(--palette-neutral-100);
+  --color-surface: var(--palette-neutral-0);
+  --color-surface-2: var(--palette-neutral-50);
+  --color-surface-3: var(--palette-neutral-200);
+  --color-surface-glass: color-mix(in srgb, var(--color-surface) 82%, transparent);
+
+  --color-border: var(--palette-neutral-300);
+  --color-border-strong: var(--palette-neutral-400);
+  --color-border-subtle: var(--palette-neutral-200);
+
+  --color-text: var(--palette-ink);
+  --color-text-muted: var(--palette-neutral-600);
+  --color-text-subtle: var(--palette-neutral-500);
+
+  --color-brand: var(--palette-brand-500);
+  --color-brand-solid: var(--palette-brand-500);
+  --color-brand-strong: var(--palette-brand-700);
+  --color-brand-soft: var(--palette-brand-100);
+  --color-on-brand: var(--palette-white);
+  --color-ink: var(--palette-ink);
+  --color-on-institute: var(--color-ink);
+
+  --color-accent: var(--palette-warning-500);
+  --color-accent-soft: var(--palette-warning-100);
+  --color-focus: var(--color-brand);
+
+  --color-success: var(--palette-success-500);
+  --color-success-soft: var(--palette-success-100);
+  --color-success-text: var(--palette-success-700);
+  --color-warning: var(--palette-warning-500);
+  --color-warning-soft: var(--palette-warning-100);
+  --color-warning-text: var(--palette-warning-900);
+  --color-danger: var(--palette-danger-500);
+  --color-danger-strong: var(--palette-danger-700);
+  --color-danger-soft: var(--palette-danger-100);
+  --color-danger-text: var(--palette-danger-700);
+  --color-info: var(--palette-info-500);
+  --color-info-soft: var(--palette-info-100);
+  --color-info-text: var(--palette-info-700);
+
+  --status-aprobada-bg: var(--palette-success-100);
+  --status-aprobada-border: var(--palette-success-300);
+  --status-aprobada-text: var(--palette-success-700);
+  --status-aprobada-solid: var(--palette-success-500);
+
+  --status-regular-bg: var(--palette-violet-100);
+  --status-regular-border: var(--palette-violet-300);
+  --status-regular-text: var(--palette-violet-700);
+  --status-regular-solid: var(--palette-violet-500);
+
+  --status-cursando-bg: var(--palette-info-100);
+  --status-cursando-border: var(--palette-info-300);
+  --status-cursando-text: var(--palette-info-700);
+  --status-cursando-solid: var(--palette-info-500);
+
+  --status-libre-bg: var(--palette-danger-100);
+  --status-libre-border: var(--palette-danger-300);
+  --status-libre-text: var(--palette-danger-700);
+  --status-libre-solid: var(--palette-danger-500);
+
+  --status-disponible-bg: var(--palette-teal-100);
+  --status-disponible-border: var(--palette-teal-300);
+  --status-disponible-text: var(--palette-teal-700);
+  --status-disponible-solid: var(--palette-teal-500);
+
+  --status-bloqueada-bg: var(--palette-neutral-200);
+  --status-bloqueada-border: var(--palette-neutral-400);
+  --status-bloqueada-text: var(--palette-neutral-700);
+  --status-bloqueada-solid: var(--palette-neutral-500);
+
+  --graph-bg: var(--color-surface-2);
+  --graph-grid: var(--color-border-subtle);
+  --graph-edge: var(--palette-neutral-500);
+  --graph-edge-pending: var(--palette-neutral-500);
+  --graph-edge-fulfilled: var(--palette-success-500);
+  --graph-path-requirements: var(--palette-warning-700);
+  --graph-path-suggested: var(--palette-teal-700);
+  --graph-selection: var(--palette-info-500);
+  --graph-unlock: var(--palette-success-500);
+  --graph-dim-opacity: 0.32;
+
+  --gradient-brand: linear-gradient(135deg, var(--color-brand-solid) 0%, var(--color-brand-strong) 100%);
+  --gradient-surface: linear-gradient(160deg, var(--color-surface) 0%, var(--color-surface-2) 100%);
+  --gradient-app-glow: radial-gradient(ellipse 80% 60% at 0% -10%, color-mix(in srgb, var(--color-brand) 6%, transparent) 0%, transparent 60%);
+
+  --gradient-institute-bio: linear-gradient(135deg, color-mix(in oklab, var(--unahur-bio) 78%, var(--color-surface)) 0%, var(--unahur-bio) 100%);
+  --gradient-institute-tech: linear-gradient(135deg, color-mix(in oklab, var(--unahur-tech) 78%, var(--color-surface)) 0%, var(--unahur-tech) 100%);
+  --gradient-institute-health: linear-gradient(135deg, color-mix(in oklab, var(--unahur-health) 78%, var(--color-surface)) 0%, var(--unahur-health) 100%);
+  --gradient-institute-education: linear-gradient(135deg, color-mix(in oklab, var(--unahur-education) 78%, var(--color-surface)) 0%, var(--unahur-education) 100%);
+
+  --gradient-institute-bio-soft: linear-gradient(135deg, color-mix(in oklab, var(--unahur-bio) 10%, var(--color-surface)) 0%, color-mix(in oklab, var(--unahur-bio) 14%, var(--color-surface)) 100%);
+  --gradient-institute-tech-soft: linear-gradient(135deg, color-mix(in oklab, var(--unahur-tech) 10%, var(--color-surface)) 0%, color-mix(in oklab, var(--unahur-tech) 14%, var(--color-surface)) 100%);
+  --gradient-institute-health-soft: linear-gradient(135deg, color-mix(in oklab, var(--unahur-health) 10%, var(--color-surface)) 0%, color-mix(in oklab, var(--unahur-health) 14%, var(--color-surface)) 100%);
+  --gradient-institute-education-soft: linear-gradient(135deg, color-mix(in oklab, var(--unahur-education) 10%, var(--color-surface)) 0%, color-mix(in oklab, var(--unahur-education) 14%, var(--color-surface)) 100%);
+
+  --shadow-sm: 0 1px 2px color-mix(in srgb, var(--palette-ink) 4%, transparent), 0 1px 3px color-mix(in srgb, var(--palette-ink) 6%, transparent);
+  --shadow-md: 0 4px 14px color-mix(in srgb, var(--palette-ink) 8%, transparent);
+  --shadow-lg: 0 14px 34px color-mix(in srgb, var(--palette-ink) 14%, transparent);
+
+  --bs-body-bg: var(--color-bg);
+  --bs-body-color: var(--color-text);
+  --bs-secondary-bg: var(--color-surface-2);
+  --bs-tertiary-bg: var(--color-surface-3);
+  --bs-border-color: var(--color-border);
+  --bs-secondary-color: var(--color-text-muted);
+  --bs-emphasis-color: var(--color-text);
+  --bs-primary: var(--color-brand-solid);
+  --bs-primary-rgb: var(--palette-brand-rgb);
+  --bs-link-color: var(--color-brand);
+  --bs-link-hover-color: var(--color-brand-strong);
+  --bs-focus-ring-color: color-mix(in srgb, var(--color-brand) 35%, transparent);
+  --bs-success: var(--color-success);
+  --bs-warning: var(--color-warning);
+  --bs-danger: var(--color-danger);
+  --bs-info: var(--color-info);
+  --bs-tooltip-bg: var(--color-text);
+  --bs-tooltip-color: var(--color-surface);
+  --bs-card-bg: var(--color-surface);
+  --bs-card-cap-bg: var(--color-surface-2);
+}
+
+[data-bs-theme="dark"] {
+  color-scheme: dark;
+
+  --color-bg: var(--palette-neutral-950);
+  --color-surface: var(--palette-neutral-900);
+  --color-surface-2: var(--palette-neutral-850);
+  --color-surface-3: var(--palette-neutral-800);
+  --color-surface-glass: color-mix(in srgb, var(--color-surface) 90%, transparent);
+
+  --color-border: color-mix(in srgb, var(--palette-white) 9%, transparent);
+  --color-border-strong: color-mix(in srgb, var(--palette-white) 16%, transparent);
+  --color-border-subtle: color-mix(in srgb, var(--palette-white) 6%, transparent);
+
+  --color-text: var(--palette-neutral-25);
+  --color-text-muted: var(--palette-neutral-400);
+  --color-text-subtle: var(--palette-neutral-500);
+
+  --color-brand: var(--palette-brand-300);
+  --color-brand-solid: var(--palette-brand-500);
+  --color-brand-strong: var(--palette-brand-700);
+  --color-brand-soft: var(--palette-brand-900);
+  --color-on-brand: var(--palette-white);
+  --color-ink: var(--palette-ink);
+  --color-on-institute: var(--palette-neutral-25);
+
+  --color-accent: var(--palette-warning-500);
+  --color-accent-soft: var(--palette-warning-900);
+  --color-focus: var(--palette-brand-300);
+
+  --color-success: var(--palette-success-300);
+  --color-success-soft: var(--palette-success-900);
+  --color-success-text: var(--palette-success-300);
+  --color-warning: var(--palette-warning-300);
+  --color-warning-soft: var(--palette-warning-900);
+  --color-warning-text: var(--palette-warning-300);
+  --color-danger: var(--palette-danger-300);
+  --color-danger-strong: var(--palette-danger-500);
+  --color-danger-soft: var(--palette-danger-900);
+  --color-danger-text: var(--palette-danger-300);
+  --color-info: var(--palette-info-300);
+  --color-info-soft: var(--palette-info-900);
+  --color-info-text: var(--palette-info-300);
+
+  --status-aprobada-bg: var(--palette-success-900);
+  --status-aprobada-border: var(--palette-success-700);
+  --status-aprobada-text: var(--palette-success-300);
+  --status-aprobada-solid: var(--palette-success-500);
+
+  --status-regular-bg: var(--palette-violet-900);
+  --status-regular-border: var(--palette-violet-700);
+  --status-regular-text: var(--palette-violet-300);
+  --status-regular-solid: var(--palette-violet-500);
+
+  --status-cursando-bg: var(--palette-info-900);
+  --status-cursando-border: var(--palette-info-700);
+  --status-cursando-text: var(--palette-info-300);
+  --status-cursando-solid: var(--palette-info-500);
+
+  --status-libre-bg: var(--palette-danger-900);
+  --status-libre-border: var(--palette-danger-700);
+  --status-libre-text: var(--palette-danger-300);
+  --status-libre-solid: var(--palette-danger-500);
+
+  --status-disponible-bg: var(--palette-teal-900);
+  --status-disponible-border: var(--palette-teal-700);
+  --status-disponible-text: var(--palette-teal-300);
+  --status-disponible-solid: var(--palette-teal-500);
+
+  --status-bloqueada-bg: var(--palette-neutral-800);
+  --status-bloqueada-border: var(--palette-neutral-700);
+  --status-bloqueada-text: var(--palette-neutral-300);
+  --status-bloqueada-solid: var(--palette-neutral-500);
+
+  --graph-bg: var(--color-surface);
+  --graph-grid: var(--palette-neutral-700);
+  --graph-edge: var(--palette-neutral-500);
+  --graph-edge-pending: var(--palette-neutral-500);
+  --graph-edge-fulfilled: var(--palette-success-300);
+  --graph-path-requirements: var(--palette-warning-300);
+  --graph-path-suggested: var(--palette-teal-300);
+  --graph-selection: var(--palette-info-300);
+  --graph-unlock: var(--palette-success-300);
+  --graph-dim-opacity: 0.4;
+
+  --gradient-brand: linear-gradient(135deg, var(--color-brand-solid) 0%, var(--color-brand-strong) 100%);
+  --gradient-surface: linear-gradient(160deg, var(--color-surface) 0%, var(--color-surface-2) 100%);
+  --gradient-app-glow: radial-gradient(ellipse 80% 60% at 0% -10%, color-mix(in srgb, var(--color-brand) 8%, transparent) 0%, transparent 60%);
+
+  --gradient-institute-bio: linear-gradient(135deg, color-mix(in oklab, var(--unahur-bio) 35%, var(--color-surface)) 0%, color-mix(in oklab, var(--unahur-bio) 55%, var(--color-surface)) 100%);
+  --gradient-institute-tech: linear-gradient(135deg, color-mix(in oklab, var(--unahur-tech) 35%, var(--color-surface)) 0%, color-mix(in oklab, var(--unahur-tech) 55%, var(--color-surface)) 100%);
+  --gradient-institute-health: linear-gradient(135deg, color-mix(in oklab, var(--unahur-health) 35%, var(--color-surface)) 0%, color-mix(in oklab, var(--unahur-health) 55%, var(--color-surface)) 100%);
+  --gradient-institute-education: linear-gradient(135deg, color-mix(in oklab, var(--unahur-education) 35%, var(--color-surface)) 0%, color-mix(in oklab, var(--unahur-education) 55%, var(--color-surface)) 100%);
+
+  --gradient-institute-bio-soft: linear-gradient(135deg, color-mix(in oklab, var(--unahur-bio) 18%, var(--color-surface)) 0%, color-mix(in oklab, var(--unahur-bio) 22%, var(--color-surface)) 100%);
+  --gradient-institute-tech-soft: linear-gradient(135deg, color-mix(in oklab, var(--unahur-tech) 18%, var(--color-surface)) 0%, color-mix(in oklab, var(--unahur-tech) 22%, var(--color-surface)) 100%);
+  --gradient-institute-health-soft: linear-gradient(135deg, color-mix(in oklab, var(--unahur-health) 18%, var(--color-surface)) 0%, color-mix(in oklab, var(--unahur-health) 22%, var(--color-surface)) 100%);
+  --gradient-institute-education-soft: linear-gradient(135deg, color-mix(in oklab, var(--unahur-education) 18%, var(--color-surface)) 0%, color-mix(in oklab, var(--unahur-education) 22%, var(--color-surface)) 100%);
+
+  --shadow-sm: 0 1px 2px color-mix(in srgb, var(--palette-black) 35%, transparent);
+  --shadow-md: 0 6px 18px color-mix(in srgb, var(--palette-black) 40%, transparent);
+  --shadow-lg: 0 16px 40px color-mix(in srgb, var(--palette-black) 55%, transparent);
+}

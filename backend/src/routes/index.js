@@ -13,6 +13,7 @@ const planSubjectRoutes = require("./planSubject.routes");
 
 const userStudyPlanRoutes = require("./userStudyPlan.routes");
 const subjectProgressRoutes = require("./subjectProgress.routes");
+const acaActivityRoutes = require("./acaActivity.routes");
 
 const router = Router();
 
@@ -48,5 +49,6 @@ router.use("/study-plans", studyPlanRoutes);
 // Progreso académico nuevo: UserStudyPlan + SubjectProgress
 router.use("/user-study-plans", subjectProgressRoutes);
 router.use("/user-study-plans", userStudyPlanRoutes);
+router.use("/user-study-plans", acaActivityRoutes);
 
 module.exports = router;

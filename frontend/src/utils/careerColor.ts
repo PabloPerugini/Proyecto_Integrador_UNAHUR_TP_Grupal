@@ -1,5 +1,5 @@
 import type { Career } from '../types';
-import { instituteColor, DEFAULT_INSTITUTE_COLOR } from './instituteColors';
+import { instituteToken, DEFAULT_INSTITUTE_COLOR } from './instituteColors';
 
 // Fuente canónica de color por instituto: prioridad al color guardado en
 // la unidad académica (DB), luego los hex oficiales UNAHUR por nombre.
@@ -11,9 +11,9 @@ export function deriveCareerColor(
   academicUnitColor?: string | null,
 ): string {
   if (academicUnitColor) return academicUnitColor;
-  if (academicUnitName) return instituteColor(academicUnitName);
-  if (institute && instituteColor(institute) !== DEFAULT_INSTITUTE_COLOR) {
-    return instituteColor(institute);
+  if (academicUnitName) return instituteToken(academicUnitName);
+  if (institute && instituteToken(institute) !== DEFAULT_INSTITUTE_COLOR) {
+    return instituteToken(institute);
   }
   void name;
   return DEFAULT_INSTITUTE_COLOR;

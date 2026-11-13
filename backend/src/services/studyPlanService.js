@@ -4,6 +4,7 @@ const Career = require("../models/career");
 const PlanSubject = require("../models/planSubject");
 const UserStudyPlan = require("../models/userStudyPlan");
 const SubjectProgress = require("../models/subjectProgress");
+const AcaActivity = require("../models/acaActivity");
 const PlanImport = require("../models/planImport");
 
 // Carreras con unidad populada (para colores por instituto en el front).
@@ -67,8 +68,6 @@ const createStudyPlan = async (studyPlanData) => {
     career: studyPlanData.career,
     resolution: studyPlanData.resolution,
     durationYears: studyPlanData.durationYears,
-    creditsFinal: studyPlanData.creditsFinal,
-    creditsIntermediate: studyPlanData.creditsIntermediate,
     intermediateTitle: studyPlanData.intermediateTitle,
     status: studyPlanData.status || "draft",
     createdBy: studyPlanData.createdBy,
@@ -93,8 +92,6 @@ const updateStudyPlan = async (id, studyPlanData) => {
     "career",
     "resolution",
     "durationYears",
-    "creditsFinal",
-    "creditsIntermediate",
     "intermediateTitle",
     "status",
     "planYear",
@@ -166,13 +163,16 @@ const deleteStudyPlan = async (id, user) => {
     await PlanSubject.find({ studyPlan: id }).select("_id")
   ).map((s) => s._id);
 
-  const [progress, removedEnrollments, subjects, imports] = await Promise.all([
+  const [progress, removedEnrollments, subjects, imports, acaActivities] = await Promise.all([
     subjectIds.length
       ? SubjectProgress.deleteMany({ planSubject: { $in: subjectIds } })
       : { deletedCount: 0 },
     UserStudyPlan.deleteMany({ studyPlan: id }),
     PlanSubject.deleteMany({ studyPlan: id }),
     PlanImport.deleteMany({ studyPlan: id }),
+    enrollments.length
+      ? AcaActivity.deleteMany({ userStudyPlan: { $in: enrollments.map((e) => e._id) } })
+      : { deletedCount: 0 },
   ]);
 
   await StudyPlan.findByIdAndDelete(id);
@@ -184,11 +184,12 @@ const deleteStudyPlan = async (id, user) => {
       enrollments: removedEnrollments.deletedCount,
       progress: progress.deletedCount,
       imports: imports.deletedCount,
+      acaActivities: acaActivities.deletedCount,
     },
   };
 };
 
-// Tecnicatura intermedia como sub-plan virtual cerrado.
+// Título intermedio como sub-plan virtual cerrado.
 // Respeta la misma visibilidad que findStudyPlanById.
 const getIntermediateView = async (id, user) => {
   const plan = await findStudyPlanById(id, user);
@@ -224,7 +225,6 @@ const getIntermediateView = async (id, user) => {
         code: s.code,
         name: s.name,
         year: s.year ?? null,
-        credits: s.credits ?? 0,
         requires: reqs.filter((c) => interCodes.has(c)),
         externalRequires: reqs.filter((c) => !interCodes.has(c)),
       };
@@ -234,7 +234,6 @@ const getIntermediateView = async (id, user) => {
     planId: String(plan._id),
     planName: plan.name,
     intermediateTitle: plan.intermediateTitle,
-    creditsIntermediate: plan.creditsIntermediate ?? 0,
     closed: subjects.every((s) => s.externalRequires.length === 0),
     total: subjects.length,
     subjects,

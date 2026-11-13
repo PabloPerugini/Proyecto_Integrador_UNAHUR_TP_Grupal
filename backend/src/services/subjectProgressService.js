@@ -2,6 +2,11 @@ const SubjectProgress = require("../models/subjectProgress");
 const UserStudyPlan = require("../models/userStudyPlan");
 const PlanSubject = require("../models/planSubject");
 
+function shouldValidatePrerequisites(nextStatus, currentStatus) {
+    if (nextStatus === "PENDIENTE" || nextStatus === "LIBRE") return false;
+    return !["CURSANDO", "REGULARIZADA", "APROBADA"].includes(currentStatus);
+}
+
 const validateUserStudyPlan = async (userId, userStudyPlanId) => {
     const userStudyPlan = await UserStudyPlan.findOne({
         _id: userStudyPlanId,
@@ -43,23 +48,18 @@ const saveSubjectProgress = async (
         throw new Error("La materia no pertence a este plan");
     }
 
-    // Las correlativas se validan al iniciar; los avances ya registrados pueden
-    // cambiar de estado aunque luego venza una correlativa. Volver a PENDIENTE
-    // siempre está permitido.
+    // Los avances ya registrados no se revocan si una correlativa pierde su
+    // regularidad. Los nuevos avances sí deben cumplir los requisitos actuales.
     const nextStatus = progressData.status;
-    if (nextStatus !== undefined && nextStatus !== "PENDIENTE") {
-        const states = new Map(
-            (
-                await SubjectProgress.find({
-                    userStudyPlan: userStudyPlanId,
-                }).select("planSubject status")
-            ).map((p) => [String(p.planSubject), p.status]),
-        );
-
-        const missing = [];
+    if (nextStatus !== undefined) {
+        const savedProgress = await SubjectProgress.find({
+            userStudyPlan: userStudyPlanId,
+        }).select("planSubject status");
+        const states = new Map(savedProgress.map((p) => [String(p.planSubject), p.status]));
         const currentStatus = states.get(String(planSubjectId));
-        const alreadyStarted = ["CURSANDO", "REGULARIZADA", "APROBADA"].includes(currentStatus);
-        if (!alreadyStarted) {
+
+        if (shouldValidatePrerequisites(nextStatus, currentStatus)) {
+            const missing = [];
             for (const prereq of planSubject.prerequisites || []) {
                 const ref = prereq.planSubject;
                 const refId = ref && typeof ref === "object" ? String(ref._id) : String(ref);
@@ -78,12 +78,12 @@ const saveSubjectProgress = async (
                     );
                 }
             }
-        }
 
-        if (missing.length > 0) {
-            throw new Error(
-                `No podés avanzar ${planSubject.code || "la materia"} sin ${missing.join(", ")}`,
-            );
+            if (missing.length > 0) {
+                throw new Error(
+                    `No podés avanzar ${planSubject.code || "la materia"} sin ${missing.join(", ")}`,
+                );
+            }
         }
     }
 
@@ -127,4 +127,5 @@ const saveSubjectProgress = async (
 module.exports = {
   getSubjectProgress,
   saveSubjectProgress,
+  shouldValidatePrerequisites,
 };

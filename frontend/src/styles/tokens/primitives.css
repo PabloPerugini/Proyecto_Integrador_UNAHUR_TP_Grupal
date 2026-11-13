@@ -1,0 +1,65 @@
+/* Rampas OKLCH. Único lugar (junto con brand.css) donde viven literales. */
+:root {
+  --palette-white: #ffffff;
+  --palette-black: #000000;
+  --palette-ink: oklch(0.199 0.020 258.3);
+
+  --palette-brand-100: oklch(0.950 0.030 165.8);
+  --palette-brand-300: oklch(0.860 0.060 165.8);
+  --palette-brand-500: oklch(0.469 0.095 165.8);
+  --palette-brand-700: oklch(0.350 0.070 165.8);
+  --palette-brand-900: oklch(0.280 0.050 165.8);
+  --palette-brand-rgb: 10, 107, 78;
+
+  --palette-neutral-0: #ffffff;
+  --palette-neutral-25: oklch(0.985 0.003 275.0);
+  --palette-neutral-50: oklch(0.977 0.005 275.0);
+  --palette-neutral-100: oklch(0.968 0.007 277.2);
+  --palette-neutral-200: oklch(0.940 0.006 275.0);
+  --palette-neutral-300: oklch(0.920 0.008 253.9);
+  --palette-neutral-400: oklch(0.800 0.012 260.0);
+  --palette-neutral-500: oklch(0.554 0.041 257.4);
+  --palette-neutral-600: oklch(0.470 0.030 260.0);
+  --palette-neutral-700: oklch(0.350 0.020 264.0);
+  --palette-neutral-800: oklch(0.280 0.020 264.0);
+  --palette-neutral-850: oklch(0.244 0.022 265.7);
+  --palette-neutral-900: oklch(0.214 0.019 266.1);
+  --palette-neutral-950: oklch(0.173 0.013 264.1);
+  --palette-neutral-1000: oklch(0.120 0.010 264.0);
+
+  --palette-success-100: oklch(0.950 0.039 159.2);
+  --palette-success-300: oklch(0.820 0.110 150.0);
+  --palette-success-500: oklch(0.627 0.170 149.2);
+  --palette-success-700: oklch(0.450 0.130 150.0);
+  --palette-success-900: oklch(0.300 0.080 150.0);
+
+  --palette-warning-100: oklch(0.960 0.038 81.5);
+  --palette-warning-300: oklch(0.880 0.120 75.0);
+  --palette-warning-500: oklch(0.813 0.165 75.0);
+  --palette-warning-700: oklch(0.600 0.130 65.0);
+  --palette-warning-900: oklch(0.350 0.080 65.0);
+
+  --palette-danger-100: oklch(0.969 0.015 22.4);
+  --palette-danger-300: oklch(0.780 0.140 22.0);
+  --palette-danger-500: oklch(0.592 0.202 21.2);
+  --palette-danger-700: oklch(0.420 0.160 22.0);
+  --palette-danger-900: oklch(0.280 0.100 22.0);
+
+  --palette-info-100: oklch(0.933 0.032 258.4);
+  --palette-info-300: oklch(0.780 0.130 261.0);
+  --palette-info-500: oklch(0.522 0.220 261.0);
+  --palette-info-700: oklch(0.400 0.160 261.0);
+  --palette-info-900: oklch(0.270 0.100 261.0);
+
+  --palette-violet-100: oklch(0.925 0.041 297.8);
+  --palette-violet-300: oklch(0.780 0.140 292.0);
+  --palette-violet-500: oklch(0.513 0.230 292.1);
+  --palette-violet-700: oklch(0.380 0.160 292.0);
+  --palette-violet-900: oklch(0.260 0.100 292.0);
+
+  --palette-teal-100: oklch(0.953 0.050 180.8);
+  --palette-teal-300: oklch(0.820 0.090 188.0);
+  --palette-teal-500: oklch(0.657 0.114 188.8);
+  --palette-teal-700: oklch(0.460 0.090 188.0);
+  --palette-teal-900: oklch(0.300 0.060 188.0);
+}

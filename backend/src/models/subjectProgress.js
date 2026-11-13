@@ -33,6 +33,7 @@ const subjectProgressSchema = new mongoose.Schema(
                 "CURSANDO",
                 "REGULARIZADA",
                 "APROBADA",
+                "LIBRE",
             ],
             default: "PENDIENTE",
         },

@@ -22,6 +22,7 @@ backend/scripts/tmp-debug-*.js
 
 # Estado del tooling de OpenCode (lo recrea la app; no va al repo)
 .opencode/
+.superpowers/
 
 # Sistema
 .DS_Store

@@ -191,7 +191,6 @@ const createPlanSubject = async (planSubjectData) => {
     kind: planSubjectData.kind,
     generic: planSubjectData.generic,
     hours: planSubjectData.hours,
-    credits: planSubjectData.credits,
     optional: planSubjectData.optional,
     intermediate: planSubjectData.intermediate,
     prerequisites: planSubjectData.prerequisites || [],
@@ -248,12 +247,6 @@ const updatePlanSubject = async (studyPlanId, id, data) => {
   // Duración
   if (data.duration !== undefined) {
     planSubject.duration = data.duration;
-    updated = true;
-  }
-
-  // Créditos
-  if (data.credits !== undefined) {
-    planSubject.credits = data.credits;
     updated = true;
   }
 

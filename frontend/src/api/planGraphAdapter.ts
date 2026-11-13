@@ -1,10 +1,15 @@
 import type { GraphData, GraphNode, SubjectStatus } from '../types';
 import { studyPlansApi, orderedSubjects, subjectName, prerequisiteId, careerName, type PlanSubject, type StudyPlan, type ResolvedProgressStatus } from './studyPlans';
 import { getCareerColor } from '../utils/careerColor';
+import { instituteToken } from '../utils/instituteColors';
 import { resolveProgressStatuses } from '../utils/progressStatus';
 
 function toLabel(status: ResolvedProgressStatus | undefined): SubjectStatus {
-  return status === 'APROBADA' ? 'Aprobada' : status === 'REGULARIZADA' ? 'Regular' : status === 'CURSANDO' ? 'Cursando' : status === 'DISPONIBLE' ? 'Disponible' : 'Bloqueada';
+  return status === 'APROBADA' ? 'Aprobada'
+    : status === 'REGULARIZADA' ? 'Regular'
+      : status === 'CURSANDO' ? 'Cursando'
+        : status === 'LIBRE' ? 'Libre'
+          : status === 'DISPONIBLE' ? 'Disponible' : 'Bloqueada';
 }
 
 function subjectWorkloadHours(subject: PlanSubject): number | null {
@@ -64,27 +69,23 @@ export async function getPlanGraph(plan: StudyPlan, strictProgress = false): Pro
   }));
   const availableNow = nodes.filter(n => n.status === 'Disponible').map(n => n.code);
   const approved = itemsSorted.filter(item => statusById.get(item._id) === 'APROBADA');
-  const totalCredits = itemsSorted.reduce((a,s) => a + (s.credits ?? 0), 0);
-  const approvedCredits = approved.reduce((a,s) => a + (s.credits ?? 0), 0);
   const intermediateItems = itemsSorted.filter(s => s.intermediate);
   return {
     title: `${careerName(plan)} · ${plan.name}`,
     userStudyPlanId: enrollment?._id,
-    color: typeof plan.career === 'object' && plan.career ? getCareerColor({ name: plan.career.name || '', color: plan.career.color, academicUnit: plan.career.academicUnit ?? null }) : '#238a42',
+    color: typeof plan.career === 'object' && plan.career ? getCareerColor({ name: plan.career.name || '', color: plan.career.color, academicUnit: plan.career.academicUnit ?? null }) : instituteToken(null),
     nodes, edges, availableNow, criticalPath: [], hasCycle: false, topologicalOrder: [],
     stats: {
       total: nodes.length, aprobadas: approved.length, disponibles: availableNow.length,
       bloqueadas: nodes.filter(n => n.status === 'Bloqueada').length,
       enCurso: nodes.filter(n => n.status === 'Cursando').length,
+      libres: nodes.filter(n => n.status === 'Libre').length,
       regulares: nodes.filter(n => n.status === 'Regular').length,
-      creditsTotal: totalCredits, creditsAprobados: approvedCredits,
     },
     intermediate: intermediateItems.length ? {
       title: plan.intermediateTitle ?? null,
       total: intermediateItems.length,
       aprobadas: intermediateItems.filter(s => statusById.get(s._id) === 'APROBADA').length,
-      credits: intermediateItems.reduce((a,s) => a + (s.credits ?? 0), 0),
-      creditsAprob: intermediateItems.filter(s => statusById.get(s._id) === 'APROBADA').reduce((a,s) => a + (s.credits ?? 0), 0),
     } : undefined,
   };
 }

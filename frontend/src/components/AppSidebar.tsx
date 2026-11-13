@@ -2,7 +2,6 @@ import { NavLink, useMatch } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useCareerSelection } from '../context/CareerContext';
 import SidebarBase from './SidebarBase';
-import StudyPlanSidebarSelector from './StudyPlanSidebarSelector';
 import type { NavItem } from './SidebarBase';
 import {
   IconHome,
@@ -71,7 +70,7 @@ export default function AppSidebar() {
     ));
 
   return (
-    <SidebarBase nav={exploreNav} sectionLabel="Explorar" brandTo="/" mobileTitle={isGraphRoute ? 'Mapa de correlatividades' : undefined} topContent={<StudyPlanSidebarSelector />}>
+    <SidebarBase nav={exploreNav} sectionLabel="Explorar" brandTo="/" mobileTitle={isGraphRoute ? 'Mapa de correlatividades' : undefined}>
       {isAdmin && (
         <>
           <div className="sidebar__section mt-3">Administración</div>

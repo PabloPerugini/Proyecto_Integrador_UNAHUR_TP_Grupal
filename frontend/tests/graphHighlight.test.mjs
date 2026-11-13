@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { getDirectSuccessorCodes, tintStatusSvg } from '../src/utils/graphHighlight.ts';
+import { getDirectSuccessorCodes, HIGHLIGHT_COLOR, tintStatusSvg } from '../src/utils/graphHighlight.ts';
 
 const edges = [
   { id: 'ab', source: 'A', target: 'B' },
@@ -11,6 +11,10 @@ const edges = [
 test('devuelve solo sucesores directos del nodo seleccionado', () => {
   assert.deepEqual(getDirectSuccessorCodes(edges, 'A'), new Set(['B', 'C']));
   assert.deepEqual(getDirectSuccessorCodes(edges, null), new Set());
+});
+
+test('el resaltado usa el token del orden sugerido', () => {
+  assert.equal(HIGHLIGHT_COLOR, 'var(--graph-path-suggested)');
 });
 
 test('tiñe trazos SVG sin reemplazar el fondo ni los trazos transparentes', () => {

@@ -105,11 +105,6 @@ const planSubjectSchema = new mongoose.Schema(
     },
 
 
-    credits: {
-      type: Number,
-      default: 0,
-    },
-
     optional: {
       type: Boolean,
       default: false,

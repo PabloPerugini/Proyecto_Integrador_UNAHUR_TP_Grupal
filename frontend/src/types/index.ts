@@ -40,8 +40,6 @@ export interface Career {
   planResolution?: string;
   ruleCode?: string;
   durationYears?: number;
-  creditsFinal?: number;
-  creditsIntermediate?: number;
   intermediateTitle?: string | null;
   status?: CareerStatus;
   subjectCount?: number;
@@ -56,7 +54,7 @@ export interface Career {
 }
 
 export type SubjectKind = 'Materia' | 'ACA' | 'AU' | 'OTRA';
-export type SubjectStatus = 'Aprobada' | 'Regular' | 'Cursando' | 'Disponible' | 'Bloqueada';
+export type SubjectStatus = 'Aprobada' | 'Regular' | 'Cursando' | 'Libre' | 'Disponible' | 'Bloqueada';
 
 export interface Hours {
   his: number;
@@ -76,7 +74,6 @@ export interface Subject {
   cuatrimestre: number | null;
   duration: 'C' | 'A' | 'TF';
   hours: Hours;
-  credits: number;
   kind: SubjectKind;
   generic?: string | null;
   optional: boolean;
@@ -90,7 +87,6 @@ export interface ParsedSubject {
   year: number | null;
   cuatrimestre: number | null;
   duration: 'C' | 'A' | 'TF';
-  credits: number;
   kind: SubjectKind;
   optional?: boolean;
   intermediate?: boolean;
@@ -111,8 +107,6 @@ export interface ProgressEntry {
 }
 
 export interface ProgressSummary {
-  creditsTotal: number;
-  creditsAprobados: number;
   aprobadas: number;
   total: number;
 }
@@ -147,17 +141,14 @@ export interface GraphStats {
   disponibles: number;
   bloqueadas: number;
   enCurso: number;
+  libres: number;
   regulares: number;
-  creditsTotal: number;
-  creditsAprobados: number;
 }
 
 export interface IntermediateProgress {
   title?: string | null;
   total: number;
   aprobadas: number;
-  credits: number;
-  creditsAprob: number;
 }
 
 export interface GraphData {

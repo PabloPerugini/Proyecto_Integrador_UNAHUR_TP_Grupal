@@ -24,16 +24,6 @@ const studyPlanSchema = new mongoose.Schema(
             default: 0,
         },
 
-        creditsFinal: {
-            type: Number,
-            default: 0,
-        },
-
-        creditsIntermediate: {
-            type: Number,
-            default: 0,
-        },
-
         intermediateTitle: {
             type: String,
             default: null,

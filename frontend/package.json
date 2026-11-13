@@ -15,6 +15,8 @@
     "test:layout": "node --experimental-strip-types --test tests/academicEdgeLayout.test.mjs",
     "test:faq": "node --experimental-strip-types --test tests/faqSearch.test.mjs",
     "test:subjects": "node --experimental-strip-types --test tests/planSubjectName.test.mjs",
+    "test:color": "node --experimental-strip-types --test tests/color.test.mjs",
+    "test:theme": "node --experimental-strip-types --test tests/colorTokens.test.mjs tests/instituteColors.test.mjs tests/statusColors.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
