@@ -15,7 +15,7 @@ interface ActiveAnswer {
 const suggestedQuestionIds = [
   { id: 'progreso-1', label: 'Mi progreso' },
   { id: 'correlatividades-1', label: 'Correlatividades' },
-  { id: 'correlatividades-camino-optimo', label: 'Ruta para aprobar' },
+  { id: 'correlatividades-camino-optimo', label: 'Ruta para desbloquear Materia' },
   { id: 'progreso-2', label: 'Importar historia' },
 ];
 

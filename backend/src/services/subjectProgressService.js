@@ -43,8 +43,8 @@ const saveSubjectProgress = async (
         throw new Error("La materia no pertence a este plan");
     }
 
-    // Regla de correlativas: para avanzar (cursar/regularizar/aprobar) hay que
-    // tener cada prerequisite en el estado requerido. Volver a PENDIENTE
+    // Las correlativas se validan al iniciar; los avances ya registrados pueden
+    // cambiar de estado aunque luego venza una correlativa. Volver a PENDIENTE
     // siempre está permitido.
     const nextStatus = progressData.status;
     if (nextStatus !== undefined && nextStatus !== "PENDIENTE") {
@@ -57,22 +57,26 @@ const saveSubjectProgress = async (
         );
 
         const missing = [];
-        for (const prereq of planSubject.prerequisites || []) {
-            const ref = prereq.planSubject;
-            const refId = ref && typeof ref === "object" ? String(ref._id) : String(ref);
-            const state = states.get(refId) || "PENDIENTE";
-            const ok =
-                prereq.requiredStatus === "APROBADA"
-                    ? state === "APROBADA"
-                    : state === "REGULARIZADA" || state === "APROBADA";
-            if (!ok) {
-                const label =
-                    ref && typeof ref === "object" && ref.code
-                        ? `${ref.code}`
-                        : "la correlativa";
-                missing.push(
-                    `${label} (${prereq.requiredStatus === "APROBADA" ? "aprobada" : "regularizada"})`,
-                );
+        const currentStatus = states.get(String(planSubjectId));
+        const alreadyStarted = ["CURSANDO", "REGULARIZADA", "APROBADA"].includes(currentStatus);
+        if (!alreadyStarted) {
+            for (const prereq of planSubject.prerequisites || []) {
+                const ref = prereq.planSubject;
+                const refId = ref && typeof ref === "object" ? String(ref._id) : String(ref);
+                const state = states.get(refId) || "PENDIENTE";
+                const ok =
+                    prereq.requiredStatus === "APROBADA"
+                        ? state === "APROBADA"
+                        : state === "REGULARIZADA" || state === "APROBADA";
+                if (!ok) {
+                    const label =
+                        ref && typeof ref === "object" && ref.code
+                            ? `${ref.code}`
+                            : "la correlativa";
+                    missing.push(
+                        `${label} (${prereq.requiredStatus === "APROBADA" ? "aprobada" : "regularizada"})`,
+                    );
+                }
             }
         }
 

@@ -1,0 +1,13 @@
+:where(.subject-status-icon) {
+  display: inline-flex;
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  vertical-align: middle;
+}
+
+.subject-status-icon > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}

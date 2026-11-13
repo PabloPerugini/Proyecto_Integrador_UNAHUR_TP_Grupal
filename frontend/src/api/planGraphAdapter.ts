@@ -1,11 +1,21 @@
 import type { GraphData, GraphNode, SubjectStatus } from '../types';
-import { studyPlansApi, orderedSubjects, subjectName, prerequisiteId, careerName, type PlanSubject, type StudyPlan, type ProgressStatus } from './studyPlans';
+import { studyPlansApi, orderedSubjects, subjectName, prerequisiteId, careerName, type PlanSubject, type StudyPlan, type ResolvedProgressStatus } from './studyPlans';
 import { getCareerColor } from '../utils/careerColor';
 import { resolveProgressStatuses } from '../utils/progressStatus';
 
-function toLabel(status: ProgressStatus | undefined): SubjectStatus {
+function toLabel(status: ResolvedProgressStatus | undefined): SubjectStatus {
   return status === 'APROBADA' ? 'Aprobada' : status === 'REGULARIZADA' ? 'Regular' : status === 'CURSANDO' ? 'Cursando' : status === 'DISPONIBLE' ? 'Disponible' : 'Bloqueada';
 }
+
+function subjectWorkloadHours(subject: PlanSubject): number | null {
+  const hours = subject.hours ?? {};
+  const total = [hours.ht, hours.total].find(value => typeof value === 'number' && value > 0);
+  if (typeof total === 'number') return total;
+  const fields = ['his', 'hit', 'hite', 'hip', 'htat'];
+  const components = fields.reduce((sum, field) => sum + (hours[field] ?? 0), 0);
+  return components > 0 ? components : null;
+}
+
 export async function getPlanGraph(plan: StudyPlan, strictProgress = false): Promise<GraphData> {
   const [items, enrollments] = await Promise.all([
     studyPlansApi.getSubjects(plan._id),
@@ -16,6 +26,9 @@ export async function getPlanGraph(plan: StudyPlan, strictProgress = false): Pro
   const statusById = resolveProgressStatuses(items, new Map(savedProgress.map(p => [
     typeof p.planSubject === 'string' ? p.planSubject : p.planSubject?._id ?? '', p.status,
   ])));
+  const progressById = new Map(savedProgress.map(progress => [
+    typeof progress.planSubject === 'string' ? progress.planSubject : progress.planSubject?._id ?? '', progress,
+  ]));
   const itemsSorted = orderedSubjects(items);
   const byId = new Map(itemsSorted.map(s => [s._id, s]));
   const seen = new Set<string>();
@@ -36,7 +49,8 @@ export async function getPlanGraph(plan: StudyPlan, strictProgress = false): Pro
       id: codeById.get(item._id)!, code: codeById.get(item._id)!, name: subjectName(item),
       planSubjectId: item._id,
       year: item.year ?? null, cuatrimestre: item.period ?? null, duration: d,
-      credits: item.credits ?? 0, kind: item.kind ?? 'Materia', optional: item.optional ?? false,
+      credits: item.credits ?? 0, workloadHours: subjectWorkloadHours(item), kind: item.kind ?? 'Materia', optional: item.optional ?? false,
+      grade: progressById.get(item._id)?.grade ?? null,
       intermediate: item.intermediate ?? false, status: toLabel(statusById.get(item._id)),
       position: { x: (year === 0 ? 0 : year - 1) * 310, y: row * 125 + 70 },
     };

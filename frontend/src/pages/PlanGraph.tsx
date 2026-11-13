@@ -7,6 +7,7 @@ import {
   BackgroundVariant,
   ViewportPortal,
   Controls,
+  ControlButton,
   Handle,
   Position,
   MarkerType,
@@ -16,13 +17,12 @@ import {
   type CoordinateExtent
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Alert, Button, Card, OverlayTrigger, Tooltip } from 'react-bootstrap';
+import { Alert, Button, Card, Dropdown, Form, OverlayTrigger, Tooltip } from 'react-bootstrap';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getPlanGraph } from '../api/planGraphAdapter';
-import { studyPlansApi, type StudyPlan } from '../api/studyPlans';
+import { studyPlansApi, type ProgressStatus, type StudyPlan } from '../api/studyPlans';
 import type { GraphData, SubjectStatus } from '../types';
 import { useCareerSelection } from '../context/CareerContext';
-import { useTheme } from '../hooks/useTheme';
 import { yearLabel } from '../utils/subjects';
 import { statusColor, statusLabel, resolveNodeStatus } from '../utils/status';
 import { instituteColor } from '../utils/instituteColors';
@@ -53,41 +53,63 @@ interface PlanNodeData {
   credits: number;
 }
 
+function withOptimisticSubjectStatus(graph: GraphData, code: string, status: SubjectStatus): GraphData {
+  const previous = graph.nodes.find(node => node.code === code);
+  if (!previous || previous.status === status) return graph;
+  const approvedDelta = Number(status === 'Aprobada') - Number(previous.status === 'Aprobada');
+  const inProgressDelta = Number(status === 'Cursando') - Number(previous.status === 'Cursando');
+  const regularDelta = Number(status === 'Regular') - Number(previous.status === 'Regular');
+  const availableDelta = Number(status === 'Disponible') - Number(previous.status === 'Disponible');
+  const availableNow = new Set(graph.availableNow);
+  if (status === 'Disponible') availableNow.add(code);
+  else availableNow.delete(code);
+  return {
+    ...graph,
+    nodes: graph.nodes.map(node => node.code === code ? { ...node, status } : node),
+    availableNow: [...availableNow],
+    stats: {
+      ...graph.stats,
+      aprobadas: graph.stats.aprobadas + approvedDelta,
+      creditsAprobados: graph.stats.creditsAprobados + approvedDelta * previous.credits,
+      enCurso: graph.stats.enCurso + inProgressDelta,
+      regulares: graph.stats.regulares + regularDelta,
+      disponibles: graph.stats.disponibles + availableDelta,
+    },
+  };
+}
+
 const BORDER_WIDTH = 4;
 const DIMMED_OPACITY = 0.32;
-const AVAILABLE_COLOR = '#3B82F6';
-const OPTIMAL_NODE_BACKGROUND = '#FFF0D6';
-const OPTIMAL_NODE_BORDER = '#D97706';
-const IN_PROGRESS_COLOR = '#0561e5';
-const UNLOCK_COLOR = IN_PROGRESS_COLOR;
+// Los valores de color se editan en styles/academicMapPalette.css.
+const OPTIMAL_NODE_BACKGROUND = 'var(--map-path-bg)';
+const OPTIMAL_NODE_BORDER = 'var(--map-path-border)';
+const IN_PROGRESS_COLOR = 'var(--map-in-progress-accent)';
+const UNLOCK_COLOR = 'var(--map-unlock-color)';
 const UNLOCK_HIGHLIGHT_MS = 5000;
 const GRAPH_BACKGROUND = {
-  color: '#f8fbff',
-  dotsColor: '#d3dceb',
+  color: 'var(--map-canvas-bg)',
+  dotsColor: 'var(--map-canvas-dot)',
   dotsGap: 24,
   dotsSize: 1.4,
-  dark: {
-    color: '#101923',
-    dotsColor: '#293547',
-  },
 };
 // Configuración de las flechas
 const EDGE_COLORS = {
-  normal: '#94a3b8',
-  critical: '#fd7e14',
-  optimal: '#d9870b',
+  normal: 'var(--map-edge-normal)',
+  critical: 'var(--map-edge-critical)',
+  optimal: 'var(--map-edge-optimal)',
 };
 
 const STATUS_NODE_BORDER_COLORS: Record<SubjectStatus, string> = {
-  Aprobada: '#00963f',
-  Regular: '#7138dc',
-  Cursando: '#075ce5',
-  Disponible: '#075ce5',
-  Bloqueada: '#596575',
+  Aprobada: 'var(--map-status-approved-border)',
+  Regular: 'var(--map-status-regular-border)',
+  Cursando: 'var(--map-status-in-progress-border)',
+  Disponible: 'var(--map-status-available-border)',
+  Bloqueada: 'var(--map-status-locked-border)',
 };
 
 const EDGE_WIDTH = {
   normal: 1.25,
+  approvedToProgress: 4,
   critical: 3,
   optimal: 3,
 };
@@ -103,22 +125,20 @@ function nodeBorder(
   const width = `${BORDER_WIDTH}px solid`;
 
   if (d.optimal || d.critical) return `${width} ${OPTIMAL_NODE_BORDER}`;
-  if (selected && d.status !== 'Aprobada') return `${width} #2563EB`;
+  if (selected && d.status !== 'Aprobada') return `${width} var(--map-selection-border)`;
   if (d.newlyUnlocked) return `${width} ${UNLOCK_COLOR}`;
   if (d.highlightedNext) return `${width} ${HIGHLIGHT_COLOR}`;
-  if (d.status === 'Aprobada') return `${width} #00963f`;
-  if (d.status === 'Regular') return `${width} #7138dc`;
-  if (d.status === 'Cursando') return `${width} #075ce5`;
-  if (d.available) return `${width} #075ce5`;
+  if (d.status === 'Aprobada' || d.status === 'Regular' || d.status === 'Cursando') return `${width} ${STATUS_NODE_BORDER_COLORS[d.status]}`;
+  if (d.available) return `${width} ${STATUS_NODE_BORDER_COLORS.Disponible}`;
 
-  return `${width} #596575`;
+  return `${width} ${STATUS_NODE_BORDER_COLORS.Bloqueada}`;
 }
 
 function StatusBadges({ d }: { d: Pick<PlanNodeData, 'optimal' | 'critical'> }) {
   return (
     <>
-      {d.optimal && <span className="badge" style={{ fontSize: 9, background: '#d9870b' }}>óptima</span>}
-      {d.critical && <span className="badge text-bg-dark" style={{ fontSize: 9 }}>crítico</span>}
+      {d.optimal && <span className="badge" style={{ fontSize: 9, background: EDGE_COLORS.optimal, color: 'var(--map-badge-optimal-text)' }}>óptima</span>}
+      {d.critical && <span className="badge" style={{ fontSize: 9, background: 'var(--map-badge-critical-bg)', color: 'var(--map-badge-critical-text)' }}>crítico</span>}
     </>
   );
 }
@@ -153,7 +173,7 @@ function toPlanNodeData(
 function PlanNode({ data }: NodeProps<Node<Record<string, unknown>>>) {
   const d = data as unknown as PlanNodeData;
   const pathColor = d.optimal ? EDGE_COLORS.optimal : d.critical ? EDGE_COLORS.critical : undefined;
-  const color = d.optimal || d.critical ? OPTIMAL_NODE_BACKGROUND : pathColor ?? (d.highlightedNext ? '#CCFBF1' : statusColor(d.status));
+  const color = d.optimal || d.critical ? OPTIMAL_NODE_BACKGROUND : pathColor ?? (d.highlightedNext ? 'var(--map-next-bg)' : statusColor(d.status));
   const border = nodeBorder(d, d.selectedSubject);
 
   return (
@@ -162,7 +182,7 @@ function PlanNode({ data }: NodeProps<Node<Record<string, unknown>>>) {
       style={{
         ...((d.newlyUnlocked || d.highlightedNext) ? { '--plan-highlight-color': d.newlyUnlocked ? UNLOCK_COLOR : HIGHLIGHT_COLOR } : {}),
         background: color,
-        color: pathColor ? '#211407' : '#23395d',
+        color: pathColor ? 'var(--map-path-text)' : 'var(--map-node-text)',
         outline: undefined,
         outlineOffset: 3,
         borderRadius: 12,
@@ -188,7 +208,7 @@ function PlanNode({ data }: NodeProps<Node<Record<string, unknown>>>) {
         onAdvance={d.onAdvance ? () => d.onAdvance?.(d.code) : undefined}
         onRevert={d.onAdvance ? () => d.onAdvance?.(d.code, true) : undefined}
         disabled={d.progressSaving}
-        highlightColor={d.selectedSubject && d.status !== 'Aprobada' ? '#075ce5' : d.newlyUnlocked ? UNLOCK_COLOR : d.highlightedNext ? HIGHLIGHT_COLOR : undefined}
+        highlightColor={d.selectedSubject && d.status !== 'Aprobada' ? 'var(--map-selection-icon)' : d.newlyUnlocked ? UNLOCK_COLOR : d.highlightedNext ? HIGHLIGHT_COLOR : undefined}
       />
       <Handle
         type="target"
@@ -230,11 +250,11 @@ function YearLabel({ data }: NodeProps<Node<Record<string, unknown>>>) {
         width,
         fontWeight: isYear ? 700 : 600,
         fontSize: 16,
-        color: 'var(--bs-secondary-color)',
+        color: 'var(--map-year-label)',
         whiteSpace: 'nowrap',
         textAlign: isYear ? 'center' : 'left',
         paddingBottom: isYear ? 8 : 0,
-        borderBottom: isYear ? '1px solid var(--bs-secondary-color)' : undefined,
+        borderBottom: isYear ? '1px solid var(--map-year-label)' : undefined,
       }}
     >
       {label}
@@ -270,11 +290,51 @@ interface DetailProps {
   selectedNode: GraphData['nodes'][number] | null;
   requires: GraphData['nodes'][number][];
   successors: GraphData['nodes'][number][];
+  progressSaving: boolean;
   onSelect: (code: string) => void;
+  onSetStatus: (code: string, status: ProgressStatus) => void;
+  onSaveGrade: (code: string, grade: number | null) => Promise<void>;
   onClose: () => void;
 }
 
-function DetailPanel({ selectedNode, requires, successors, onSelect, onClose }: DetailProps) {
+const DETAIL_STATUS_OPTIONS: { status: ProgressStatus; label: string; displayStatus: SubjectStatus }[] = [
+  { status: 'PENDIENTE', label: 'Disponible', displayStatus: 'Disponible' },
+  { status: 'CURSANDO', label: 'Cursando', displayStatus: 'Cursando' },
+  { status: 'REGULARIZADA', label: 'Regularizada', displayStatus: 'Regular' },
+  { status: 'APROBADA', label: 'Aprobada', displayStatus: 'Aprobada' },
+];
+
+function DetailPanel({ selectedNode, requires, successors, progressSaving, onSelect, onSetStatus, onSaveGrade, onClose }: DetailProps) {
+  const [gradeValue, setGradeValue] = useState(selectedNode?.grade == null ? '' : String(selectedNode.grade));
+  const [gradeSaving, setGradeSaving] = useState(false);
+  const [gradeError, setGradeError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setGradeValue(selectedNode?.grade == null ? '' : String(selectedNode.grade));
+    setGradeError(null);
+  }, [selectedNode?.code, selectedNode?.grade, selectedNode?.status]);
+
+  const saveGrade = async () => {
+    if (!selectedNode || gradeSaving) return;
+    const input = gradeValue.trim();
+    const grade = input === '' ? null : Number(input);
+    if (grade !== null && (!Number.isInteger(grade) || grade < 1 || grade > 10)) {
+      setGradeError('La nota debe ser un número entero entre 1 y 10.');
+      return;
+    }
+    if (grade === (selectedNode.grade ?? null)) return;
+
+    setGradeSaving(true);
+    setGradeError(null);
+    try {
+      await onSaveGrade(selectedNode.code, grade);
+    } catch (error) {
+      setGradeError(error instanceof Error ? error.message : 'No se pudo guardar la nota.');
+    } finally {
+      setGradeSaving(false);
+    }
+  };
+
   const renderSubjectRows = (subjects: GraphData['nodes']): ReactNode => (
     subjects.length === 0
       ? <div className="plan-detail__empty">(ninguna)</div>
@@ -304,10 +364,71 @@ function DetailPanel({ selectedNode, requires, successors, onSelect, onClose }: 
           {selectedNode && (
             <>
               <div className="plan-detail__status-wrap">
-                <span className="plan-detail__status" style={{ color: STATUS_NODE_BORDER_COLORS[selectedNode.status] }}>
-                  <SubjectStatusIcon status={selectedNode.status} showTooltip={false} className="plan-detail__status-icon" />
-                  {statusLabel(selectedNode.status)}
-                </span>
+                {selectedNode.status === 'Bloqueada' ? (
+                  <div className="plan-detail__status" style={{ color: STATUS_NODE_BORDER_COLORS[selectedNode.status] }}>
+                    <SubjectStatusIcon status={selectedNode.status} showTooltip={false} className="plan-detail__status-icon" />
+                    {statusLabel(selectedNode.status)}
+                  </div>
+                ) : (
+                  <Dropdown>
+                    <Dropdown.Toggle
+                      variant="link"
+                      id="plan-detail-status-toggle"
+                      className="plan-detail__status plan-detail__status-toggle"
+                      style={{ color: STATUS_NODE_BORDER_COLORS[selectedNode.status] }}
+                      disabled={progressSaving}
+                      aria-label={`Cambiar estado de ${selectedNode.name}`}
+                    >
+                      <SubjectStatusIcon status={selectedNode.status} showTooltip={false} className="plan-detail__status-icon" />
+                      {statusLabel(selectedNode.status)}
+                    </Dropdown.Toggle>
+                    <Dropdown.Menu className="plan-detail__status-menu">
+                      {DETAIL_STATUS_OPTIONS
+                        .filter(option => option.displayStatus !== selectedNode.status)
+                        .map(option => (
+                          <Dropdown.Item
+                            key={option.status}
+                            disabled={progressSaving}
+                            className="plan-detail__status-option"
+                            onClick={() => onSetStatus(selectedNode.code, option.status)}
+                          >
+                            <SubjectStatusIcon status={option.displayStatus} showTooltip={false} className="plan-detail__status-icon" />
+                            {option.label}
+                          </Dropdown.Item>
+                        ))}
+                    </Dropdown.Menu>
+                  </Dropdown>
+                )}
+                {['Aprobada', 'Regular'].includes(selectedNode.status) && (
+                  <>
+                    <span className="plan-detail__grade-separator" aria-hidden="true" />
+                    <div className={`plan-detail__grade plan-detail__grade--${selectedNode.status === 'Aprobada' ? 'approved' : 'regular'}`}>
+                      <label className="plan-detail__grade-label" htmlFor="plan-detail-grade-input">Nota final</label>
+                      <Form.Control
+                        id="plan-detail-grade-input"
+                        className="plan-detail__grade-input"
+                        type="number"
+                        min="1"
+                        max="10"
+                        step="1"
+                        inputMode="decimal"
+                        aria-label={`Nota final de ${selectedNode.name}`}
+                        value={gradeValue}
+                        disabled={gradeSaving || progressSaving}
+                        onChange={event => { setGradeValue(event.target.value); setGradeError(null); }}
+                        onBlur={() => { void saveGrade(); }}
+                        onKeyDown={event => {
+                          if (event.key === 'Enter') {
+                            event.preventDefault();
+                            event.currentTarget.blur();
+                          }
+                        }}
+                      />
+                    </div>
+                    {gradeSaving && <span className="plan-detail__grade-message text-muted" role="status">Guardando…</span>}
+                    {gradeError && <span className="plan-detail__grade-message text-danger" role="alert">{gradeError}</span>}
+                  </>
+                )}
               </div>
 
               <section className="plan-detail__section">
@@ -335,8 +456,7 @@ function DetailPanel({ selectedNode, requires, successors, onSelect, onClose }: 
 }
 
 export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'grafo' | 'tablero' }) {
-  const { theme } = useTheme();
-  const graphBackground = theme === 'dark' ? GRAPH_BACKGROUND.dark : GRAPH_BACKGROUND;
+  const graphBackground = GRAPH_BACKGROUND;
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { careerId: selectedCareerId, setCareerId: setSelectedCareerId } = useCareerSelection();
@@ -385,6 +505,25 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
   const [progressSaving, setProgressSaving] = useState(false);
   const [progressError, setProgressError] = useState<string | null>(null);
   const [unlockHighlight, setUnlockHighlight] = useState<{ source: string; codes: Set<string> } | null>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const [isMapFullscreen, setIsMapFullscreen] = useState(false);
+  useEffect(() => {
+    const syncFullscreenState = () => {
+      setIsMapFullscreen(document.fullscreenElement === mapContainerRef.current);
+    };
+    document.addEventListener('fullscreenchange', syncFullscreenState);
+    return () => document.removeEventListener('fullscreenchange', syncFullscreenState);
+  }, []);
+  const toggleMapFullscreen = useCallback(async () => {
+    const mapContainer = mapContainerRef.current;
+    if (!mapContainer) return;
+    try {
+      if (document.fullscreenElement === mapContainer) await document.exitFullscreen();
+      else await mapContainer.requestFullscreen();
+    } catch (error) {
+      console.error('No se pudo cambiar el modo de pantalla completa del mapa.', error);
+    }
+  }, []);
   useEffect(() => {
     if (!unlockHighlight) return;
     const timer = window.setTimeout(() => setUnlockHighlight(null), UNLOCK_HIGHLIGHT_MS);
@@ -404,36 +543,96 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
     return () => { progressOperation.current = null; };
   }, [id]);
 
-  const advanceSubject = useCallback(async (code: string, backwards = false) => {
+  const advanceSubject = useCallback(async (code: string, backwards = false, requestedStatus?: ProgressStatus) => {
     const subject = graph?.nodes.find(node => node.code === code);
-    const status = backwards
-      ? subject?.status === 'Aprobada' ? 'CURSANDO' : subject?.status === 'Cursando' ? 'DISPONIBLE' : null
-      : subject?.status === 'Disponible' ? 'CURSANDO' : subject?.status === 'Cursando' ? 'APROBADA' : null;
-    if (!status || !subject?.planSubjectId || !graph?.userStudyPlanId || !selectedPlan || progressOperation.current) return;
+    const status: ProgressStatus | null = requestedStatus ?? (backwards
+      ? subject?.status === 'Aprobada' ? 'CURSANDO' : subject?.status === 'Cursando' ? 'PENDIENTE' : null
+      : subject?.status === 'Disponible' ? 'CURSANDO' : subject?.status === 'Cursando' ? 'APROBADA' : null);
+    if (!status || !subject?.planSubjectId || !selectedPlan || progressOperation.current) return;
+    if (requestedStatus && DETAIL_STATUS_OPTIONS.some(option => option.status === requestedStatus && option.displayStatus === subject.status)) return;
     const operation = Symbol();
     progressOperation.current = operation;
     setProgressSaving(true);
     setProgressError(null);
+    const previousGraph = graph;
+    const displayStatus: SubjectStatus = status === 'APROBADA' ? 'Aprobada'
+      : status === 'REGULARIZADA' ? 'Regular'
+        : status === 'CURSANDO' ? 'Cursando' : 'Disponible';
+    if (graph) setGraph(withOptimisticSubjectStatus(graph, code, displayStatus));
     let saved = false;
+    let userStudyPlanId = graph?.userStudyPlanId;
     try {
-      await studyPlansApi.saveProgress(graph.userStudyPlanId, subject.planSubjectId, { status });
+      if (!userStudyPlanId) {
+        const enrollments = await studyPlansApi.getMine();
+        const enrollment = enrollments.find(item =>
+          (typeof item.studyPlan === 'string' ? item.studyPlan : item.studyPlan?._id) === selectedPlan._id,
+        ) ?? await studyPlansApi.enroll(selectedPlan._id);
+        userStudyPlanId = enrollment._id;
+        setEnrollments(current => current.includes(selectedPlan._id) ? current : [...current, selectedPlan._id]);
+        setGraph(current => current ? { ...current, userStudyPlanId } : current);
+      }
+      await studyPlansApi.saveProgress(userStudyPlanId, subject.planSubjectId, { status });
       saved = true;
       const updated = await getPlanGraph(selectedPlan, true);
       if (progressOperation.current === operation) {
         if (backwards) setUnlockHighlight(null);
         if (status === 'APROBADA') {
           const successors = getDirectSuccessorCodes(updated.edges, code);
-          const previous = new Map(graph.nodes.map(node => [node.code, node.status]));
+          const previous = new Map((graph?.nodes ?? []).map(node => [node.code, node.status]));
           const codes = new Set(updated.nodes.filter(node => successors.has(node.code)
             && previous.get(node.code) === 'Bloqueada' && node.status === 'Disponible').map(node => node.code));
           setUnlockHighlight(codes.size ? { source: code, codes } : null);
         }
-        setGraph(updated);
+        setGraph(updated.userStudyPlanId ? updated : { ...updated, userStudyPlanId });
       }
     } catch (error) {
-      if (progressOperation.current === operation) setProgressError(saved
-        ? 'El cambio se guardó, pero no se pudo actualizar el mapa. Recargá la página para ver el progreso actualizado.'
-        : error instanceof Error ? error.message : 'No se pudo guardar el progreso. Intentá nuevamente.');
+      if (progressOperation.current === operation) {
+        if (!saved && previousGraph) {
+          setGraph(userStudyPlanId
+            ? { ...previousGraph, userStudyPlanId }
+            : previousGraph);
+        }
+        setProgressError(saved
+          ? 'El cambio se guardó, pero no se pudo actualizar el mapa. Recargá la página para ver el progreso actualizado.'
+          : error instanceof Error ? error.message : 'No se pudo guardar el progreso. Intentá nuevamente.');
+      }
+    } finally {
+      if (progressOperation.current === operation) {
+        progressOperation.current = null;
+        setProgressSaving(false);
+      }
+    }
+  }, [graph, selectedPlan]);
+
+  const saveSubjectGrade = useCallback(async (code: string, grade: number | null) => {
+    const subject = graph?.nodes.find(node => node.code === code);
+    if (!subject?.planSubjectId || !selectedPlan) throw new Error('No se pudo identificar la materia para guardar la nota.');
+    if (progressOperation.current) throw new Error('Esperá a que termine el otro guardado para editar la nota.');
+
+    const operation = Symbol();
+    progressOperation.current = operation;
+    setProgressSaving(true);
+    setProgressError(null);
+    let userStudyPlanId = graph?.userStudyPlanId;
+    try {
+      if (!userStudyPlanId) {
+        const enrollments = await studyPlansApi.getMine();
+        const enrollment = enrollments.find(item =>
+          (typeof item.studyPlan === 'string' ? item.studyPlan : item.studyPlan?._id) === selectedPlan._id,
+        ) ?? await studyPlansApi.enroll(selectedPlan._id);
+        userStudyPlanId = enrollment._id;
+        setEnrollments(current => current.includes(selectedPlan._id) ? current : [...current, selectedPlan._id]);
+        setGraph(current => current ? { ...current, userStudyPlanId } : current);
+      }
+      await studyPlansApi.saveProgress(userStudyPlanId, subject.planSubjectId, { grade });
+      if (progressOperation.current === operation) {
+        setGraph(current => current ? {
+          ...current,
+          nodes: current.nodes.map(node => node.code === code ? { ...node, grade } : node),
+        } : current);
+      }
+    } catch (error) {
+      throw error instanceof Error ? error : new Error('No se pudo guardar la nota.');
     } finally {
       if (progressOperation.current === operation) {
         progressOperation.current = null;
@@ -451,7 +650,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
       if (u && typeof u === 'object' && u.name)
         return instituteColor(u.name, u.color);
     }
-    return graph?.color ?? '#238a42';
+    return graph?.color ?? 'var(--map-career-fallback)';
   }, [selectedPlan, graph]);
 
   useEffect(() => {
@@ -652,7 +851,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
         selectedSubject: node.id === selectedCode,
         // React Flow stores this handler in data; only the icon's click invokes it.
         // eslint-disable-next-line react-hooks/refs
-        onAdvance: graph?.userStudyPlanId ? advanceSubject : undefined,
+        onAdvance: graph ? advanceSubject : undefined,
         progressSaving,
       } : {
         ...node.data,
@@ -795,16 +994,20 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
   const flowEdges: Edge[] = useMemo(() => {
     if (!displayGraph) return [];
 
-    const fulfilledColor = theme === 'dark' ? '#4ade80' : '#00963f';
-    const pendingColor = theme === 'dark' ? '#718096' : EDGE_COLORS.normal;
+    const fulfilledColor = 'var(--map-edge-fulfilled)';
+    const pendingColor = EDGE_COLORS.normal;
 
     return displayGraph.edges.map((e) => {
       const highlightedNext = !activeMode && e.source === selectedCode && highlightedNextCodes.has(e.target);
       const newlyUnlocked = !activeMode && e.source === unlockHighlight?.source && newlyUnlockedCodes.has(e.target);
-      const fulfilledPrerequisite = ['Aprobada', 'Regular'].includes(byCodeMap.get(e.source)?.status ?? '');
+      const sourceStatus = byCodeMap.get(e.source)?.status;
+      const targetStatus = byCodeMap.get(e.target)?.status;
+      const fulfilledPrerequisite = ['Aprobada', 'Regular'].includes(sourceStatus ?? '');
+      const approvedToProgress = sourceStatus === 'Aprobada'
+        && ['Disponible', 'Cursando'].includes(targetStatus ?? '');
       const onPathApprovedPrerequisite = !!activeMode
         && !!activePath?.set.has(e.target)
-        && byCodeMap.get(e.source)?.status === 'Aprobada';
+        && sourceStatus === 'Aprobada';
       const onOptimal = activeMode === 'optimal' && fastPath.edgeSet.has(e.id);
       const onCritical = activeMode === 'critical' && criticalPath.edgeSet.has(e.id);
 
@@ -824,7 +1027,10 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
         : onCritical
           ? EDGE_WIDTH.critical
           : EDGE_WIDTH.normal;
-      const strokeWidth = highlightedNext ? 3 : onPathApprovedPrerequisite ? 2.5 : newlyUnlocked ? 1.5 : baseWidth;
+      const strokeWidth = approvedToProgress ? EDGE_WIDTH.approvedToProgress
+        : highlightedNext ? 3
+          : onPathApprovedPrerequisite ? 2.5
+            : newlyUnlocked ? 1.5 : baseWidth;
 
       return {
         id: e.id,
@@ -833,7 +1039,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
         type: 'academic',
         data: { sections: layout?.routes[e.id] },
         animated: onOptimal || onCritical,
-        zIndex: highlightedNext || onPathApprovedPrerequisite ? 5 : 0,
+        zIndex: highlightedNext || onPathApprovedPrerequisite || approvedToProgress ? 5 : 0,
 
         // Estilo de la línea
         style: {
@@ -843,7 +1049,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
           strokeLinecap: 'round',
           opacity: activeMode ? (onOptimal || onCritical || onPathApprovedPrerequisite ? 1 : 0.2) : selectedNode
             ? highlightedNext || newlyUnlocked ? 1 : DIMMED_OPACITY
-            : fulfilledPrerequisite ? 0.68 : 1,
+            : approvedToProgress ? 1 : fulfilledPrerequisite ? 0.68 : 1,
           ...(onOptimal ? { strokeDasharray: '6 3' } : {}),
         },
 
@@ -851,13 +1057,13 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
         markerEnd: {
           type: MarkerType.ArrowClosed,
           color,
-          width: ARROW_SIZE.width,
-          height: ARROW_SIZE.height,
+          width: approvedToProgress ? ARROW_SIZE.width * 1.3 : ARROW_SIZE.width,
+          height: approvedToProgress ? ARROW_SIZE.height * 1.3 : ARROW_SIZE.height,
           markerUnits: 'userSpaceOnUse',
         },
       };
     });
-  }, [displayGraph, fastPath, criticalPath, activeMode, activePath, selectedCode, highlightedNextCodes, selectedNode, layout, unlockHighlight, newlyUnlockedCodes, byCodeMap, theme]);
+  }, [displayGraph, fastPath, criticalPath, activeMode, activePath, selectedCode, highlightedNextCodes, selectedNode, layout, unlockHighlight, newlyUnlockedCodes, byCodeMap]);
 
 
   const boardGroups = useMemo(() => {
@@ -926,7 +1132,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
   const renderCard = (d: PlanNodeData, selected: boolean) => {
     const isNext = highlightedNextCodes.has(d.code);
     const isRelated = isNext || d.code === selectedCode;
-    const border = isNext ? `${BORDER_WIDTH}px solid #0D9488` : nodeBorder(d, selected);
+    const border = isNext ? `${BORDER_WIDTH}px solid ${HIGHLIGHT_COLOR}` : nodeBorder(d, selected);
     const pathColor = d.optimal ? EDGE_COLORS.optimal : d.critical ? EDGE_COLORS.critical : undefined;
     return (
       <button
@@ -934,8 +1140,8 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
         className={!pathColor && d.status === 'Cursando' ? 'plan-node--in-progress' : undefined}
         onClick={() => setPinnedCode((prev) => (prev === d.code ? null : d.code))}
         style={{
-          background: d.optimal || d.critical ? OPTIMAL_NODE_BACKGROUND : pathColor ?? (isNext ? '#CCFBF1' : statusColor(d.status)),
-          color: pathColor ? '#211407' : '#23395d',
+          background: d.optimal || d.critical ? OPTIMAL_NODE_BACKGROUND : pathColor ?? (isNext ? 'var(--map-next-bg)' : statusColor(d.status)),
+          color: pathColor ? 'var(--map-path-text)' : 'var(--map-node-text)',
           opacity: activePath ? activePath.set.has(d.code) || approvedPathPrerequisites.has(d.code) ? 1 : DIMMED_OPACITY : selectedNode && !isRelated ? DIMMED_OPACITY : 1,
           outline: undefined,
           outlineOffset: 3,
@@ -946,7 +1152,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
           maxWidth: 240,
           flex: '1 1 200px',
           textAlign: 'left',
-          boxShadow: d.status === 'Cursando' ? undefined : '0 2px 6px rgba(0,0,0,.2)',
+          boxShadow: d.status === 'Cursando' ? undefined : 'var(--map-board-node-shadow)',
           cursor: 'pointer',
         }}
       >
@@ -954,10 +1160,10 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
           <span style={{ fontWeight: 700, fontSize: 12, lineHeight: 1.25 }}>{d.name}</span>
           <SubjectStatusIcon status={d.status} className="board-subject-status-icon" />
         </div>
-        <div style={{ fontSize: 11, color: pathColor ? '#211407' : '#526987', marginTop: 3 }}>
+        <div style={{ fontSize: 11, color: pathColor ? 'var(--map-path-text)' : 'var(--map-node-muted)', marginTop: 3 }}>
           {d.code} · {d.credits} cr · {statusLabel(d.status)}
         </div>
-        <div style={{ fontSize: 10, color: pathColor ? '#211407' : '#526987', marginTop: 3 }}>
+        <div style={{ fontSize: 10, color: pathColor ? 'var(--map-path-text)' : 'var(--map-node-muted)', marginTop: 3 }}>
           <StatusBadges d={d} />
         </div>
       </button>
@@ -967,11 +1173,10 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
   return (
     <ReactFlowProvider>
       <div
-        className="plan-graph"
+        className={`plan-graph${view === 'grafo' ? ' plan-graph--map' : ''}`}
         style={{
           '--plan-highlight-color': HIGHLIGHT_COLOR,
           '--plan-in-progress-color': IN_PROGRESS_COLOR,
-          height: view === 'grafo' ? 'calc(100dvh - 118px)' : 'auto',
           display: 'flex',
           flexDirection: 'column',
           width: '100%',
@@ -979,6 +1184,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
           margin: '0 auto',
         } as CSSProperties}
       >
+        <div className="plan-map-controls">
         <header className="plan-map-header">
           <div className="plan-map-heading">
             <h1 className="plan-map-heading__title">
@@ -1017,9 +1223,9 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
             </div>
           )}
 
-          <div className="d-flex flex-wrap align-items-center gap-2 ms-auto" role="group" aria-label="Navegación del plan">
-            {view !== 'grafo' && <>
-              <OverlayTrigger placement="bottom" overlay={<Tooltip id="plan-critical-toolbar-tooltip">Te muestra qué materias conviene aprobar a tiempo para no atrasar las siguientes.</Tooltip>}>
+          <div className={view === 'grafo' ? 'plan-map-toolbar__paths' : 'd-flex flex-wrap align-items-center gap-2 ms-auto'} role="group" aria-label="Navegación del plan">
+            {(view !== 'grafo' || displayGraph) && <>
+              <OverlayTrigger placement="bottom" overlay={<Tooltip id="plan-critical-toolbar-tooltip">Resalta el camino pendiente con mayor carga horaria total. Si empatan, prioriza el que tiene más materias.</Tooltip>}>
                 <Button
                   className="plan-map-action plan-map-action--critical"
                   variant={activeMode === 'critical' ? 'warning' : 'outline-secondary'}
@@ -1029,7 +1235,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
                   disabled={criticalPath.chain.length === 0}
                   onClick={() => setPathMode(mode => mode === 'critical' ? null : 'critical')}
                 >
-                  Materias clave para avanzar
+                  Ruta con más carga horaria
                 </Button>
               </OverlayTrigger>
               <OverlayTrigger placement="bottom" overlay={<Tooltip id="plan-optimal-toolbar-tooltip">Elegí una materia para ver las correlativas que necesitás aprobar antes.</Tooltip>}>
@@ -1042,100 +1248,47 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
                   disabled={!displayGraph?.nodes.length}
                   onClick={() => setPathMode(mode => mode === 'optimal' ? null : 'optimal')}
                 >
-                  Ruta para aprobar
+                  Ruta para desbloquear Materia
                 </Button>
               </OverlayTrigger>
             </>}
           </div>
         </div>
 
-        {view === 'grafo' && displayGraph && <div className="plan-progress-summary">
-          <div className="plan-progress-summary__stats" aria-label="Resumen de estados">
-            {([
-              { status: 'Aprobada', label: '', count: displayGraph.stats.aprobadas, tone: 'approved' },
-              { status: 'Cursando', label: 'Cursando', count: displayGraph.stats.enCurso, tone: 'in-progress' },
-              { status: 'Disponible', label: displayGraph.stats.disponibles === 1 ? 'Disponible' : 'Disponibles', count: displayGraph.stats.disponibles, tone: 'available' },
-              { status: 'Bloqueada', label: '', count: displayGraph.stats.bloqueadas, tone: 'locked' },
-              { status: 'Regular', label: 'Regulares', count: displayGraph.stats.regulares, tone: 'regular' },
-            ] as const).map(item => {
-              const stat = <span key={item.status} className={`plan-progress-summary__stat plan-progress-summary__stat--${item.tone}`}>
-                <SubjectStatusIcon status={item.status} showTooltip={false} /><strong>{item.count}</strong>{item.label && <> {item.label}</>}
-              </span>;
-              if (item.status === 'Aprobada' || item.status === 'Bloqueada') {
-                const approved = item.status === 'Aprobada';
-                return (
-                  <OverlayTrigger
-                    key={item.status}
-                    placement="top"
-                    overlay={<Tooltip id={`plan-status-${item.tone}-tooltip`} className={`status-legend-tooltip status-legend-tooltip--${item.tone}`}>{approved ? 'Aprobadas' : 'Bloqueadas'}</Tooltip>}
-                  >
-                    {stat}
-                  </OverlayTrigger>
-                );
-              }
-              return stat;
-            })}
-          </div>
-          <div className="plan-progress-summary__actions" role="group" aria-label="Rutas de correlatividades">
-            <OverlayTrigger placement="bottom" overlay={<Tooltip id="plan-optimal-legend-tooltip">Elegí una materia para ver las correlativas que necesitás aprobar antes.</Tooltip>}>
-              <Button
-                className="plan-map-action plan-map-action--optimal"
-                variant={pathMode === 'optimal' ? 'warning' : 'outline-secondary'}
-                size="sm"
-                aria-pressed={pathMode === 'optimal'}
-                aria-describedby="plan-path-help"
-                disabled={!displayGraph.nodes.length}
-                onClick={() => setPathMode(mode => mode === 'optimal' ? null : 'optimal')}
-              >
-                Ruta para aprobar
-              </Button>
-            </OverlayTrigger>
-            <OverlayTrigger placement="bottom" overlay={<Tooltip id="plan-critical-legend-tooltip">Te muestra qué materias conviene aprobar a tiempo para no atrasar las siguientes.</Tooltip>}>
-              <Button
-                className="plan-map-action plan-map-action--critical"
-                variant={activeMode === 'critical' ? 'warning' : 'outline-secondary'}
-                size="sm"
-                aria-pressed={activeMode === 'critical'}
-                aria-describedby="plan-path-help"
-                disabled={criticalPath.chain.length === 0}
-                onClick={() => setPathMode(mode => mode === 'critical' ? null : 'critical')}
-              >
-                Materias clave para avanzar
-              </Button>
-            </OverlayTrigger>
-          </div>
-        </div>}
+        </div>
 
         {err && <Alert variant="danger" className="mx-3">{err}</Alert>}
         {progressError && <Alert variant="warning" className="mx-3" dismissible onClose={() => setProgressError(null)}>{progressError}</Alert>}
-        {criticalPath.hasCycle && <Alert variant="warning" className="mx-3 py-1 small">Hay un ciclo entre las correlativas pendientes. No se puede calcular la secuencia de materias clave.</Alert>}
+        {criticalPath.hasCycle && <Alert variant="warning" className="mx-3 py-1 small">Hay un ciclo entre las correlativas pendientes. No se puede calcular la ruta con más carga horaria.</Alert>}
         <div id="plan-path-help" className="mx-3 mb-2 small" role="status">
           {activePath ? (
             <>
               <div
-                className={activeMode === 'critical' ? 'rounded px-3 py-2' : undefined}
-                style={activeMode === 'critical' ? { background: 'rgba(253,126,20,.12)', borderLeft: `3px solid ${EDGE_COLORS.critical}` } : undefined}
+                className="rounded px-3 py-2"
+                style={{ background: 'var(--map-route-notice-bg)', borderLeft: `3px solid ${EDGE_COLORS.critical}` }}
               >
                 <div>
-                  <strong>{activeMode === 'critical' ? 'Materias clave para avanzar.' : `Ruta para llegar a ${selectedNode?.name}.`}</strong>{' '}
+                  <strong>{activeMode === 'critical' ? 'Ruta con más carga horaria.' : 'Ruta para desbloquear Materia.'}</strong>{' '}
                   {activeMode === 'critical'
-                    ? 'Muestra qué materias tenés que aprobar para cursar las siguientes. Si te atrasás con una, podés atrasarte con las demás.'
-                    : 'Resalta la secuencia de correlativas necesaria para aprobar la materia elegida.'}
+                    ? 'Resalta el recorrido pendiente con mayor carga horaria total.'
+                    : 'Muestra las correlativas que necesitás completar para aprobar la materia elegida.'}
                 </div>
                 <div className="text-muted">Volvé a pulsar el botón activo para quitar el resaltado.</div>
               </div>
             </>
           ) : pathMode === 'optimal' ? (
-            <div className="rounded px-3 py-2" style={{ background: 'rgba(217,135,11,.12)', borderLeft: `3px solid ${EDGE_COLORS.optimal}` }}>
-              <strong>Ruta para aprobar activada.</strong>{' '}
-              {displayGraph?.nodes.every(node => node.status === 'Aprobada')
-                ? 'Ya aprobaste todas las materias de esta vista. No quedan recorridos pendientes.'
-                : selectedNode?.status === 'Aprobada'
-                  ? `Ya aprobaste ${selectedNode.name}. Elegí otra materia para ver cómo llegar a aprobarla.`
-                  : fastPath.hasCycle
-                    ? 'Las correlativas de esta materia forman un ciclo y no permiten calcular el recorrido. Podés elegir otra materia.'
-                    : `Hacé clic en una materia ${view === 'grafo' ? 'del mapa' : 'del tablero'} para ver las correlativas que necesitás completar hasta aprobarla.`}
-              {' '}Para salir, volvé a pulsar «Ruta para aprobar».
+            <div className="rounded px-3 py-2" style={{ background: 'var(--map-route-notice-bg)', borderLeft: `3px solid ${EDGE_COLORS.critical}` }}>
+              <div>
+                <strong>Ruta para desbloquear Materia activada.</strong>{' '}
+                {displayGraph?.nodes.every(node => node.status === 'Aprobada')
+                  ? 'Ya aprobaste todas las materias de esta vista. No quedan recorridos pendientes.'
+                  : selectedNode?.status === 'Aprobada'
+                    ? `Ya aprobaste ${selectedNode.name}. Elegí otra materia para ver cómo llegar a aprobarla.`
+                    : fastPath.hasCycle
+                      ? 'Las correlativas de esta materia forman un ciclo y no permiten calcular el recorrido. Podés elegir otra materia.'
+                      : `Hacé clic en una materia ${view === 'grafo' ? 'del mapa' : 'del tablero'} para ver las correlativas que necesitás completar hasta aprobarla.`}
+              </div>
+              <div className="text-muted">Volvé a pulsar el botón activo para quitar el resaltado.</div>
             </div>
           ) : null}
         </div>
@@ -1150,14 +1303,74 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
         )}
 
         <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', margin: '0 8px 8px' }}>
-          <div style={{
-            flex: view === 'grafo' ? 1 : '0 0 auto',
-            minHeight: view === 'grafo' ? 400 : 0,
-            position: 'relative',
-            height: view === 'grafo' ? '100%' : 'auto',
-          }}>
+          <div
+            ref={view === 'grafo' ? mapContainerRef : null}
+            className={view === 'grafo' ? 'plan-graph-map-shell' : undefined}
+            style={{
+              flex: view === 'grafo' ? 1 : '0 0 auto',
+              minHeight: 0,
+              position: 'relative',
+            }}
+          >
+            {view === 'grafo' && displayGraph && <div className="plan-progress-summary">
+              <div className="plan-progress-summary__stats" aria-label="Resumen de estados">
+                {([
+                  { status: 'Aprobada', label: '', count: displayGraph.stats.aprobadas, tone: 'approved' },
+                  { status: 'Bloqueada', label: '', count: displayGraph.stats.bloqueadas, tone: 'locked' },
+                  { status: 'Cursando', label: 'Cursando', count: displayGraph.stats.enCurso, tone: 'in-progress' },
+                  { status: 'Disponible', label: displayGraph.stats.disponibles === 1 ? 'Disponible' : 'Disponibles', count: displayGraph.stats.disponibles, tone: 'available' },
+                  { status: 'Regular', label: 'Regulares', count: displayGraph.stats.regulares, tone: 'regular' },
+                ] as const).map(item => {
+                  const stat = <span key={item.status} className={`plan-progress-summary__stat plan-progress-summary__stat--${item.tone}`}>
+                    <SubjectStatusIcon status={item.status} showTooltip={false} /><strong>{item.count}</strong>{item.label && <> {item.label}</>}
+                  </span>;
+                  if (item.status === 'Aprobada' || item.status === 'Bloqueada') {
+                    const approved = item.status === 'Aprobada';
+                    return (
+                      <OverlayTrigger
+                        key={item.status}
+                        placement="top"
+                        overlay={<Tooltip id={`plan-status-${item.tone}-tooltip`} className={`status-legend-tooltip status-legend-tooltip--${item.tone}`}>{approved ? 'Aprobadas' : 'Bloqueadas'}</Tooltip>}
+                      >
+                        {stat}
+                      </OverlayTrigger>
+                    );
+                  }
+                  return stat;
+                })}
+              </div>
+              <div className="plan-progress-summary__actions" role="group" aria-label="Rutas de correlatividades">
+                <OverlayTrigger placement="bottom" overlay={<Tooltip id="plan-optimal-legend-tooltip">Elegí una materia para ver las correlativas que necesitás aprobar antes.</Tooltip>}>
+                  <Button
+                    className="plan-map-action plan-map-action--optimal"
+                    variant={pathMode === 'optimal' ? 'warning' : 'outline-secondary'}
+                    size="sm"
+                    aria-pressed={pathMode === 'optimal'}
+                    aria-describedby="plan-path-help"
+                    disabled={!displayGraph.nodes.length}
+                    onClick={() => setPathMode(mode => mode === 'optimal' ? null : 'optimal')}
+                  >
+                    Ruta para desbloquear Materia
+                  </Button>
+                </OverlayTrigger>
+                <OverlayTrigger placement="bottom" overlay={<Tooltip id="plan-critical-legend-tooltip">Resalta el camino pendiente con mayor carga horaria total. Si empatan, prioriza el que tiene más materias.</Tooltip>}>
+                  <Button
+                    className="plan-map-action plan-map-action--critical"
+                    variant={activeMode === 'critical' ? 'warning' : 'outline-secondary'}
+                    size="sm"
+                    aria-pressed={activeMode === 'critical'}
+                    aria-describedby="plan-path-help"
+                    disabled={criticalPath.chain.length === 0}
+                    onClick={() => setPathMode(mode => mode === 'critical' ? null : 'critical')}
+                  >
+                    Ruta con más carga horaria
+                  </Button>
+                </OverlayTrigger>
+              </div>
+            </div>}
             {view === 'grafo' && graph && !tecEmpty && (
               <ReactFlow
+                className="plan-graph-canvas"
                 nodes={flowNodes}
                 edges={flowEdges}
                 nodeTypes={nodeTypes}
@@ -1179,7 +1392,8 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
                 }}
                 style={{
                   width: '100%',
-                  height: '100%',
+                  height: 'auto',
+                  flex: '1 1 auto',
                   background: graphBackground.color,
                   borderRadius: 20,
                   overflow: 'hidden',
@@ -1196,7 +1410,32 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
                   color={graphBackground.dotsColor}
                   bgColor={graphBackground.color}
                 />
-                <Controls position="bottom-left" />
+                <Controls position="bottom-left" showFitView={false}>
+                  <ControlButton
+                    onClick={() => { void toggleMapFullscreen(); }}
+                    title={isMapFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
+                    aria-label={isMapFullscreen ? 'Salir de pantalla completa' : 'Poner el mapa en pantalla completa'}
+                    aria-pressed={isMapFullscreen}
+                  >
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      {isMapFullscreen ? (
+                        <>
+                          <path d="M8 3v5H3" />
+                          <path d="M21 8h-5V3" />
+                          <path d="M3 16h5v5" />
+                          <path d="M16 21v-5h5" />
+                        </>
+                      ) : (
+                        <>
+                          <path d="M8 3H5a2 2 0 0 0-2 2v3" />
+                          <path d="M16 3h3a2 2 0 0 1 2 2v3" />
+                          <path d="M8 21H5a2 2 0 0 1-2-2v-3" />
+                          <path d="M16 21h3a2 2 0 0 0 2-2v-3" />
+                        </>
+                      )}
+                    </svg>
+                  </ControlButton>
+                </Controls>
                 <LayoutViewport layout={layout} />
               </ReactFlow>
             )}
@@ -1252,7 +1491,10 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
               selectedNode={selectedNode}
               requires={requires}
               successors={successors}
+              progressSaving={progressSaving}
               onSelect={setPinnedCode}
+              onSetStatus={(code, status) => { void advanceSubject(code, false, status); }}
+              onSaveGrade={saveSubjectGrade}
               onClose={() => setPinnedCode(null)}
             />
           )}

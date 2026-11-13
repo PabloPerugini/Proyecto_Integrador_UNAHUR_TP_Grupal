@@ -114,7 +114,7 @@ export default function AcademicMapCanvas({
       zIndex: 0,
       markerEnd: {
         type: MarkerType.ArrowClosed,
-        color: typeof edge.style?.stroke === 'string' ? edge.style.stroke : '#94A3B8',
+        color: typeof edge.style?.stroke === 'string' ? edge.style.stroke : 'var(--map-edge-normal)',
         width: 14,
         height: 14,
         markerUnits: 'userSpaceOnUse',

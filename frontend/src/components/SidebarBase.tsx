@@ -18,6 +18,7 @@ interface SidebarBaseProps {
   nav: NavItem[];
   sectionLabel: string;
   brandTo: string;
+  mobileTitle?: string;
   children?: ReactNode;
   topContent?: ReactNode;
 }
@@ -26,7 +27,7 @@ function GradifyMark() {
   return <GradifyLogo className="sidebar__brand-logo" />;
 }
 
-export default function SidebarBase({ nav, sectionLabel, brandTo, children, topContent }: SidebarBaseProps) {
+export default function SidebarBase({ nav, sectionLabel, brandTo, mobileTitle, children, topContent }: SidebarBaseProps) {
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(() => {
     try { return localStorage.getItem('gradify-sidebar-collapsed') === 'true'; }
@@ -90,15 +91,16 @@ export default function SidebarBase({ nav, sectionLabel, brandTo, children, topC
       </aside>
 
       {/* Mobile top bar + offcanvas */}
-      <div className="m-topbar">
+      <div className={`m-topbar${mobileTitle ? ' m-topbar--page-title' : ''}`}>
         <button type="button" className="m-topbar__burger" aria-label="Abrir menú" onClick={() => setOpen(true)}>
           <IconMenu />
         </button>
-        <NavLink to={brandTo} className="m-topbar__brand">
+        <NavLink to={brandTo} className="m-topbar__brand" aria-label={mobileTitle ? 'Ir al inicio' : undefined}>
           <GradifyMark />
-          Gradify
+          <span className="m-topbar__brand-name">Gradify</span>
         </NavLink>
-        <span className="ms-auto">
+        {mobileTitle && <h1 className="m-topbar__title">{mobileTitle}</h1>}
+        <span className="m-topbar__theme ms-auto">
           <ThemeToggle />
         </span>
       </div>

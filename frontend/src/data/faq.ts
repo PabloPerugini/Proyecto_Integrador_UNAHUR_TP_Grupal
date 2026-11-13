@@ -58,18 +58,18 @@ export const FAQS: Faq[] = [
   {
     id: 'correlatividades-camino-critico',
     category: 'correlatividades',
-    question: '¿Qué muestran las materias clave para avanzar?',
+    question: '¿Qué muestra la ruta con más carga horaria?',
     answer:
-      'En el grafo o tablero, activá «Materias clave para avanzar» para ver una secuencia de materias pendientes conectadas por sus correlativas. Si hay un ciclo entre correlativas, no se puede calcular.',
-    tags: ['camino', 'crítico', 'critico', 'secuencia', 'finalizar'],
+      'En el grafo o tablero, activá «Ruta con más carga horaria» para ver la secuencia de materias pendientes conectadas por sus correlativas que suma la mayor carga horaria. Si hay un ciclo entre correlativas, no se puede calcular.',
+    tags: ['ruta', 'carga horaria', 'horas', 'camino', 'crítico', 'critico', 'secuencia', 'finalizar'],
     link: '/grafo',
   },
   {
     id: 'correlatividades-camino-optimo',
     category: 'correlatividades',
-    question: '¿Cómo veo la ruta para aprobar una materia?',
+    question: '¿Cómo veo la ruta para desbloquear una materia?',
     answer:
-      'En el grafo o tablero, activá «Ruta para aprobar» y elegí una materia pendiente. Se resalta la secuencia de correlativas pendientes que necesitás completar para llegar a aprobarla. Las materias ya aprobadas no forman parte del recorrido.',
+      'En el grafo o tablero, activá «Ruta para desbloquear Materia» y elegí una materia pendiente. Se resalta la secuencia de correlativas pendientes que necesitás completar para desbloquearla. Las materias ya aprobadas no forman parte del recorrido.',
     tags: ['camino', 'óptimo', 'optimo', 'recorrido', 'ruta', 'materia', 'aprobar', 'correlativas'],
     link: '/grafo',
   },

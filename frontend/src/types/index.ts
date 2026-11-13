@@ -126,6 +126,8 @@ export interface GraphNode {
   cuatrimestre: number | null;
   duration?: 'C' | 'A' | 'TF' | null;
   credits: number;
+  workloadHours?: number | null;
+  grade?: number | null;
   kind: SubjectKind;
   optional: boolean;
   intermediate?: boolean;

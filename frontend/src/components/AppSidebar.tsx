@@ -21,6 +21,7 @@ import {
 export default function AppSidebar() {
   const { user } = useAuth();
   const isUsersRoute = useMatch('/admin/users/*') !== null;
+  const isGraphRoute = useMatch('/grafo/*') !== null;
   const { careerId } = useCareerSelection();
   const isAdmin = user?.rol === 'ADMIN';
 
@@ -70,7 +71,7 @@ export default function AppSidebar() {
     ));
 
   return (
-    <SidebarBase nav={exploreNav} sectionLabel="Explorar" brandTo="/" topContent={<StudyPlanSidebarSelector />}>
+    <SidebarBase nav={exploreNav} sectionLabel="Explorar" brandTo="/" mobileTitle={isGraphRoute ? 'Mapa de correlatividades' : undefined} topContent={<StudyPlanSidebarSelector />}>
       {isAdmin && (
         <>
           <div className="sidebar__section mt-3">Administración</div>

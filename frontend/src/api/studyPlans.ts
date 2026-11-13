@@ -125,11 +125,10 @@ export interface UserStudyPlan {
 }
 export type ProgressStatus =
   | 'PENDIENTE'
-  | 'DISPONIBLE'
-  | 'BLOQUEADA'
   | 'CURSANDO'
   | 'REGULARIZADA'
   | 'APROBADA';
+export type ResolvedProgressStatus = ProgressStatus | 'DISPONIBLE' | 'BLOQUEADA';
 export interface SubjectProgress {
   _id: string;
   userStudyPlan: string;
@@ -140,7 +139,7 @@ export interface SubjectProgress {
   origin?: string | null;
 }
 export interface ProgressInput {
-  status: ProgressStatus;
+  status?: ProgressStatus;
   grade?: number | null;
   academicDate?: string | null;
   origin?: string | null;

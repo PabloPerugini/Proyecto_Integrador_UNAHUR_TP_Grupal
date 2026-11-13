@@ -36,12 +36,15 @@ export default function StudyPlanSidebarSelector() {
   }, [careerId, plans]);
 
   useEffect(() => {
+    // El selector móvil se monta al abrir el menú. Mientras carga, su lista
+    // vacía no debe borrar la selección compartida con el selector de escritorio.
+    if (loading || error) return;
     if (!plans.length) {
       if (careerId) setCareerId(null);
       return;
     }
     if (!plans.some((plan) => plan._id === careerId)) setCareerId(plans[0]._id);
-  }, [plans, careerId, setCareerId]);
+  }, [plans, careerId, setCareerId, loading, error]);
 
   const selectPlan = (id: string) => {
     if (!id) return;

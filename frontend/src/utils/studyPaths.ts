@@ -1,9 +1,9 @@
 import type { GraphEdge, GraphNode } from '../types';
 
-type PathNode = Pick<GraphNode, 'code' | 'status'>;
+type PathNode = Pick<GraphNode, 'code' | 'status' | 'workloadHours'>;
 
-// Busca la secuencia más larga de correlativas pendientes.
-// Sin destino recorre todo el plan; con destino, solo sus requisitos.
+// Sin destino traza el camino pendiente con mayor carga horaria acumulada.
+// Con destino incluye todas las ramas pendientes necesarias para aprobarlo.
 export function getStudyPath(nodes: readonly PathNode[], edges: readonly GraphEdge[], targetCode?: string | null) {
   const empty = (hasCycle = false) => ({
     chain: [] as string[],
@@ -11,50 +11,97 @@ export function getStudyPath(nodes: readonly PathNode[], edges: readonly GraphEd
   });
   const pending = new Map(nodes.filter(n => n.status !== 'Aprobada').map(n => [n.code, n]));
   if (targetCode === null || (targetCode !== undefined && !pending.has(targetCode))) return empty();
-  const incoming = new Map<string, GraphEdge[]>();
+  if (targetCode !== undefined) {
+    const incoming = new Map<string, GraphEdge[]>();
+    for (const edge of edges) {
+      if (!pending.has(edge.source) || !pending.has(edge.target)) continue;
+      const list = incoming.get(edge.target) ?? [];
+      list.push(edge);
+      incoming.set(edge.target, list);
+    }
+    const chain = new Set<string>();
+    const edgeSet = new Set<string>();
+    const visiting = new Set<string>();
+    let hasCycle = false;
+    const visit = (code: string) => {
+      if (visiting.has(code)) { hasCycle = true; return; }
+      if (chain.has(code)) return;
+      chain.add(code);
+      visiting.add(code);
+      for (const edge of incoming.get(code) ?? []) {
+        edgeSet.add(edge.id);
+        visit(edge.source);
+      }
+      visiting.delete(code);
+    };
+    visit(targetCode);
+    if (hasCycle) return empty(true);
+    return { chain: Array.from(chain), set: chain, edgeSet, hasCycle: false };
+  }
+  const outgoing = new Map<string, GraphEdge[]>();
   for (const edge of edges) {
     if (!pending.has(edge.source) || !pending.has(edge.target)) continue;
-    const list = incoming.get(edge.target) ?? [];
-    list.push(edge);
-    incoming.set(edge.target, list);
+    const outgoingEdges = outgoing.get(edge.source) ?? [];
+    outgoingEdges.push(edge);
+    outgoing.set(edge.source, outgoingEdges);
   }
-  const lengths = new Map<string, number>();
-  const predecessor = new Map<string, GraphEdge>();
+  if (pending.size === 0) return empty();
+  const workload = new Map<string, number>();
+  for (const node of pending.values()) workload.set(node.code, node.workloadHours ?? 1);
+  const pathHours = new Map<string, number>();
+  const pathLengths = new Map<string, number>();
+  const bestNextEdges = new Map<string, GraphEdge[]>();
   const visiting = new Set<string>();
   let hasCycle = false;
   const visit = (code: string): number => {
     if (visiting.has(code)) { hasCycle = true; return 0; }
-    const cached = lengths.get(code);
+    const cached = pathHours.get(code);
     if (cached !== undefined) return cached;
     visiting.add(code);
-    let best = 0;
-    for (const edge of incoming.get(code) ?? []) {
-      const length = visit(edge.source);
-      if (length > best) {
-        best = length;
-        predecessor.set(code, edge);
+    let bestTailHours = 0;
+    let bestTailLength = 0;
+    const bestEdges: GraphEdge[] = [];
+    for (const edge of outgoing.get(code) ?? []) {
+      const tailHours = visit(edge.target);
+      const tailLength = pathLengths.get(edge.target) ?? 0;
+      if (tailHours > bestTailHours || (tailHours === bestTailHours && tailLength > bestTailLength)) {
+        bestTailHours = tailHours;
+        bestTailLength = tailLength;
+        bestEdges.splice(0, bestEdges.length, edge);
+      } else if (tailHours === bestTailHours && tailLength === bestTailLength) {
+        bestEdges.push(edge);
       }
     }
     visiting.delete(code);
-    const length = best + 1;
-    lengths.set(code, length);
-    return length;
+    bestNextEdges.set(code, bestEdges);
+    pathLengths.set(code, bestTailLength + 1);
+    const totalHours = (workload.get(code) ?? 1) + bestTailHours;
+    pathHours.set(code, totalHours);
+    return totalHours;
   };
-  let end = targetCode;
-  let longest = 0;
-  for (const code of targetCode === undefined ? pending.keys() : [targetCode]) {
-    const candidate = visit(code);
-    if (candidate > longest) { longest = candidate; end = code; }
-  }
+  for (const code of pending.keys()) visit(code);
   if (hasCycle) return empty(true);
-  const chain: string[] = [];
+  const maxPathHours = Math.max(...pathHours.values());
+  const maxPathLength = Math.max(...Array.from(pathHours.keys())
+    .filter(code => pathHours.get(code) === maxPathHours)
+    .map(code => pathLengths.get(code) ?? 0));
+  const set = new Set<string>();
   const edgeSet = new Set<string>();
-  while (end !== undefined) {
-    chain.push(end);
-    const edge = predecessor.get(end);
-    if (edge) edgeSet.add(edge.id);
-    end = edge?.source;
+  const visited = new Set<string>();
+  const collectPath = (code: string) => {
+    set.add(code);
+    for (const edge of outgoing.get(code) ?? []) {
+      if (!(bestNextEdges.get(code) ?? []).some(best => best.id === edge.id)) continue;
+      edgeSet.add(edge.id);
+      if (visited.has(edge.target)) continue;
+      visited.add(edge.target);
+      collectPath(edge.target);
+    }
+  };
+  for (const [code, hours] of pathHours) {
+    if (hours !== maxPathHours || pathLengths.get(code) !== maxPathLength) continue;
+    visited.add(code);
+    collectPath(code);
   }
-  chain.reverse();
-  return { chain, set: new Set(chain), edgeSet, hasCycle: false };
+  return { chain: Array.from(set), set, edgeSet, hasCycle: false };
 }

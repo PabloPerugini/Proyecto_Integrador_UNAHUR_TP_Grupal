@@ -2,8 +2,8 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { buildGraph } = require("../src/services/graph.service");
 
-// RN04: desmarcar revierte el sustento de dependientes (sin destruir datos:
-// el estado guardado se conserva, la disponibilidad se re-deriva).
+// RN04: los avances aprobados se conservan aunque luego se desmarque una
+// correlativa anterior; continúan habilitando las materias posteriores.
 const subjects = [
   { code: "M1", name: "M1", year: 1, cuatrimestre: 1, requires: [] },
   { code: "M2", name: "M2", year: 1, cuatrimestre: 2, requires: ["M1"] },
@@ -21,7 +21,7 @@ test("RN04: cadena aprobada habilita el siguiente", () => {
   assert.ok(g.availableNow.includes("M3"));
 });
 
-test("RN04: desmarcar M1 quita sustento a M2 y M3", () => {
+test("RN04: desmarcar M1 conserva M2 aprobada y habilita M3", () => {
   const g = buildGraph({
     subjects,
     progress: [
@@ -29,7 +29,7 @@ test("RN04: desmarcar M1 quita sustento a M2 y M3", () => {
       { subjectCode: "M2", status: "Aprobada" },
     ],
   });
-  assert.ok(!g.availableNow.includes("M3"));
+  assert.ok(g.availableNow.includes("M3"));
   assert.ok(!g.availableNow.includes("M2"));
 });
 

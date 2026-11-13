@@ -125,7 +125,7 @@ export default function SavedPlansPanel({ refreshKey = 0, careerIds }: { refresh
               <Button size="sm" variant="outline-primary" onClick={() => navigate(`/admin/${p._id}`)}>Editar</Button>{' '}
               <Dropdown align="end" className="d-inline-block">
                 <Dropdown.Toggle size="sm" variant="outline-secondary" id={`plan-more-${p._id}`} aria-label={`Más acciones para ${p.name}`} disabled={deletingId === p._id}>⋮</Dropdown.Toggle>
-                <Dropdown.Menu popperConfig={{ strategy: 'fixed' }}>
+                <Dropdown.Menu renderOnMount popperConfig={{ strategy: 'fixed' }}>
                   <Dropdown.Item onClick={() => navigate(`/grafo/${p._id}`)}>Ver grafo</Dropdown.Item>
                   <Dropdown.Item onClick={() => navigate(`/tablero/${p._id}`)}>Ir al tablero</Dropdown.Item>
                   <Dropdown.Divider />
