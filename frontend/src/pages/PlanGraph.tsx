@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -16,16 +16,16 @@ import {
   type CoordinateExtent
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Alert, Badge, Button, Card } from 'react-bootstrap';
+import { Alert, Button, Card, OverlayTrigger, Tooltip } from 'react-bootstrap';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getPlanGraph } from '../api/planGraphAdapter';
 import { studyPlansApi, type StudyPlan } from '../api/studyPlans';
-import type { GraphData, IntermediateProgress, SubjectStatus } from '../types';
+import type { GraphData, SubjectStatus } from '../types';
 import { useCareerSelection } from '../context/CareerContext';
 import { useTheme } from '../hooks/useTheme';
 import { yearLabel } from '../utils/subjects';
-import { STATUS_BADGE, statusColor, statusLabel, resolveNodeStatus } from '../utils/status';
-import { instituteColor, instituteGradientTec } from '../utils/instituteColors';
+import { statusColor, statusLabel, resolveNodeStatus } from '../utils/status';
+import { instituteColor } from '../utils/instituteColors';
 import { getDirectSuccessorCodes, HIGHLIGHT_COLOR } from '../utils/graphHighlight';
 import { getStudyPath } from '../utils/studyPaths';
 import SubjectStatusAction from '../components/SubjectStatusAction';
@@ -53,9 +53,11 @@ interface PlanNodeData {
   credits: number;
 }
 
-const BORDER_WIDTH = 2;
-const DIMMED_OPACITY = 0.55;
+const BORDER_WIDTH = 4;
+const DIMMED_OPACITY = 0.32;
 const AVAILABLE_COLOR = '#3B82F6';
+const OPTIMAL_NODE_BACKGROUND = '#FFF0D6';
+const OPTIMAL_NODE_BORDER = '#D97706';
 const IN_PROGRESS_COLOR = '#0561e5';
 const UNLOCK_COLOR = IN_PROGRESS_COLOR;
 const UNLOCK_HIGHLIGHT_MS = 5000;
@@ -76,6 +78,14 @@ const EDGE_COLORS = {
   optimal: '#d9870b',
 };
 
+const STATUS_NODE_BORDER_COLORS: Record<SubjectStatus, string> = {
+  Aprobada: '#00963f',
+  Regular: '#7138dc',
+  Cursando: '#075ce5',
+  Disponible: '#075ce5',
+  Bloqueada: '#596575',
+};
+
 const EDGE_WIDTH = {
   normal: 1.25,
   critical: 3,
@@ -92,16 +102,16 @@ function nodeBorder(
 ): string {
   const width = `${BORDER_WIDTH}px solid`;
 
-  if (d.optimal) return `${width} ${EDGE_COLORS.optimal}`;
-  if (d.critical) return `${width} ${EDGE_COLORS.critical}`;
-  if (selected) return `${width} #2563EB`;
+  if (d.optimal || d.critical) return `${width} ${OPTIMAL_NODE_BORDER}`;
+  if (selected && d.status !== 'Aprobada') return `${width} #2563EB`;
   if (d.newlyUnlocked) return `${width} ${UNLOCK_COLOR}`;
   if (d.highlightedNext) return `${width} ${HIGHLIGHT_COLOR}`;
-  if (d.status === 'Aprobada') return `${width} #258b43`;
-  if (d.status === 'Cursando') return `${width} ${IN_PROGRESS_COLOR}`;
-  if (d.available) return `${width} ${AVAILABLE_COLOR}`;
+  if (d.status === 'Aprobada') return `${width} #00963f`;
+  if (d.status === 'Regular') return `${width} #7138dc`;
+  if (d.status === 'Cursando') return `${width} #075ce5`;
+  if (d.available) return `${width} #075ce5`;
 
-  return `${width} #CBD5E1`;
+  return `${width} #596575`;
 }
 
 function StatusBadges({ d }: { d: Pick<PlanNodeData, 'optimal' | 'critical'> }) {
@@ -143,17 +153,17 @@ function toPlanNodeData(
 function PlanNode({ data }: NodeProps<Node<Record<string, unknown>>>) {
   const d = data as unknown as PlanNodeData;
   const pathColor = d.optimal ? EDGE_COLORS.optimal : d.critical ? EDGE_COLORS.critical : undefined;
-  const color = pathColor ?? statusColor(d.status);
+  const color = d.optimal || d.critical ? OPTIMAL_NODE_BACKGROUND : pathColor ?? (d.highlightedNext ? '#CCFBF1' : statusColor(d.status));
   const border = nodeBorder(d, d.selectedSubject);
 
   return (
     <div
       className={`plan-node${!pathColor && d.status === 'Cursando' ? ' plan-node--in-progress' : ''}${d.highlightedNext || d.newlyUnlocked ? ' plan-node--highlighted-next' : ''}`}
       style={{
-        ...(d.newlyUnlocked ? { '--plan-highlight-color': UNLOCK_COLOR } : {}),
+        ...((d.newlyUnlocked || d.highlightedNext) ? { '--plan-highlight-color': d.newlyUnlocked ? UNLOCK_COLOR : HIGHLIGHT_COLOR } : {}),
         background: color,
         color: pathColor ? '#211407' : '#23395d',
-        outline: pathColor && d.selectedSubject ? '2px solid #23395d' : undefined,
+        outline: undefined,
         outlineOffset: 3,
         borderRadius: 12,
 
@@ -178,7 +188,7 @@ function PlanNode({ data }: NodeProps<Node<Record<string, unknown>>>) {
         onAdvance={d.onAdvance ? () => d.onAdvance?.(d.code) : undefined}
         onRevert={d.onAdvance ? () => d.onAdvance?.(d.code, true) : undefined}
         disabled={d.progressSaving}
-        highlightColor={d.newlyUnlocked ? UNLOCK_COLOR : d.highlightedNext ? HIGHLIGHT_COLOR : undefined}
+        highlightColor={d.selectedSubject && d.status !== 'Aprobada' ? '#075ce5' : d.newlyUnlocked ? UNLOCK_COLOR : d.highlightedNext ? HIGHLIGHT_COLOR : undefined}
       />
       <Handle
         type="target"
@@ -233,45 +243,6 @@ function YearLabel({ data }: NodeProps<Node<Record<string, unknown>>>) {
   );
 }
 
-function IntermediateBanner({ intermediate }: { intermediate: IntermediateProgress }) {
-  const complete = intermediate.total > 0 && intermediate.aprobadas >= intermediate.total;
-  const pct = intermediate.total > 0 ? Math.min(100, Math.round((intermediate.aprobadas / intermediate.total) * 100)) : 0;
-  return (
-    <div className="px-3" style={{ margin: '0 auto', width: '100%', paddingBottom: 0 }}>
-      <div
-        className="d-flex align-items-center gap-2 flex-wrap"
-        style={{
-          padding: '6px 12px',
-          borderRadius: 10,
-          background: complete ? 'rgba(25,135,84,.12)' : 'rgba(20,108,67,.06)',
-          border: `1px solid ${complete ? 'rgba(25,135,84,.35)' : 'rgba(20,108,67,.25)'}`,
-        }}
-      >
-        <span className="fw-semibold small">
-          Título intermedio{intermediate.title ? `: ${intermediate.title}` : ''}
-        </span>
-        {complete ? (
-          <Badge bg="success">Completado — podés titularte</Badge>
-        ) : (
-          <span className="small text-muted">
-            {intermediate.aprobadas}/{intermediate.total} materias · {intermediate.creditsAprob}/{intermediate.credits} créditos
-          </span>
-        )}
-        <div className="progress flex-grow-1" style={{ height: 8, maxWidth: 260, marginBottom: 0 }}>
-          <div
-            className="progress-bar bg-success"
-            role="progressbar"
-            aria-valuenow={pct}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            style={{ width: `${pct}%` }}
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
-
 const nodeTypes = { plan: PlanNode, yearLabel: YearLabel };
 const edgeTypes = { academic: AcademicEdge };
 const EMPTY_EDGES: GraphData['edges'] = [];
@@ -294,103 +265,67 @@ const GRAPH_SPACING = {
   rowGap: 152,
 };
 
-const STATUS_LEGEND: { status: SubjectStatus; label: string; stat: 'aprobadas' | 'regulares' | 'enCurso' | 'bloqueadas' | 'disponibles' }[] = [
-  { status: 'Aprobada', label: 'Aprobadas', stat: 'aprobadas' },
-  { status: 'Regular', label: 'Regulares', stat: 'regulares' },
-  { status: 'Cursando', label: 'En curso', stat: 'enCurso' },
-  { status: 'Bloqueada', label: 'Bloqueadas', stat: 'bloqueadas' },
-  { status: 'Disponible', label: 'Disponibles', stat: 'disponibles' },
-];
-
-interface FastPathStep {
-  code: string;
-  name: string;
-  cost: number;
-}
-
 interface DetailProps {
   graph: GraphData;
   selectedNode: GraphData['nodes'][number] | null;
   requires: GraphData['nodes'][number][];
   successors: GraphData['nodes'][number][];
-  fastPath: { steps: FastPathStep[]; cost: number };
+  onSelect: (code: string) => void;
   onClose: () => void;
 }
 
-function DetailPanel({ selectedNode, requires, successors, fastPath, onClose }: DetailProps) {
+function DetailPanel({ selectedNode, requires, successors, onSelect, onClose }: DetailProps) {
+  const renderSubjectRows = (subjects: GraphData['nodes']): ReactNode => (
+    subjects.length === 0
+      ? <div className="plan-detail__empty">(ninguna)</div>
+      : subjects.map((subject) => (
+        <button
+          type="button"
+          className={`plan-detail__item${subject.status === 'Aprobada' ? ' plan-detail__item--approved' : ''}`}
+          key={subject.code}
+          onClick={() => onSelect(subject.code)}
+          aria-label={`Ver detalle de ${subject.name}`}
+        >
+          <SubjectStatusIcon status={subject.status} showTooltip={false} className="plan-detail__status-icon" />
+          <span>{subject.name}</span>
+        </button>
+      ))
+  );
+
   return (
     <div className="plan-detail">
-      <Card>
-        <Card.Header className="d-flex align-items-center">
-          <span className="me-auto fw-semibold">Detalle</span>
-          <Button variant="link" size="sm" className="p-0 text-decoration-none" onClick={onClose}>✕</Button>
+      <Card className="plan-detail__card">
+        <Card.Header className="plan-detail__header">
+          <span className="plan-detail__title">{selectedNode?.name}</span>
+          <Button variant="link" size="sm" className="plan-detail__close" onClick={onClose} aria-label="Cerrar detalle">×</Button>
         </Card.Header>
-        <Card.Body>
+        <Card.Body className="plan-detail__body">
           {!selectedNode && <p className="text-muted mb-0">Tocá una materia para ver sus correlatividades.</p>}
           {selectedNode && (
             <>
-              <h5 className="mb-1">{selectedNode.name}</h5>
-              <p className="text-muted mb-1">
-                <code>{selectedNode.code}</code> · año {selectedNode.year ?? '-'} · cuat. {selectedNode.cuatrimestre ?? '-'} · {selectedNode.credits} cr
-              </p>
-              <div className="mb-2">
-                <Badge bg={STATUS_BADGE[selectedNode.status]}>
+              <div className="plan-detail__status-wrap">
+                <span className="plan-detail__status" style={{ color: STATUS_NODE_BORDER_COLORS[selectedNode.status] }}>
+                  <SubjectStatusIcon status={selectedNode.status} showTooltip={false} className="plan-detail__status-icon" />
                   {statusLabel(selectedNode.status)}
-                </Badge>
+                </span>
               </div>
 
-              <div className="mt-2"><strong>Se requiere para cursar:</strong></div>
-              <ul className="small mb-3 ps-3">
-                {requires.length === 0 && <li className="text-muted">(ninguna)</li>}
-                {requires.map((r) => (
-                  <li key={r.code}>{r.name} <Badge bg={STATUS_BADGE[r.status]}>{statusLabel(r.status)}</Badge></li>
-                ))}
-              </ul>
+              <section className="plan-detail__section">
+                <h3 className="plan-detail__section-title">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m2 9 10-5 10 5-10 5L2 9Z" /><path d="M6 11v5c3.5 2.5 8.5 2.5 12 0v-5M22 9v6" /></svg>
+                  Requisitos
+                </h3>
+                <div className="plan-detail__items">{renderSubjectRows(requires)}</div>
+              </section>
 
-              <div><strong>Habilita:</strong></div>
-              <ul className="small mb-0 ps-3">
-                {successors.length === 0 && <li className="text-muted">(ninguna)</li>}
-                {successors.map((r) => <li key={r.code}>{r.name}</li>)}
-              </ul>
+              <section className="plan-detail__section">
+                <h3 className="plan-detail__section-title">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18V7h15" /><path d="m14 2 5 5-5 5" /></svg>
+                  Desbloquea
+                </h3>
+                <div className="plan-detail__items">{renderSubjectRows(successors)}</div>
+              </section>
 
-              {fastPath.cost > 0 && (
-                <div className="mt-3 p-2" style={{ background: 'rgba(217,135,11,.14)', borderRadius: 8, borderLeft: '3px solid #d9870b' }}>
-                  <div className="fw-semibold" style={{ color: '#b26a00', fontSize: 13 }}>
-                    Para llegar a aprobar esta materia: ≈ {fastPath.cost}{' '}
-                    {fastPath.cost === 1 ? 'cuatrimestre' : 'cuatrimestres'} como mínimo
-                  </div>
-                  <div className="small text-muted mb-2">
-                    De las secuencias de correlativas que llevan a esta materia, esta es la que más tiempo requiere.
-                    Seguí el orden de la lista y avanzá con las otras correlativas en paralelo.
-                  </div>
-                  <ol className="small mb-2 ps-3" style={{ lineHeight: 1.6 }}>
-                    {fastPath.steps.map((s, i) => {
-                      const isLast = i === fastPath.steps.length - 1;
-                      const acc = fastPath.steps.slice(0, i + 1).reduce((a, x) => a + (x.cost ?? 0), 0);
-                      return (
-                        <li key={s.code}>
-                          <span className={isLast ? 'fw-bold' : ''}>{s.name}</span>
-                          <span className="text-muted">
-                            {' '}
-                            · {s.cost === 0 ? 'ya aprobada' : s.cost === 1 ? '1 cuatrimestre' : '2 cuatrimestres'}
-                            {s.cost > 0 && <span> (total hasta acá: {acc})</span>}
-                          </span>
-                          {isLast && (
-                            <span className="badge ms-1" style={{ background: '#d9870b' }}>
-                              esta materia
-                            </span>
-                          )}
-                        </li>
-                      );
-                    })}
-                  </ol>
-                  <div className="small text-muted" style={{ opacity: 0.85 }}>
-                    El tiempo incluye la materia elegida y supone que podés cursar las otras ramas en paralelo.
-                    {' '}Las aprobadas no suman tiempo; las que estás cursando cuentan con su duración completa.
-                    {' '}La oferta de materias, los horarios y los cupos pueden alargar este plazo.
-                  </div>
-                </div>
-              )}
             </>
           )}
         </Card.Body>
@@ -589,7 +524,6 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
   const highlightedNextCodes = useMemo(() => getDirectSuccessorCodes(
     displayGraph?.edges ?? [], selectedNode?.code ?? null,
   ), [displayGraph, selectedNode]);
-
   const fastPath = useMemo(() => getStudyPath(
     displayGraph?.nodes ?? [], displayGraph?.edges ?? [], selectedCode,
   ), [displayGraph, selectedCode]);
@@ -600,16 +534,16 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
     ? criticalPath
     : pathMode === 'optimal' && fastPath.chain.length > 0 ? fastPath : null;
   const activeMode = activePath ? pathMode : null;
-
-  const fastPathSteps = useMemo(
-    () =>
-      fastPath.chain.map((code, i) => ({
-        code,
-        name: byCodeMap.get(code)?.name ?? code,
-        cost: fastPath.chainCosts[i] ?? 0,
-      })),
-    [fastPath.chain, fastPath.chainCosts, byCodeMap],
-  );
+  const approvedPathPrerequisites = useMemo(() => {
+    const codes = new Set<string>();
+    if (!displayGraph || !activePath?.set.size) return codes;
+    for (const edge of displayGraph.edges) {
+      if (activePath.set.has(edge.target) && byCodeMap.get(edge.source)?.status === 'Aprobada') {
+        codes.add(edge.source);
+      }
+    }
+    return codes;
+  }, [displayGraph, activePath, byCodeMap]);
 
   const baseNodes: Node[] = useMemo(() => {
     const g = displayGraph;
@@ -706,7 +640,9 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
     return {
       ...node,
       position: layout?.positions[node.id] ?? node.position,
-      style: { opacity: node.type === 'plan' && (activePath ? !activePath.set.has(node.id) : selectedNode && !related) ? DIMMED_OPACITY : 1 },
+      style: { opacity: node.type === 'plan' && (activePath
+        ? !activePath.set.has(node.id) && !approvedPathPrerequisites.has(node.id)
+        : selectedNode && !related) ? DIMMED_OPACITY : 1 },
       data: node.type === 'plan' ? {
         ...node.data,
         optimal: activeMode === 'optimal' && fastPath.set.has(node.id),
@@ -723,7 +659,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
         width: layout?.yearWidths[node.id] ?? node.data.width,
       },
     };
-  }), [baseNodes, layout, fastPath.set, criticalPath.set, activeMode, activePath, highlightedNextCodes, selectedCode, selectedNode, graph?.userStudyPlanId, advanceSubject, progressSaving, newlyUnlockedCodes]);
+  }), [baseNodes, layout, fastPath.set, criticalPath.set, activeMode, activePath, approvedPathPrerequisites, highlightedNextCodes, selectedCode, selectedNode, graph?.userStudyPlanId, advanceSubject, progressSaving, newlyUnlockedCodes]);
 
   const MAP_MARGINS = {
     left: 700,    // Espacio a la izquierda
@@ -859,22 +795,28 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
   const flowEdges: Edge[] = useMemo(() => {
     if (!displayGraph) return [];
 
+    const fulfilledColor = theme === 'dark' ? '#4ade80' : '#00963f';
+    const pendingColor = theme === 'dark' ? '#718096' : EDGE_COLORS.normal;
+
     return displayGraph.edges.map((e) => {
       const highlightedNext = !activeMode && e.source === selectedCode && highlightedNextCodes.has(e.target);
       const newlyUnlocked = !activeMode && e.source === unlockHighlight?.source && newlyUnlockedCodes.has(e.target);
-      const leadsToAvailable = !activeMode && byCodeMap.get(e.source)?.status === 'Aprobada'
-        && byCodeMap.get(e.target)?.status === 'Disponible';
+      const fulfilledPrerequisite = ['Aprobada', 'Regular'].includes(byCodeMap.get(e.source)?.status ?? '');
+      const onPathApprovedPrerequisite = !!activeMode
+        && !!activePath?.set.has(e.target)
+        && byCodeMap.get(e.source)?.status === 'Aprobada';
       const onOptimal = activeMode === 'optimal' && fastPath.edgeSet.has(e.id);
       const onCritical = activeMode === 'critical' && criticalPath.edgeSet.has(e.id);
 
       // Color de la línea y la punta
       const color = newlyUnlocked ? UNLOCK_COLOR : highlightedNext
         ? HIGHLIGHT_COLOR
+        : onPathApprovedPrerequisite ? fulfilledColor
         : onOptimal
         ? EDGE_COLORS.optimal
         : onCritical
           ? EDGE_COLORS.critical
-          : leadsToAvailable ? AVAILABLE_COLOR : EDGE_COLORS.normal;
+          : fulfilledPrerequisite ? fulfilledColor : pendingColor;
 
       // Grosor de la línea
       const baseWidth = onOptimal
@@ -882,7 +824,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
         : onCritical
           ? EDGE_WIDTH.critical
           : EDGE_WIDTH.normal;
-      const strokeWidth = highlightedNext || newlyUnlocked ? 1.5 : baseWidth;
+      const strokeWidth = highlightedNext ? 3 : onPathApprovedPrerequisite ? 2.5 : newlyUnlocked ? 1.5 : baseWidth;
 
       return {
         id: e.id,
@@ -891,6 +833,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
         type: 'academic',
         data: { sections: layout?.routes[e.id] },
         animated: onOptimal || onCritical,
+        zIndex: highlightedNext || onPathApprovedPrerequisite ? 5 : 0,
 
         // Estilo de la línea
         style: {
@@ -898,7 +841,9 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
           strokeWidth,
           strokeLinejoin: 'round',
           strokeLinecap: 'round',
-          opacity: activeMode ? (onOptimal || onCritical ? 1 : 0.2) : selectedNode && !highlightedNext && !newlyUnlocked ? DIMMED_OPACITY : 1,
+          opacity: activeMode ? (onOptimal || onCritical || onPathApprovedPrerequisite ? 1 : 0.2) : selectedNode
+            ? highlightedNext || newlyUnlocked ? 1 : DIMMED_OPACITY
+            : fulfilledPrerequisite ? 0.68 : 1,
           ...(onOptimal ? { strokeDasharray: '6 3' } : {}),
         },
 
@@ -912,7 +857,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
         },
       };
     });
-  }, [displayGraph, fastPath, criticalPath, activeMode, selectedCode, highlightedNextCodes, selectedNode, layout, unlockHighlight, newlyUnlockedCodes, byCodeMap]);
+  }, [displayGraph, fastPath, criticalPath, activeMode, activePath, selectedCode, highlightedNextCodes, selectedNode, layout, unlockHighlight, newlyUnlockedCodes, byCodeMap, theme]);
 
 
   const boardGroups = useMemo(() => {
@@ -979,7 +924,9 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
   }
 
   const renderCard = (d: PlanNodeData, selected: boolean) => {
-    const border = nodeBorder(d, selected);
+    const isNext = highlightedNextCodes.has(d.code);
+    const isRelated = isNext || d.code === selectedCode;
+    const border = isNext ? `${BORDER_WIDTH}px solid #0D9488` : nodeBorder(d, selected);
     const pathColor = d.optimal ? EDGE_COLORS.optimal : d.critical ? EDGE_COLORS.critical : undefined;
     return (
       <button
@@ -987,10 +934,10 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
         className={!pathColor && d.status === 'Cursando' ? 'plan-node--in-progress' : undefined}
         onClick={() => setPinnedCode((prev) => (prev === d.code ? null : d.code))}
         style={{
-          background: pathColor ?? statusColor(d.status),
+          background: d.optimal || d.critical ? OPTIMAL_NODE_BACKGROUND : pathColor ?? (isNext ? '#CCFBF1' : statusColor(d.status)),
           color: pathColor ? '#211407' : '#23395d',
-          opacity: activePath && !activePath.set.has(d.code) ? DIMMED_OPACITY : 1,
-          outline: pathColor && selected ? '2px solid #23395d' : undefined,
+          opacity: activePath ? activePath.set.has(d.code) || approvedPathPrerequisites.has(d.code) ? 1 : DIMMED_OPACITY : selectedNode && !isRelated ? DIMMED_OPACITY : 1,
+          outline: undefined,
           outlineOffset: 3,
           border,
           borderRadius: 10,
@@ -1042,108 +989,159 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
 
         <div className="plan-map-toolbar">
           {selectedPlan?.intermediateTitle && (
-            <div className="d-flex gap-1" role="tablist" aria-label="Vista del plan">
-              <Button
-                size="sm"
-                role="tab"
-                aria-selected={tab === 'lic'}
-                variant={tab === 'lic' ? 'primary' : 'outline-primary'}
-                onClick={() => { setTab('lic'); setPinnedCode(null); setPathMode(null); }}
-              >
-                Licenciatura
-              </Button>
-              <Button
-                size="sm"
-                role="tab"
-                aria-selected={tab === 'tec'}
-                variant={tab === 'tec' ? 'primary' : 'outline-primary'}
-                style={tab === 'tec' ? { background: instituteGradientTec(planBaseColor), borderColor: 'transparent' } : undefined}
-                onClick={() => { setTab('tec'); setPinnedCode(null); setPathMode(null); }}
-                title={interCodes ? `${interCodes.size} materias de la tecnicatura` : selectedPlan.intermediateTitle}
-              >
-                Tecnicatura
-              </Button>
+            <div className="plan-degree-switch" role="tablist" aria-label="Vista del plan">
+              <OverlayTrigger placement="bottom" overlay={<Tooltip id="plan-degree-lic-tooltip">Muestra todas las materias del plan de licenciatura.</Tooltip>}>
+                <Button
+                  className="plan-degree-switch__option"
+                  size="sm"
+                  role="tab"
+                  aria-selected={tab === 'lic'}
+                  variant={tab === 'lic' ? 'primary' : 'outline-primary'}
+                  onClick={() => { setTab('lic'); setPinnedCode(null); setPathMode(null); }}
+                >
+                  Licenciatura
+                </Button>
+              </OverlayTrigger>
+              <OverlayTrigger placement="bottom" overlay={<Tooltip id="plan-degree-tec-tooltip">Muestra solo las materias que forman parte de la tecnicatura.</Tooltip>}>
+                <Button
+                  className="plan-degree-switch__option"
+                  size="sm"
+                  role="tab"
+                  aria-selected={tab === 'tec'}
+                  variant={tab === 'tec' ? 'primary' : 'outline-primary'}
+                  onClick={() => { setTab('tec'); setPinnedCode(null); setPathMode(null); }}
+                >
+                  Tecnicatura
+                </Button>
+              </OverlayTrigger>
             </div>
           )}
 
-          <div className="d-flex flex-wrap align-items-center gap-2 ms-auto" role="group" aria-label="Navegación y caminos del plan">
-            <Button variant="outline-secondary" size="sm" onClick={() => navigate('/')}>← Volver</Button>
-            <Button
-              variant={activeMode === 'critical' ? 'warning' : 'outline-secondary'}
-              size="sm"
-              aria-pressed={activeMode === 'critical'}
-              aria-describedby="plan-path-help"
-              disabled={criticalPath.chain.length === 0}
-              style={activeMode === 'critical' ? { background: EDGE_COLORS.critical, borderColor: EDGE_COLORS.critical, color: '#211407' } : undefined}
-              title="Ver la secuencia de materias pendientes que más tiempo requiere en todo el plan"
-              onClick={() => setPathMode(mode => mode === 'critical' ? null : 'critical')}
-            >
-              Camino crítico
-            </Button>
-            <Button
-              variant={pathMode === 'optimal' ? 'warning' : 'outline-secondary'}
-              size="sm"
-              aria-pressed={pathMode === 'optimal'}
-              aria-describedby="plan-path-help"
-              disabled={!displayGraph?.nodes.length}
-              style={pathMode === 'optimal' ? { background: EDGE_COLORS.optimal, borderColor: EDGE_COLORS.optimal, color: '#211407' } : undefined}
-              title={pathMode === 'optimal' ? 'Desactivar el camino óptimo' : 'Activar y elegir una materia para ver cómo llegar a aprobarla'}
-              onClick={() => setPathMode(mode => mode === 'optimal' ? null : 'optimal')}
-            >
-              Camino óptimo
-            </Button>
+          <div className="d-flex flex-wrap align-items-center gap-2 ms-auto" role="group" aria-label="Navegación del plan">
+            {view !== 'grafo' && <>
+              <OverlayTrigger placement="bottom" overlay={<Tooltip id="plan-critical-toolbar-tooltip">Te muestra qué materias conviene aprobar a tiempo para no atrasar las siguientes.</Tooltip>}>
+                <Button
+                  className="plan-map-action plan-map-action--critical"
+                  variant={activeMode === 'critical' ? 'warning' : 'outline-secondary'}
+                  size="sm"
+                  aria-pressed={activeMode === 'critical'}
+                  aria-describedby="plan-path-help"
+                  disabled={criticalPath.chain.length === 0}
+                  onClick={() => setPathMode(mode => mode === 'critical' ? null : 'critical')}
+                >
+                  Materias clave para avanzar
+                </Button>
+              </OverlayTrigger>
+              <OverlayTrigger placement="bottom" overlay={<Tooltip id="plan-optimal-toolbar-tooltip">Elegí una materia para ver las correlativas que necesitás aprobar antes.</Tooltip>}>
+                <Button
+                  className="plan-map-action plan-map-action--optimal"
+                  variant={pathMode === 'optimal' ? 'warning' : 'outline-secondary'}
+                  size="sm"
+                  aria-pressed={pathMode === 'optimal'}
+                  aria-describedby="plan-path-help"
+                  disabled={!displayGraph?.nodes.length}
+                  onClick={() => setPathMode(mode => mode === 'optimal' ? null : 'optimal')}
+                >
+                  Ruta para aprobar
+                </Button>
+              </OverlayTrigger>
+            </>}
           </div>
         </div>
 
+        {view === 'grafo' && displayGraph && <div className="plan-progress-summary">
+          <div className="plan-progress-summary__stats" aria-label="Resumen de estados">
+            {([
+              { status: 'Aprobada', label: '', count: displayGraph.stats.aprobadas, tone: 'approved' },
+              { status: 'Cursando', label: 'Cursando', count: displayGraph.stats.enCurso, tone: 'in-progress' },
+              { status: 'Disponible', label: displayGraph.stats.disponibles === 1 ? 'Disponible' : 'Disponibles', count: displayGraph.stats.disponibles, tone: 'available' },
+              { status: 'Bloqueada', label: '', count: displayGraph.stats.bloqueadas, tone: 'locked' },
+              { status: 'Regular', label: 'Regulares', count: displayGraph.stats.regulares, tone: 'regular' },
+            ] as const).map(item => {
+              const stat = <span key={item.status} className={`plan-progress-summary__stat plan-progress-summary__stat--${item.tone}`}>
+                <SubjectStatusIcon status={item.status} showTooltip={false} /><strong>{item.count}</strong>{item.label && <> {item.label}</>}
+              </span>;
+              if (item.status === 'Aprobada' || item.status === 'Bloqueada') {
+                const approved = item.status === 'Aprobada';
+                return (
+                  <OverlayTrigger
+                    key={item.status}
+                    placement="top"
+                    overlay={<Tooltip id={`plan-status-${item.tone}-tooltip`} className={`status-legend-tooltip status-legend-tooltip--${item.tone}`}>{approved ? 'Aprobadas' : 'Bloqueadas'}</Tooltip>}
+                  >
+                    {stat}
+                  </OverlayTrigger>
+                );
+              }
+              return stat;
+            })}
+          </div>
+          <div className="plan-progress-summary__actions" role="group" aria-label="Rutas de correlatividades">
+            <OverlayTrigger placement="bottom" overlay={<Tooltip id="plan-optimal-legend-tooltip">Elegí una materia para ver las correlativas que necesitás aprobar antes.</Tooltip>}>
+              <Button
+                className="plan-map-action plan-map-action--optimal"
+                variant={pathMode === 'optimal' ? 'warning' : 'outline-secondary'}
+                size="sm"
+                aria-pressed={pathMode === 'optimal'}
+                aria-describedby="plan-path-help"
+                disabled={!displayGraph.nodes.length}
+                onClick={() => setPathMode(mode => mode === 'optimal' ? null : 'optimal')}
+              >
+                Ruta para aprobar
+              </Button>
+            </OverlayTrigger>
+            <OverlayTrigger placement="bottom" overlay={<Tooltip id="plan-critical-legend-tooltip">Te muestra qué materias conviene aprobar a tiempo para no atrasar las siguientes.</Tooltip>}>
+              <Button
+                className="plan-map-action plan-map-action--critical"
+                variant={activeMode === 'critical' ? 'warning' : 'outline-secondary'}
+                size="sm"
+                aria-pressed={activeMode === 'critical'}
+                aria-describedby="plan-path-help"
+                disabled={criticalPath.chain.length === 0}
+                onClick={() => setPathMode(mode => mode === 'critical' ? null : 'critical')}
+              >
+                Materias clave para avanzar
+              </Button>
+            </OverlayTrigger>
+          </div>
+        </div>}
+
         {err && <Alert variant="danger" className="mx-3">{err}</Alert>}
         {progressError && <Alert variant="warning" className="mx-3" dismissible onClose={() => setProgressError(null)}>{progressError}</Alert>}
-        {criticalPath.hasCycle && <Alert variant="warning" className="mx-3 py-1 small">Hay un ciclo entre las correlativas pendientes. No se puede calcular el camino crítico.</Alert>}
+        {criticalPath.hasCycle && <Alert variant="warning" className="mx-3 py-1 small">Hay un ciclo entre las correlativas pendientes. No se puede calcular la secuencia de materias clave.</Alert>}
         <div id="plan-path-help" className="mx-3 mb-2 small" role="status">
           {activePath ? (
             <>
-              <div>
-                <strong>{activeMode === 'critical' ? 'Camino crítico: mirá el plan completo.' : `Camino óptimo: cómo llegar a ${selectedNode?.name}.`}</strong>{' '}
-                {activeMode === 'critical'
-                  ? 'Resalta la secuencia de materias pendientes que más tiempo requiere. Cada una habilita la siguiente: retrasar esta secuencia puede demorar la finalización del plan.'
-                  : 'Resalta la secuencia de correlativas que más tiempo requiere hasta aprobar la materia elegida, incluyéndola. Te permite identificar por dónde empezar.'}
-              </div>
-              <div className="text-muted">
-                Tiempo estimado de esta secuencia: <strong>≈ {activePath.cost} {activePath.cost === 1 ? 'cuatrimestre' : 'cuatrimestres'}</strong>.
-                {' '}Supone que avanzás con las otras correlativas en paralelo; también tenés que cumplirlas.
-                {' '}Volvé a pulsar el botón activo para recuperar los colores de estado.
+              <div
+                className={activeMode === 'critical' ? 'rounded px-3 py-2' : undefined}
+                style={activeMode === 'critical' ? { background: 'rgba(253,126,20,.12)', borderLeft: `3px solid ${EDGE_COLORS.critical}` } : undefined}
+              >
+                <div>
+                  <strong>{activeMode === 'critical' ? 'Materias clave para avanzar.' : `Ruta para llegar a ${selectedNode?.name}.`}</strong>{' '}
+                  {activeMode === 'critical'
+                    ? 'Muestra qué materias tenés que aprobar para cursar las siguientes. Si te atrasás con una, podés atrasarte con las demás.'
+                    : 'Resalta la secuencia de correlativas necesaria para aprobar la materia elegida.'}
+                </div>
+                <div className="text-muted">Volvé a pulsar el botón activo para quitar el resaltado.</div>
               </div>
             </>
           ) : pathMode === 'optimal' ? (
             <div className="rounded px-3 py-2" style={{ background: 'rgba(217,135,11,.12)', borderLeft: `3px solid ${EDGE_COLORS.optimal}` }}>
-              <strong>Camino óptimo activado.</strong>{' '}
+              <strong>Ruta para aprobar activada.</strong>{' '}
               {displayGraph?.nodes.every(node => node.status === 'Aprobada')
                 ? 'Ya aprobaste todas las materias de esta vista. No quedan recorridos pendientes.'
                 : selectedNode?.status === 'Aprobada'
                   ? `Ya aprobaste ${selectedNode.name}. Elegí otra materia para ver cómo llegar a aprobarla.`
                   : fastPath.hasCycle
                     ? 'Las correlativas de esta materia forman un ciclo y no permiten calcular el recorrido. Podés elegir otra materia.'
-                    : `Hacé clic en una materia ${view === 'grafo' ? 'del mapa' : 'del tablero'} para ver el recorrido hasta aprobarla y su tiempo estimado.`}
-              {' '}Para salir, volvé a pulsar «Camino óptimo».
+                    : `Hacé clic en una materia ${view === 'grafo' ? 'del mapa' : 'del tablero'} para ver las correlativas que necesitás completar hasta aprobarla.`}
+              {' '}Para salir, volvé a pulsar «Ruta para aprobar».
             </div>
-          ) : (
-            <span className="text-muted">
-              <strong>Camino crítico:</strong> qué secuencia de materias puede demorar la finalización del plan.
-              {' '}<strong>Camino óptimo:</strong> activá el botón y elegí una materia para ver cómo llegar a aprobarla.
-            </span>
-          )}
+          ) : null}
         </div>
         {view === 'grafo' && layoutError && <Alert variant="warning" className="mx-3">No se pudieron optimizar las flechas. Se muestran conexiones ortogonales simples. {layoutError}</Alert>}
         {id && !selectedPlan && plans.length > 0 && <Alert variant="warning" className="mx-3">Seleccioná un plan válido. Los enlaces antiguos de carrera ya no corresponden al grafo.</Alert>}
         {displayGraph && displayGraph.edges.length === 0 && <Alert variant="info" className="mx-3 py-1 small">No hay correlatividades vinculadas todavía. Podés agregarlas desde Administrar plan.</Alert>}
-        {graph?.intermediate && graph.intermediate.total > 0 && (
-          <IntermediateBanner intermediate={graph.intermediate} />
-        )}
-        {tab === 'tec' && (
-          <Alert variant="info" className="mx-3 py-1 small">
-            Vista de tecnicatura: tu avance acá cuenta para ambas titulaciones.
-          </Alert>
-        )}
-
         {tecEmpty && (
           <Alert variant="warning" className="mx-3">
             La tecnicatura de este plan todavía no tiene materias marcadas.
@@ -1152,47 +1150,6 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
         )}
 
         <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', margin: '0 8px 8px' }}>
-          {displayGraph && !tecEmpty && (
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8, flexShrink: 0 }}>
-              <div
-                style={{
-                  maxWidth: '94%',
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '2px 14px',
-                  padding: '5px 16px',
-                  borderRadius: 999,
-                  background: 'var(--bs-body-bg)',
-                  border: '1px solid var(--bs-border-color)',
-                  boxShadow: '0 2px 8px rgba(0,0,0,.12)',
-                }}
-              >
-                <span className="small fw-semibold text-secondary me-1" style={{ whiteSpace: 'nowrap' }}>Estados</span>
-                {STATUS_LEGEND.map((l) => (
-                  <span
-                    key={l.label}
-                    className="d-inline-flex align-items-center gap-1"
-                    style={{ fontSize: 12, whiteSpace: 'nowrap', color: 'var(--bs-body-color)' }}
-                  >
-                    <span className="d-inline-flex" aria-hidden="true"><SubjectStatusIcon status={l.status} /></span>
-                    {l.label}
-                    <strong className="plan-state-count">{displayGraph.stats[l.stat]}</strong>
-                  </span>
-                ))}
-                {activeMode && (
-                  <span className="d-inline-flex align-items-center gap-1 border-start ps-3" style={{ fontSize: 12, whiteSpace: 'nowrap', color: 'var(--bs-body-color)' }}>
-                    <svg width="28" height="16" viewBox="0 0 28 16" fill="none" aria-hidden="true" style={{ color: EDGE_COLORS[activeMode] }}>
-                      <path d="M1 8h24m-6-5 6 5-6 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                    {activeMode === 'critical' ? 'Camino crítico' : 'Camino óptimo'}
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
-
           <div style={{
             flex: view === 'grafo' ? 1 : '0 0 auto',
             minHeight: view === 'grafo' ? 400 : 0,
@@ -1295,7 +1252,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
               selectedNode={selectedNode}
               requires={requires}
               successors={successors}
-              fastPath={{ steps: selectedCode ? fastPathSteps : [], cost: selectedCode ? fastPath.cost : 0 }}
+              onSelect={setPinnedCode}
               onClose={() => setPinnedCode(null)}
             />
           )}

@@ -8,11 +8,11 @@ export function resolveNodeStatus(status: string | undefined, available: boolean
 }
 
 export const STATUS_COLOR: Record<SubjectStatus, string> = {
-  Aprobada: '#eefdf0',
-  Regular: '#F5F3FF',
-  Cursando: '#e5f0fe',
-  Disponible: '#eff6ff',
-  Bloqueada: '#edf0f4',
+  Aprobada: '#D9F7E5',
+  Regular: '#E9E1FF',
+  Cursando: '#DCEAFF',
+  Disponible: '#DCEAFF',
+  Bloqueada: '#E1E5EA',
 };
 
 export const STATUS_LABEL: Record<SubjectStatus, string> = {

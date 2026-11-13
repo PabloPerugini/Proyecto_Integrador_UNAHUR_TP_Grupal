@@ -58,18 +58,18 @@ export const FAQS: Faq[] = [
   {
     id: 'correlatividades-camino-critico',
     category: 'correlatividades',
-    question: '¿Qué muestra el camino crítico?',
+    question: '¿Qué muestran las materias clave para avanzar?',
     answer:
-      'En el grafo o tablero, activa «Camino crítico» para resaltar la secuencia de materias pendientes que más tiempo requiere. Tiene en cuenta las correlatividades y supone que podés cursar materias en paralelo; las materias anuales cuentan como más tiempo que las cuatrimestrales. Si hay un ciclo entre correlativas, no se puede calcular.',
-    tags: ['camino', 'crítico', 'critico', 'tiempo', 'demora', 'secuencia', 'finalizar'],
+      'En el grafo o tablero, activá «Materias clave para avanzar» para ver una secuencia de materias pendientes conectadas por sus correlativas. Si hay un ciclo entre correlativas, no se puede calcular.',
+    tags: ['camino', 'crítico', 'critico', 'secuencia', 'finalizar'],
     link: '/grafo',
   },
   {
     id: 'correlatividades-camino-optimo',
     category: 'correlatividades',
-    question: '¿Cómo uso el camino óptimo?',
+    question: '¿Cómo veo la ruta para aprobar una materia?',
     answer:
-      'En el grafo o tablero, activa «Camino óptimo» y elegí una materia pendiente. Se resalta la secuencia de correlativas pendientes que más tiempo requiere para llegar a aprobar esa materia, suponiendo que cursás en paralelo cuando es posible. Las materias ya aprobadas no forman parte del recorrido.',
+      'En el grafo o tablero, activá «Ruta para aprobar» y elegí una materia pendiente. Se resalta la secuencia de correlativas pendientes que necesitás completar para llegar a aprobarla. Las materias ya aprobadas no forman parte del recorrido.',
     tags: ['camino', 'óptimo', 'optimo', 'recorrido', 'ruta', 'materia', 'aprobar', 'correlativas'],
     link: '/grafo',
   },

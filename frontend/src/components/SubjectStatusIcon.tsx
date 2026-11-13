@@ -20,9 +20,10 @@ interface SubjectStatusIconProps {
   status: SubjectStatus;
   className?: string;
   highlightColor?: string;
+  showTooltip?: boolean;
 }
 
-export default function SubjectStatusIcon({ status, className, highlightColor }: SubjectStatusIconProps) {
+export default function SubjectStatusIcon({ status, className, highlightColor, showTooltip = true }: SubjectStatusIconProps) {
   const label = STATUS_LABEL[status] ?? STATUS_LABEL.Bloqueada;
   const svg = STATUS_ICONS[status] ?? STATUS_ICONS.Bloqueada;
   const icon = useMemo(() => `data:image/svg+xml,${encodeURIComponent(
@@ -34,7 +35,7 @@ export default function SubjectStatusIcon({ status, className, highlightColor }:
       className={className}
       src={icon}
       alt={label}
-      title={label}
+      title={showTooltip ? label : undefined}
       width={24}
       height={24}
       draggable={false}
