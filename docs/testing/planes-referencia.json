@@ -27,19 +27,6 @@
       "notas": ""
     },
     {
-      "file": "Instituto de Biotecnología/Tecnicatura Universitaria en Producción Agroecológica Periurbana/Plan-de-estudios-Tecnicatura-Universitaria-en-Produccion-Agroecologica-Periurbana.pdf",
-      "career": "Tecnicatura Universitaria en Producción Agroecológica Periurbana",
-      "tipo": "tecnicatura",
-      "expectedSubjects": [
-        15,
-        35
-      ],
-      "expectedCredits": null,
-      "hasIntermediate": false,
-      "pairCorrelativas": null,
-      "notas": "Dialecto Asignatura|Campo|Carga|Correlatividad sin columna D (BUG-002): el parser devuelve 0, el fallback IA rescata 23 materias (verificado con groq y gemini)."
-    },
-    {
       "file": "Instituto de Biotecnología/Tecnicatura Universitaria en Producción Agroecológica Periurbana/Plan-de-estudios-TUPAP-2025.pdf",
       "career": "Tecnicatura Universitaria en Producción Agroecológica Periurbana",
       "tipo": "tecnicatura",
@@ -255,7 +242,17 @@
       ],
       "expectedCredits": null,
       "hasIntermediate": false,
-      "pairCorrelativas": null,
+      "pairCorrelativas": "Instituto de Tecnología e Ingeniería/Licenciatura en Ciberseguridad/Correlativas-Licenciatura-en-Ciberseguridad.pdf",
+      "notas": ""
+    },
+    {
+      "file": "Instituto de Tecnología e Ingeniería/Licenciatura en Ciberseguridad/Correlativas-Licenciatura-en-Ciberseguridad.pdf",
+      "career": "Licenciatura en Ciberseguridad",
+      "tipo": "correlativas",
+      "expectedSubjects": null,
+      "expectedCredits": null,
+      "hasIntermediate": false,
+      "pairCorrelativas": "Instituto de Tecnología e Ingeniería/Licenciatura en Ciberseguridad/lic-en-ciberseguridad-2026.pdf",
       "notas": ""
     },
     {
@@ -268,7 +265,17 @@
       ],
       "expectedCredits": null,
       "hasIntermediate": false,
-      "pairCorrelativas": null,
+      "pairCorrelativas": "Instituto de Tecnología e Ingeniería/Licenciatura en Desarrollo de Videojuegos y Simulaciones/Correlativas-Licenciatura-en-Desarrollo-de-Videojuegos-y-Simulaciones.pdf",
+      "notas": ""
+    },
+    {
+      "file": "Instituto de Tecnología e Ingeniería/Licenciatura en Desarrollo de Videojuegos y Simulaciones/Correlativas-Licenciatura-en-Desarrollo-de-Videojuegos-y-Simulaciones.pdf",
+      "career": "Licenciatura en Desarrollo de Videojuegos y Simulaciones",
+      "tipo": "correlativas",
+      "expectedSubjects": null,
+      "expectedCredits": null,
+      "hasIntermediate": false,
+      "pairCorrelativas": "Instituto de Tecnología e Ingeniería/Licenciatura en Desarrollo de Videojuegos y Simulaciones/lic-en-desarrollo-de-videojuegos-y-simulaciones-2026.pdf",
       "notas": ""
     },
     {
@@ -281,7 +288,17 @@
       ],
       "expectedCredits": null,
       "hasIntermediate": false,
-      "pairCorrelativas": null,
+      "pairCorrelativas": "Instituto de Tecnología e Ingeniería/Licenciatura en Informática/Correlativas-Licenciatura-en-Informatica.pdf",
+      "notas": ""
+    },
+    {
+      "file": "Instituto de Tecnología e Ingeniería/Licenciatura en Informática/Correlativas-Licenciatura-en-Informatica.pdf",
+      "career": "Licenciatura en Informática",
+      "tipo": "correlativas",
+      "expectedSubjects": null,
+      "expectedCredits": null,
+      "hasIntermediate": false,
+      "pairCorrelativas": "Instituto de Tecnología e Ingeniería/Licenciatura en Informática/lic-informatica-2026.pdf",
       "notas": ""
     },
     {

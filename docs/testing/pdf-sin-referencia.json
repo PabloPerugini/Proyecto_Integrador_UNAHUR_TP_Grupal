@@ -39,6 +39,10 @@
     {
       "file": "Instituto de Tecnología e Ingeniería/Ingeniería Metalúrgica/DI-681-2025-INGENIERO-A-METALURGICO-A-UNAHUR.pdf",
       "motivo": "Disposición CONEAU con anexo tabular del plan de Metalúrgica. Parseo actual: 46 materias, 2173 créditos; nombres alineados con el plan de referencia (49) salvo la materia 'Nuevos Entornos…' que el plan nombra 'Cultura y alfabetización digital en la universidad'. Sin fusiones detectadas. Se mantiene fuera del golden: el plan de referencia es el PDF del plan."
+    },
+    {
+      "file": "Instituto de Tecnología e Ingeniería/_obsoletos/Correlativas-Tecnicatura-en-Inteligencia-Artificial.pdf",
+      "motivo": "Correlatividades de la Tecnicatura en Inteligencia Artificial obsoleta: el plan vigente no está en el corpus y no hay par contra el cual validarlas. Se conserva el PDF como registro histórico."
     }
   ]
 }
