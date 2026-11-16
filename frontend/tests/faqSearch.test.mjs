@@ -49,6 +49,11 @@ test('encuentra la respuesta sobre los requisitos para cursar', () => {
   assert.equal(results[0].id, 'correlatividades-requisitos');
 });
 
+test('encuentra las respuestas sobre créditos y registro de actividades ACA', () => {
+  assert.equal(faqSearch(FAQS, 'créditos ACA')[0].id, 'aca-creditos');
+  assert.equal(faqSearch(FAQS, 'registrar actividad ACA')[0].id, 'aca-registrar');
+});
+
 test('las preguntas de USER solo incluyen acciones disponibles para su rol', () => {
   const userFaqs = filterFaqsForRole(FAQS, 'USUARIO');
   const ids = userFaqs.map(faq => faq.id);

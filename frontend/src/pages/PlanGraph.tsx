@@ -20,7 +20,7 @@ import '@xyflow/react/dist/style.css';
 import { Alert, Button, Card, Dropdown, Form, OverlayTrigger, Tooltip } from 'react-bootstrap';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getPlanGraph } from '../api/planGraphAdapter';
-import { studyPlansApi, type ProgressStatus, type StudyPlan } from '../api/studyPlans';
+import { studyPlansApi, careerName, type ProgressStatus, type StudyPlan } from '../api/studyPlans';
 import type { GraphData, SubjectStatus } from '../types';
 import { useCareerSelection } from '../context/CareerContext';
 import { useTheme } from '../hooks/useTheme';
@@ -1179,6 +1179,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
             <h1 className="plan-map-heading__title">
               {view === 'grafo' ? 'Mapa de correlatividades' : 'Tablero de materias'}
             </h1>
+            {selectedPlan && <p className="plan-map-heading__subtitle">{careerName(selectedPlan)} · {selectedPlan.name}</p>}
           </div>
         </header>
 
@@ -1244,34 +1245,26 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
           </div>
         </div>
 
-        {view === 'grafo' && displayGraph && <div className="plan-progress-summary">
+        {displayGraph && <div className={`plan-progress-summary${view === 'tablero' ? ' plan-progress-summary--board' : ''}`}>
           <div className="plan-progress-summary__stats" aria-label="Resumen de estados">
             {([
-              { status: 'Aprobada', label: '', count: displayGraph.stats.aprobadas, tone: 'approved' },
+              { status: 'Aprobada', label: displayGraph.stats.aprobadas === 1 ? 'Aprobada' : 'Aprobadas', count: displayGraph.stats.aprobadas, tone: 'approved' },
               { status: 'Cursando', label: 'Cursando', count: displayGraph.stats.enCurso, tone: 'in-progress' },
               { status: 'Disponible', label: displayGraph.stats.disponibles === 1 ? 'Disponible' : 'Disponibles', count: displayGraph.stats.disponibles, tone: 'available' },
-              { status: 'Bloqueada', label: '', count: displayGraph.stats.bloqueadas, tone: 'locked' },
-              { status: 'Regular', label: 'Regulares', count: displayGraph.stats.regulares, tone: 'regular' },
+              { status: 'Bloqueada', label: displayGraph.stats.bloqueadas === 1 ? 'Bloqueada' : 'Bloqueadas', count: displayGraph.stats.bloqueadas, tone: 'locked' },
+              { status: 'Regular', label: displayGraph.stats.regulares === 1 ? 'Regular' : 'Regulares', count: displayGraph.stats.regulares, tone: 'regular' },
+              { status: 'Libre', label: displayGraph.stats.libres === 1 ? 'Libre' : 'Libres', count: displayGraph.stats.libres, tone: 'libre' },
             ] as const).map(item => {
-              const stat = <span key={item.status} className={`plan-progress-summary__stat plan-progress-summary__stat--${item.tone}`}>
-                <SubjectStatusIcon status={item.status} showTooltip={false} /><strong>{item.count}</strong>{item.label && <> {item.label}</>}
-              </span>;
-              if (item.status === 'Aprobada' || item.status === 'Bloqueada') {
-                const approved = item.status === 'Aprobada';
-                return (
-                  <OverlayTrigger
-                    key={item.status}
-                    placement="top"
-                    overlay={<Tooltip id={`plan-status-${item.tone}-tooltip`} className={`status-legend-tooltip status-legend-tooltip--${item.tone}`}>{approved ? 'Aprobadas' : 'Bloqueadas'}</Tooltip>}
-                  >
-                    {stat}
-                  </OverlayTrigger>
-                );
-              }
-              return stat;
+              return (
+                <span key={item.status} className={`plan-progress-summary__stat plan-progress-summary__stat--${item.tone}`}>
+                  <SubjectStatusIcon status={item.status} showTooltip={false} />
+                  <strong>{item.count}</strong>
+                  <span className="plan-progress-summary__label">{item.label}</span>
+                </span>
+              );
             })}
           </div>
-          <div className="plan-progress-summary__actions" role="group" aria-label="Rutas de correlatividades">
+          {view === 'grafo' && <div className="plan-progress-summary__actions" role="group" aria-label="Rutas de correlatividades">
             <OverlayTrigger placement="bottom" overlay={<Tooltip id="plan-optimal-legend-tooltip">Elegí una materia para ver todas las correlativas que necesitás aprobar para cursarla.</Tooltip>}>
               <Button
                 className="plan-map-action plan-map-action--optimal"
@@ -1298,7 +1291,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
                 Orden sugerido de cursada
               </Button>
             </OverlayTrigger>
-          </div>
+          </div>}
         </div>}
 
         {err && <Alert variant="danger" className="mx-3">{err}</Alert>}

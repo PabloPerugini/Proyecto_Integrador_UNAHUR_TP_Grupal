@@ -24,15 +24,14 @@ test('respeta el nivel requerido y propaga progreso sustentado', () => {
   assert.equal(statuses.get('c'), 'DISPONIBLE');
 });
 
-test('preserva correlativas con avance cuando la materia pierde regularidad', () => {
+test('una correlativa aprobada habilita la siguiente aunque pierda estado un requisito anterior', () => {
   const statuses = resolveProgressStatuses(subjects, new Map([
     ['a', 'LIBRE'],
     ['b', 'APROBADA'],
-    ['c', 'REGULARIZADA'],
   ]));
   assert.equal(statuses.get('a'), 'LIBRE');
   assert.equal(statuses.get('b'), 'APROBADA');
-  assert.equal(statuses.get('c'), 'REGULARIZADA');
+  assert.equal(statuses.get('c'), 'DISPONIBLE');
 });
 
 test('mantiene bloqueado el nuevo avance que depende de una materia libre', () => {

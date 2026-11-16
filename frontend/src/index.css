@@ -286,6 +286,9 @@ a {
     margin: 12px 8px 8px;
     border-top: 1px solid var(--color-border);
   }
+  .sidebar--collapsed .sidebar__plan-picker {
+    display: none;
+  }
   .sidebar--collapsed .sidebar__link {
     flex-direction: column;
     justify-content: flex-start;
@@ -361,6 +364,47 @@ a {
   letter-spacing: 0.09em;
   color: var(--color-text-muted);
   padding: 16px 12px 6px;
+}
+
+.sidebar__plan-picker {
+  padding: 4px 12px 10px;
+}
+.sidebar__plan-picker label {
+  display: grid;
+  gap: 5px;
+}
+.sidebar__plan-picker label > span {
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.sidebar__plan-select {
+  min-width: 0;
+  font-size: 0.82rem;
+  text-overflow: ellipsis;
+}
+.sidebar__plan-message {
+  margin: 5px 0 0;
+  color: var(--color-danger-strong);
+  font-size: 0.75rem;
+}
+.sidebar__plan-message p {
+  margin: 0 0 3px;
+}
+.sidebar__plan-retry {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-brand);
+  font-size: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.sidebar__plan-retry:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
 }
 
 .sidebar__link {
@@ -1846,42 +1890,6 @@ a {
   .progress-overview__mobile-break { display: initial; }
 }
 
-.progress-controls {
-  margin-bottom: 16px;
-}
-.progress-plan-select {
-  width: fit-content;
-  max-width: 100%;
-}
-.progress-plan-select .card-body { padding: 12px; min-width: 0; }
-.progress-plan-select .form-label {
-  display: block;
-  margin-bottom: 6px;
-  color: var(--color-text-muted);
-  font-size: 0.78rem;
-}
-.progress-plan-select__field {
-  position: relative;
-  max-width: 100%;
-  min-width: 150px;
-}
-.progress-plan-select__measure {
-  display: block;
-  visibility: hidden;
-  white-space: nowrap;
-  overflow: hidden;
-  padding: 8px 44px 8px 12px;
-  font-size: 1rem;
-  line-height: 1.5;
-}
-.progress-plan-select .form-select {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  min-height: 40px;
-  font-size: 1rem;
-  text-overflow: ellipsis;
-}
 .progress-overview__topline { flex-wrap: wrap; }
 .progress-overview__metrics {
   display: flex;
@@ -2679,7 +2687,6 @@ a {
 /* Progress page layout */
 .progress-page .page-head { margin-bottom: 22px; }
 .progress-page .page-title { font-size: clamp(2rem, 3.3vw, 3rem); letter-spacing: -.045em; }
-.progress-page .page-sub { display: none; }
 .progress-overview { display: block; margin-bottom: 24px; }
 .progress-overview__summary {
   display: grid;

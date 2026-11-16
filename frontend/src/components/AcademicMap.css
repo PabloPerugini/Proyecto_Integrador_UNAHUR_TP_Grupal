@@ -205,10 +205,12 @@
   background: var(--color-surface);
   box-shadow: var(--shadow-sm);
 }
+.plan-progress-summary--board { margin-bottom: 8px; }
 .plan-progress-summary__stats { display: flex; flex: 0 1 auto; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
 .plan-progress-summary__stat { display: inline-flex; align-items: center; gap: 5px; padding: 6px 9px; border: 1px solid transparent; border-radius: 9px; color: var(--color-text-muted); font-size: 12px; white-space: nowrap; }
 .plan-progress-summary__stat > img { width: 19px; height: 19px; object-fit: contain; }
 .plan-progress-summary__stat strong { color: var(--color-text); font-size: 12px; font-variant-numeric: tabular-nums; }
+.plan-progress-summary__label { font-weight: 600; }
 .plan-progress-summary__stat--approved { background: var(--status-aprobada-bg); border-color: var(--status-aprobada-border); color: var(--status-aprobada-text); }
 .plan-progress-summary__stat--approved strong { color: var(--status-aprobada-text); }
 .plan-progress-summary__stat--regular { background: var(--status-regular-bg); border-color: var(--status-regular-border); color: var(--status-regular-text); }
@@ -219,10 +221,8 @@
 .plan-progress-summary__stat--available strong { color: var(--status-disponible-text); }
 .plan-progress-summary__stat--locked { background: var(--status-bloqueada-bg); border-color: var(--status-bloqueada-border); color: var(--status-bloqueada-text); }
 .plan-progress-summary__stat--locked strong { color: var(--status-bloqueada-text); }
-.status-legend-tooltip { --bs-tooltip-opacity: 1; }
-.status-legend-tooltip--approved { --bs-tooltip-bg: var(--status-aprobada-bg); --bs-tooltip-color: var(--status-aprobada-text); }
-.status-legend-tooltip--locked { --bs-tooltip-bg: var(--status-bloqueada-bg); --bs-tooltip-color: var(--status-bloqueada-text); }
-.status-legend-tooltip .tooltip-inner { padding: 5px 11px; border: 1px solid currentColor; border-radius: 999px; font-weight: 700; box-shadow: var(--shadow-md); }
+.plan-progress-summary__stat--libre { background: var(--status-libre-bg); border-color: var(--status-libre-border); color: var(--status-libre-text); }
+.plan-progress-summary__stat--libre strong { color: var(--status-libre-text); }
 .plan-progress-summary__actions { display: flex; align-items: center; gap: 8px; margin-left: auto; padding-left: 14px; border-left: 1px solid var(--color-border); }
 
 @media (max-width: 767px) {

@@ -13,10 +13,10 @@ interface ActiveAnswer {
 }
 
 const suggestedQuestionIds = [
-  { id: 'progreso-1', label: 'Mi progreso' },
-  { id: 'correlatividades-1', label: 'Correlatividades' },
+  { id: 'aca-creditos', label: 'Créditos ACA' },
+  { id: 'correlatividades-orden-sugerido', label: 'Orden sugerido' },
   { id: 'correlatividades-requisitos', label: 'Requisitos para cursar' },
-  { id: 'progreso-2', label: 'Importar historia' },
+  { id: 'aca-registrar', label: 'Registrar actividad ACA' },
 ];
 
 export default function Faq() {

@@ -40,7 +40,7 @@ function ProgressStatusSelect({ value, disabled, label, onChange }: { value: Sel
 }
 
 export default function MyProgress() {
-  const { careerId: selectedFromContext, setCareerId } = useCareerSelection(); // ahora representa StudyPlan
+  const { careerId: selectedFromContext, setCareerId, notifyEnrollmentsChanged } = useCareerSelection(); // ahora representa StudyPlan
   const { msg, flash, flashFromError, clear } = useFlashMessage();
   const [plans, setPlans] = useState<StudyPlan[]>([]);
   const selectedId = selectedFromContext ?? '';
@@ -70,15 +70,21 @@ export default function MyProgress() {
 
   useEffect(() => {
     let active = true;
-    Promise.all([studyPlansApi.getAll(), studyPlansApi.getMine()]).then(([p,e]) => {
+    Promise.all([studyPlansApi.getAll(), studyPlansApi.getMine()]).then(async ([p, e]) => {
+      const enrolledPlanIds = e.map(item => getId(item.studyPlan)).filter((id): id is string => id !== null);
+      const firstEnrolledPlan = enrolledPlanIds[0] ?? '';
+      const next = p.some(plan => plan._id === selectedFromContext) ? selectedFromContext! : firstEnrolledPlan;
+      const availablePlans = p.some(plan => plan._id === next) || !next
+        ? p
+        : [...p, await studyPlansApi.getById(next)];
       if (!active) return;
-      setPlans(p); setEnrollments(e);
-      const next = p.some(x => x._id === selectedFromContext) ? selectedFromContext! : p[0]?._id ?? '';
-      if (next && next !== selectedFromContext) setCareerId(next);
+      setPlans(availablePlans);
+      setEnrollments(e);
+      if (next !== selectedFromContext) setCareerId(next || null);
     }).catch(e => { if (active) setError(e instanceof Error ? e.message : 'Error cargando planes'); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [selectedFromContext]);
+  }, [selectedFromContext, setCareerId]);
 
   const loadProgress = useCallback(async (planId: string, personalId?: string) => {
     const [items, progress] = await Promise.all([
@@ -97,7 +103,7 @@ export default function MyProgress() {
   useEffect(() => {
     if (!selectedId) { setSubjects([]); return; }
     let active = true;
-    setLoading(true); setError(null); setSubjects([]); setHistoryPreview(null);
+    setLoading(true); setError(null); setSubjects([]); setHistoryPreview(null); setTab('lic');
     // Los valores se asignan solo si la solicitud corresponde al plan actual.
     Promise.all([
       studyPlansApi.getSubjects(selectedId),
@@ -184,6 +190,7 @@ export default function MyProgress() {
     try {
       const added = await studyPlansApi.enroll(selectedId);
       setEnrollments(p => [...p, added]);
+      notifyEnrollmentsChanged();
       flash('success', 'Plan agregado a tu progreso académico.');
     } catch (e) { flashFromError(e, 'No se pudo agregar el plan'); }
     finally { setWorking(false); }
@@ -208,28 +215,6 @@ export default function MyProgress() {
       flash('info', `${matched} materias reconocidas. Revisalas y presioná Guardar cambios.`);
     } catch (e) { flashFromError(e, 'Error leyendo historia académica'); }
     finally { setWorking(false); }
-  };
-  const exportCsv = () => {
-    const rows = [
-      ['codigo', 'materia', 'año', 'estado', 'nota'],
-      ...subjects.map((s) => [
-        s.code ?? '',
-        subjectName(s),
-        s.year ?? '',
-        draft[s._id]?.status ?? 'PENDIENTE',
-        draft[s._id]?.grade ?? '',
-      ]),
-    ];
-    const csv = rows
-      .map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(';'))
-      .join('\r\n');
-    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `progreso-${selectedPlan?.name ?? 'plan'}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
   };
   const saveAcaActivity = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -317,28 +302,16 @@ export default function MyProgress() {
   const interactionPercent = Math.min(100, acaSummary.interactionHours * 100 / ACA_PEDAGOGICAL_HOURS);
   const percentage = subjects.length ? Math.round(approved.length * 100 / subjects.length) : 0;
   return <div className="progress-page">
-    <PageHeader title="Mi progreso" />
+    <PageHeader title="Mi progreso" sub={selectedPlan ? `${careerName(selectedPlan)} · ${selectedPlan.name}` : undefined} />
     <MessageBanner message={msg} onClose={clear} />
     {loading && <div className="text-center py-5"><Spinner animation="border" /> Cargando tu progreso…</div>}
     {error && !loading && <Alert variant="danger">{error}</Alert>}
-    {!loading && !error && plans.length === 0 && <Alert variant="info">Todavía no hay planes de estudio disponibles. Podés importar uno desde Cargar plan.</Alert>}
+    {!loading && !error && !selectedPlan && <Alert variant="info">Elegí una carrera desde Inicio o Explorar para consultar tu progreso.</Alert>}
     {!loading && !error && selectedPlan && !enrollment && <Alert variant="info">
       Para registrar tus notas y materias, agregá <strong>{selectedPlan.name}</strong> a tu progreso.
       <div className="mt-2"><Button disabled={working} onClick={() => void addToMine()}>Agregar a mi progreso</Button></div>
     </Alert>}
     {!loading && !error && selectedPlan && <>
-      <div className="progress-controls">
-        <div className="card progress-plan-select"><div className="card-body">
-          <Form.Label htmlFor="progress-plan">Plan de estudios</Form.Label>
-          <div className="progress-plan-select__field">
-            <span className="progress-plan-select__measure" aria-hidden="true">{selectedPlan.name} — {careerName(selectedPlan)}</span>
-            <Form.Select id="progress-plan" value={selectedId} onChange={e => { setCareerId(e.target.value); setTab('lic'); }}>
-              {!selectedId && <option value="">Seleccioná un plan...</option>}
-              {plans.filter((p) => p._id === selectedId || enrollments.some((e) => getId(e.studyPlan) === p._id)).map(p => <option key={p._id} value={p._id}>{p.name} — {careerName(p)}</option>)}
-            </Form.Select>
-          </div>
-        </div></div>
-      </div>
       <div className="stat-grid progress-overview">
         <div className="stat-card progress-overview__summary">
           <div className="progress-overview__topline">
@@ -492,7 +465,6 @@ export default function MyProgress() {
               </div>}
             </div>
             {enrollment && <div className="subject-editor__actions">
-              <Button size="sm" variant="outline-secondary" onClick={() => exportCsv()}><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 17v3h14v-3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>Exportar CSV</Button>
               <Button size="sm" className="subject-editor__save" disabled={working || dirty.length === 0} onClick={() => void saveAll()}><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 3h12l3 3v15H4V3h1Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/><path d="M8 3v6h8V3M8 21v-8h8v8" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" /></svg>{working ? 'Guardando…' : `Guardar cambios${dirty.length ? ` (${dirty.length})` : ''}`}</Button>
             </div>}
           </div>

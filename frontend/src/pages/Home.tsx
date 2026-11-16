@@ -362,7 +362,7 @@ function planCareerColor(plan: StudyPlan): string {
 
 export default function Home() {
   const navigate = useNavigate();
-  const { setCareerId } = useCareerSelection();
+  const { careerId, setCareerId, notifyEnrollmentsChanged } = useCareerSelection();
   const { user } = useAuth();
   const isAdmin = user?.rol === 'ADMIN';
 
@@ -526,6 +526,7 @@ export default function Home() {
 
   const handleEnroll = async (planId: string) => {
     await studyPlansApi.enroll(planId);
+    notifyEnrollmentsChanged();
     const mine = await studyPlansApi.getMine();
     setEnrollments(Array.isArray(mine) ? mine : []);
   };
@@ -541,6 +542,8 @@ export default function Home() {
     setActionError(null);
     try {
       await studyPlansApi.remove(planId);
+      notifyEnrollmentsChanged();
+      if (careerId === planId) setCareerId(null);
       const mine = await studyPlansApi.getMine();
       const enrolls = Array.isArray(mine) ? mine : [];
       setEnrollments(enrolls);

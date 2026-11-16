@@ -3,6 +3,8 @@ import { createContext, useCallback, useContext, useState, type ReactNode } from
 interface CareerSelectionContextType {
   careerId: string | null;
   setCareerId: (id: string | null) => void;
+  enrollmentRevision: number;
+  notifyEnrollmentsChanged: () => void;
 }
 
 const CareerSelectionContext = createContext<CareerSelectionContextType | null>(null);
@@ -12,6 +14,7 @@ const CareerSelectionContext = createContext<CareerSelectionContextType | null>(
 const CAREER_KEY = 'gradify-selected-study-plan';
 
 export function CareerSelectionProvider({ children }: { children: ReactNode }) {
+  const [enrollmentRevision, setEnrollmentRevision] = useState(0);
   const [careerId, setCareerIdState] = useState<string | null>(() => {
     try {
       return localStorage.getItem(CAREER_KEY) ?? null;
@@ -29,9 +32,12 @@ export function CareerSelectionProvider({ children }: { children: ReactNode }) {
       // storage no disponible
     }
   }, []);
+  const notifyEnrollmentsChanged = useCallback(() => {
+    setEnrollmentRevision(revision => revision + 1);
+  }, []);
 
   return (
-    <CareerSelectionContext.Provider value={{ careerId, setCareerId }}>
+    <CareerSelectionContext.Provider value={{ careerId, setCareerId, enrollmentRevision, notifyEnrollmentsChanged }}>
       {children}
     </CareerSelectionContext.Provider>
   );

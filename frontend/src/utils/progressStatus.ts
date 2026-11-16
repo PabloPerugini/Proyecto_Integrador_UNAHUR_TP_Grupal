@@ -4,8 +4,8 @@ export function hasStarted(status: string | undefined): boolean {
   return status === 'APROBADA' || status === 'REGULARIZADA' || status === 'CURSANDO';
 }
 
-// Los avances ya registrados se conservan; la disponibilidad de materias
-// pendientes se calcula con el estado guardado de cada correlativa directa.
+// Los avances registrados se conservan; cada materia pendiente se habilita
+// según el estado guardado de sus correlativas directas.
 export function resolveProgressStatuses(
   subjects: Pick<PlanSubject, '_id' | 'prerequisites'>[],
   saved: ReadonlyMap<string, string | undefined>,

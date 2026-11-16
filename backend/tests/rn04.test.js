@@ -2,8 +2,8 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { buildGraph } = require("../src/services/graph.service");
 
-// RN04: los avances aprobados se conservan aunque luego se desmarque una
-// correlativa anterior; continúan habilitando las materias posteriores.
+// RN04: una correlativa que deja de estar aprobada no revoca materias ya
+// aprobadas; una aprobación registrada sigue habilitando sus correlativas.
 const subjects = [
   { code: "M1", name: "M1", year: 1, cuatrimestre: 1, requires: [] },
   { code: "M2", name: "M2", year: 1, cuatrimestre: 2, requires: ["M1"] },
@@ -21,11 +21,11 @@ test("RN04: cadena aprobada habilita el siguiente", () => {
   assert.ok(g.availableNow.includes("M3"));
 });
 
-test("RN04: desmarcar M1 conserva M2 aprobada y habilita M3", () => {
+test("RN04: M2 aprobada habilita M3 aunque M1 esté libre", () => {
   const g = buildGraph({
     subjects,
     progress: [
-      { subjectCode: "M1", status: "Pendiente" },
+      { subjectCode: "M1", status: "Libre" },
       { subjectCode: "M2", status: "Aprobada" },
     ],
   });
@@ -33,15 +33,16 @@ test("RN04: desmarcar M1 conserva M2 aprobada y habilita M3", () => {
   assert.ok(!g.availableNow.includes("M2"));
 });
 
-test("RN04: estado guardado intacto, stats conservan aprobadas", () => {
+test("RN04: el estado libre y las aprobaciones guardadas se conservan", () => {
   const g = buildGraph({
     subjects,
     progress: [
-      { subjectCode: "M1", status: "Pendiente" },
+      { subjectCode: "M1", status: "Libre" },
       { subjectCode: "M2", status: "Aprobada" },
     ],
   });
   assert.equal(g.stats.aprobadas, 1);
+  assert.equal(g.nodes.find((n) => n.id === "M1").status, "Libre");
   assert.equal(
     g.nodes.find((n) => n.id === "M2").status,
     "Aprobada",

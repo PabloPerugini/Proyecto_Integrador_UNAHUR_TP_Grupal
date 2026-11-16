@@ -2,6 +2,7 @@ export type FaqCategory =
   | 'importar-plan'
   | 'correlatividades'
   | 'progreso'
+  | 'aca'
   | 'bajas'
   | 'admin'
   | 'cuenta';
@@ -72,6 +73,24 @@ export const FAQS: Faq[] = [
       'En el grafo o tablero, activá «Requisitos para cursar» y elegí una materia pendiente. Se resaltan todas sus correlativas pendientes, directas e indirectas: lo que necesitás aprobar para poder cursarla. Las materias ya aprobadas no forman parte del recorrido.',
     tags: ['requisitos', 'cursar', 'ruta', 'recorrido', 'materia', 'aprobar', 'correlativas'],
     link: '/grafo',
+  },
+  {
+    id: 'aca-creditos',
+    category: 'aca',
+    question: '¿Qué son los créditos ACA y cuántos necesito?',
+    answer:
+      'Los créditos ACA corresponden a actividades acreditables y se registran aparte de las materias. Para el Título Intermedio necesitás 12 CRE en total, con al menos 4 CRE en cada categoría. Para el título de grado necesitás 30 CRE, al menos 10 por categoría y 75 horas de interacción pedagógica. Las categorías son Unidades Curriculares fuera del plan (UC), Experiencias Formativas diversas (EF) y créditos definidos por el Instituto.',
+    tags: ['aca', 'créditos', 'cre', 'título', 'intermedio', 'grado', 'categorías', 'horas'],
+    link: '/progreso',
+  },
+  {
+    id: 'aca-registrar',
+    category: 'aca',
+    question: '¿Cómo registro una actividad ACA?',
+    answer:
+      'En "Mi progreso", agregá el plan a tu cuenta si todavía no lo hiciste. En el panel de créditos ACA, completá el nombre de la actividad, su categoría, los créditos (CRE) y, si corresponde, las horas de interacción pedagógica; después presioná "Agregar actividad". Desde ese panel también podés consultar o eliminar actividades registradas.',
+    tags: ['aca', 'actividad', 'registrar', 'agregar', 'eliminar', 'cre', 'interacción pedagógica'],
+    link: '/progreso',
   },
   {
     id: 'progreso-1',

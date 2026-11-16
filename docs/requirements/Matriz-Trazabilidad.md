@@ -91,7 +91,7 @@ existe** en el repositorio, respondiendo tres preguntas:
 | RN01 | Estado inicial: materia **bloqueada** sin requisitos previos | `test:salud` verifica la regla de control *"aristas > 0 y disponibles < total"* (Test-Cases:109); Caso 11 (`availableNow` en `GET /:id/graph`); Caso 21 (colores en la UI) | `test:salud` ✅ indirecto · Casos 11 y 21 🟡 | ⚠️ |
 | RN02 | Habilitación automática de materias sucesivas al marcar *Aprobada/Regular* | `test:salud` recalcula disponibles desde el historial; Caso 10 (desbloqueo); Caso 21 (hijos desbloqueados en pantalla) | `test:salud` ⚠️ · Casos 10 y 21 🟡 | ⚠️ |
 | RN03 | Persistencia del cambio asociado a la inscripción del usuario | Caso 9 (`401` sin header) y Caso 10 (guardado); **ninguna verificación automatizada** de persistencia | Postman | 🟡 |
-| RN04 | Desmarcado: dependientes sin sustento pierden disponibilidad (el estado guardado se conserva) | `tests/rn04.test.js` (3 tests: habilitación, pérdida de sustento, stats intactos) + `graph.service.js` (aprobación efectiva transitiva) | `npm test` ✅ | ✅ |
+| RN04 | Una materia aprobada conserva su efecto sobre correlativas directas aunque un requisito anterior pierda estado | `tests/rn04.test.js` (3 tests: habilitación, M1 Libre/M2 aprobada/M3 disponible, estados intactos) + `graph.service.js` | `npm test` ✅ | ✅ |
 | RN05 | Bloqueo del avance por correlativas: no se puede cursar/regularizar/aprobar sin correlativas cumplidas | `subjectProgressService.js` valida cada `prerequisite` (`400` con el detalle); pre-chequeo en Mi progreso; Caso 27 | API + front | ✅ (backend) · 🟡 (caso UI) |
 
 ### 3.2 Reglas de sugerencia de inscripción (R0–R6, C1–C6)
@@ -268,10 +268,10 @@ Corrida completa 09/10: E2E 12/12 con JWT (register->login->me->careers->preview
 BUG-009, RN04 y AR-3. El matching, los ciclos y las reglas ahora tienen casos
 aislados además de la verificación masiva/E2E.
 
-### 11.3 RN04 ✅ (cerrada 30/09)
-`tests/rn04.test.js` (3 tests) + aprobación efectiva transitiva en `graph.service.js`:
-desmarcar quita sustento a dependientes sin destruir el estado guardado. `test:salud`
-repite números idénticos (sin regresión).
+### 11.3 RN04 ✅ (actualizada 15/11/2026)
+`tests/rn04.test.js` (3 tests): los estados guardados se conservan y una materia
+aprobada sigue habilitando sus correlativas directas, aunque un requisito anterior
+pase a Libre. La disponibilidad se calcula por requisito directo.
 
 ### 11.4 La capa de interfaz no tiene resultados 🟠
 Casos 20–23 (navegación, estados en grafo, `ErrorBoundary`, accesibilidad) y 24–38 (flujos v2.3/v2.4/v2.5:
@@ -332,7 +332,7 @@ Repegada a la tabla (sin líneas en blanco intermedias).
 | 2 | **Regresión `saveCorrelativas`** (ciclo, inexistente, autorreferencia) | ✅ en `npm test` | 🟢 bajo |
 | 3 | **FRD RN05** (correlativas bloquean el avance) | ✅ en `subjectProgressService` + unit `seguridad` | listo |
 | 4 | **FRD SEG-6** (CSRF/sesión) | ✅ en `tests/seguridad.test.js` | 🟢 bajo |
-| 5 | **Caso RN04** | ✅ `tests/rn04.test.js` (sustento transitivo) | 🟢 bajo |
+| 5 | **Caso RN04** | ✅ `tests/rn04.test.js` (M1 Libre, M2 aprobada y M3 disponible) | 🟢 bajo |
 | 6 | **Unitarios** (matching + ciclos + AR-3 + registro/roles + seguridad + intermedio) | ✅ `npm test`, **32 tests**, 0 deps | 🟢 bajo (era medio) |
 | 7 | **Casos 20–35 de interfaz** | ⬜ pendiente (0/10 pantallas E2E); los flujos nuevos (bulk/IA/tipo de carrera) quedaron verificados por API | 🟡 medio |
 | 8 | **Corrida masiva oficial (v2.4)** | ✅ corrida 9 (16/10): masiva 27+1+15+0 + títulos intermedios y salud OK; informes en `backend/scripts/informes/` | 🟢 bajo |
