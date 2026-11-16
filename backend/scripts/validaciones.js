@@ -1,15 +1,17 @@
 #!/usr/bin/env node
 /*
  * Punto único de validaciones (plan maestro Fase 2).
- * Uso: node scripts/validaciones.js <cobertura|masiva|salud|golden|todo|--help> [-- args...]
- *   npm run validar          -> todo (cobertura + golden --check + salud + masiva)
+ * Uso: node scripts/validaciones.js <cobertura|masiva|correlativas|salud|golden|todo|--help> [-- args...]
+ *   npm run validar          -> todo (cobertura + golden --check + salud + masiva + correlativas)
  *   npm run test:cobertura   -> cobertura (cada PDF de files/ clasificado: referencia o exclusión con motivo)
- *   npm run test:planes      -> masiva (carga E2E por API real, 43 PDFs)
+ *   npm run test:planes      -> masiva (carga E2E por API real, 29 planes; correlativas se derivan)
+ *   npm run test:correlativas -> correlativas (E2E del endpoint dedicado, importa plan par y limpia)
  *   npm run test:salud       -> salud (control de correlativas + negativo)
  *   npm run snapshot:planes  -> golden (snapshot determinístico, -- --check)
  *
- * NOTA DE DISEÑO: los motores (carga-masiva, verificar-salud, golden) siguen
- * en sus archivos —reescribir 30KB de E2E probado es riesgo sin valor—.
+ * NOTA DE DISEÑO: los motores (carga-masiva, verificar-correlativas,
+ * verificar-salud, golden) siguen en sus archivos —reescribir 30KB de E2E
+ * probado es riesgo sin valor—.
  * Este dispatcher es la única entrada: chequeo previo de corpus (Fase 2.2),
  * ayuda y corrida completa. Los npm scripts pasan por acá (Fase 2.3).
  */
@@ -25,6 +27,7 @@ const PLANES_DIR = resolvePlanesDir(REPO_ROOT_VALID);
 const ENGINES = {
   cobertura: "check-cobertura.js",
   masiva: "carga-masiva.test.js",
+  correlativas: "verificar-correlativas.test.js",
   salud: "verificar-salud.test.js",
   golden: "golden-snapshot.js",
 };
@@ -33,10 +36,11 @@ function help() {
   console.log(`validaciones.js <comando> [-- args del motor]
 
   cobertura  control de corpus: cada PDF de files/ está en la referencia o excluido con motivo (sin API)
-  masiva     carga E2E de planes por API real (necesita backend + Mongo + Redis)
+  masiva     carga E2E de planes por API real (29 planes; correlativas se derivan)
+  correlativas E2E de correlatividades por API real: importa el plan par, parsea y limpia
   salud      control de correlativas de Salud + control negativo (idem API)
   golden     snapshot determinístico del parser (sin API; -- --check compara)
-  todo       cobertura, golden --check, luego salud y masiva (falla rápido)
+  todo       cobertura, golden --check, luego salud, masiva y correlativas (falla rápido)
   --help     esta ayuda
 
 Ej.: node scripts/validaciones.js golden -- --check`);
@@ -65,6 +69,7 @@ async function main() {
       ["golden", ["--check"]],
       ["salud", []],
       ["masiva", []],
+      ["correlativas", []],
     ];
     for (const [engine, args] of steps) {
       console.log(`\n=== validaciones: ${engine} ===`);

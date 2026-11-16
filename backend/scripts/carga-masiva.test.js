@@ -11,9 +11,9 @@
  *
  * Criterios por caso de plan: OK (en rango de referencia), OK-IA (rescate
  * por IA), WARN (observaciones), FAIL (fuera de rango o error), SKIP
- * (archivo ausente). Los casos de correlativas miden que el preview responda
- * 200 con materias (el matching texto->prerrequisitos aún no tiene endpoint
- * en la API nueva: se reporta, no se exige).
+ * (archivo ausente o caso derivado). Los PDFs de correlativas se reportan
+ * como SKIP: se validan en npm run test:correlativas contra el endpoint
+ * dedicado (POST /study-plans/:id/parse-correlativas).
  *
  * SEGURIDAD:
  *  - Usuario de prueba propio por corrida (test-masiva-<tag>), con login JWT;
@@ -21,8 +21,7 @@
  *  - Nunca se loguean API keys ni tokens.
  *
  * Env: API_URL (default http://localhost:3000), PLANES_DIR (default
- * files/UNAHUR-Oferta-Academica en la raíz del repo, o ../files histórico),
- * STRICT_IA=1 (auditoría: la falta de respuesta IA en correlativas es FAIL).
+ * files/UNAHUR-Oferta-Academica en la raíz del repo, o ../files histórico).
  */
 const fs = require("fs");
 const path = require("path");
@@ -125,49 +124,15 @@ async function runPlan(entry) {
   return r;
 }
 
-async function runCorrelativas(entry) {
-  const abs = path.join(PLANES_DIR, ...entry.file.split("/"));
-  const r = {
+function skipCorrelativas(entry) {
+  return {
     file: entry.file, career: entry.career, tipo: "correlativas",
-    estado: "FAIL", mensaje: "", warns: [],
-    httpParse: null, total: null, sourceKind: null,
+    estado: "SKIP",
+    mensaje: "se valida en test:correlativas (endpoint parse-correlativas)",
+    warns: [], httpParse: null, detectedCount: null, sourceKind: null,
+    intermediateTitle: null, intermediateMarked: null, intermediateClassified: false,
+    saved: null, total: null, sinAnio: null,
   };
-  if (!fs.existsSync(abs)) {
-    r.estado = "SKIP";
-    r.mensaje = "archivo no encontrado en PLANES_DIR";
-    return r;
-  }
-  let parsed = null;
-  try {
-    const { status, body } = await preview(abs, 300000);
-    r.httpParse = status;
-    if (status !== 200) {
-      // El formato correlativas suele requerir IA (cuotas externas): WARN, no FAIL,
-      // salvo auditoría explícita de disponibilidad IA (STRICT_IA=1).
-      r.mensaje = `preview -> HTTP ${status}: ${body?.error?.message || body?.message || ""} (formato correlativas fuera del parser determinístico; ver cobertura IA)`;
-      if (process.env.STRICT_IA === "1") {
-        r.estado = "FAIL";
-        return r;
-      }
-      r.estado = "WARN";
-      return r;
-    }
-    parsed = body;
-  } catch (e) {
-    r.mensaje = `preview error: ${e.message}`;
-    return r;
-  }
-  const subjects = parsed.subjects || [];
-  r.total = parsed.detectedCount ?? subjects.length;
-  r.sourceKind = parsed.sourceKind;
-  r.aiFallback = parsed.aiFallback === true;
-  r.aiProvider = parsed.aiProvider || null;
-  const withCorr = subjects.filter((s) => s.correlativasTexto).length;
-  r.mensaje = `correlativas: preview 200, ${r.total} materias (origen: ${r.sourceKind}), ${withCorr} con correlativasTexto. El matching a prerequisites aún no tiene endpoint en la API nueva.`;
-  if (r.aiFallback) r.warns.push(`rescate por IA (${r.aiProvider || "?"})`);
-  if (withCorr === 0) r.warns.push("ninguna materia trae correlativasTexto");
-  r.estado = r.warns.length ? "WARN" : "OK";
-  return r;
 }
 
 async function main() {
@@ -189,20 +154,17 @@ async function main() {
   console.log(`usuario de prueba: ${TEST.nick} (ADMIN)`);
 
   const results = [];
-  const planEntries = entries.filter((e) => e.tipo !== "correlativas");
-  const corrEntries = entries.filter((e) => e.tipo === "correlativas");
 
-  for (const entry of planEntries) {
+  for (const entry of entries) {
+    if (entry.tipo === "correlativas") {
+      const r = skipCorrelativas(entry);
+      results.push(r);
+      console.log(`[corr] ${entry.career} -> SKIP (test:correlativas)`);
+      continue;
+    }
     console.log(`[plan] ${entry.career} ...`);
     // eslint-disable-next-line no-await-in-loop
     const r = await runPlan(entry);
-    results.push(r);
-    console.log(`  -> ${r.estado}: ${r.mensaje}${r.warns.length ? ` | WARN: ${r.warns.join("; ")}` : ""}`);
-  }
-  for (const entry of corrEntries) {
-    console.log(`[corr] ${entry.career} ...`);
-    // eslint-disable-next-line no-await-in-loop
-    const r = await runCorrelativas(entry);
     results.push(r);
     console.log(`  -> ${r.estado}: ${r.mensaje}${r.warns.length ? ` | WARN: ${r.warns.join("; ")}` : ""}`);
   }
@@ -219,9 +181,15 @@ async function main() {
     ``,
     `Resumen: OK=${counts.OK} OK-IA=${counts["OK-IA"]} WARN=${counts.WARN} FAIL=${counts.FAIL} SKIP=${counts.SKIP} (total ${results.length})`,
     ``,
+  ];
+  const corrCount = results.filter((r) => r.tipo === "correlativas").length;
+  if (corrCount) {
+    lines.push(`Correlativas: ${corrCount} PDFs derivados a \`npm run test:correlativas\` (no se prueban con el preview genérico).`, ``);
+  }
+  lines.push(
     `| Archivo | Tipo | Detect. | Origen | Tec. (mat) | Estado | Detalle |`,
     `| --- | --- | --- | --- | --- | --- | --- |`,
-  ];
+  );
   for (const r of results) {
     const det = r.tipo === "correlativas" ? (r.total ?? "–") : (r.detectedCount ?? "–");
     const tec = r.tipo !== "correlativas" && r.intermediateTitle
