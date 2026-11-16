@@ -42,7 +42,6 @@ interface PlanNodeData {
   progressSaving?: boolean;
   code: string;
   name: string;
-  credits: number;
   year: number | null;
   cuatrimestre?: number | null;
   duration?: string | null;
@@ -122,7 +121,7 @@ function StatusBadges({ d }: { d: Pick<PlanNodeData, 'optimal' | 'critical' | 'c
 }
 
 function toPlanNodeData(
-  n: { code: string; name: string; year: number | null; cuatrimestre: number | null; duration?: string | null; credits: number; status: PlanNodeData['status'] },
+  n: { code: string; name: string; year: number | null; cuatrimestre: number | null; duration?: string | null; status: PlanNodeData['status'] },
   availableSet: Set<string>,
   criticalSet: Set<string>,
   requirementsSet: Set<string>,
@@ -132,7 +131,6 @@ function toPlanNodeData(
   return {
     code: n.code,
     name: n.name,
-    credits: n.credits,
     year: n.year,
     cuatrimestre: n.cuatrimestre,
     duration: n.duration ?? null,
@@ -1149,7 +1147,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
           <SubjectStatusIcon status={d.status} className="board-subject-status-icon" />
         </div>
         <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 3 }}>
-          {d.code} · {d.credits} cr · {statusLabel(d.status)}
+          {d.code} · {statusLabel(d.status)}
         </div>
         <div style={{ fontSize: 10, color: 'var(--color-text-muted)', marginTop: 3 }}>
           <StatusBadges d={d} />

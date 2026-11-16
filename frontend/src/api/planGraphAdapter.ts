@@ -54,7 +54,7 @@ export async function getPlanGraph(plan: StudyPlan, strictProgress = false): Pro
       id: codeById.get(item._id)!, code: codeById.get(item._id)!, name: subjectName(item),
       planSubjectId: item._id,
       year: item.year ?? null, cuatrimestre: item.period ?? null, duration: d,
-      credits: item.credits ?? 0, workloadHours: subjectWorkloadHours(item), kind: item.kind ?? 'Materia', optional: item.optional ?? false,
+      workloadHours: subjectWorkloadHours(item), kind: item.kind ?? 'Materia', optional: item.optional ?? false,
       grade: progressById.get(item._id)?.grade ?? null,
       intermediate: item.intermediate ?? false, status: toLabel(statusById.get(item._id)),
       position: { x: (year === 0 ? 0 : year - 1) * 310, y: row * 125 + 70 },

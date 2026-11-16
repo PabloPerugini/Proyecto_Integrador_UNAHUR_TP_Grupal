@@ -52,11 +52,9 @@ const preview = (abs, timeoutMs) =>
 
 function checkPersistedShape(subjects, entry, r) {
   r.total = subjects.length;
-  r.sumCredits = subjects.reduce((a, s) => a + (s.credits || 0), 0);
   r.sinAnio = subjects.filter((s) => s.year == null && s.kind === "Materia" && !s.optional).length;
   const names = subjects.map((s) => String(s.name || "").toLowerCase());
   const dups = names.length - new Set(names).size;
-  if (r.sumCredits === 0) r.warns.push("créditos totales 0");
   if (r.sinAnio > 0) r.warns.push(`${r.sinAnio} materias sin año`);
   if (dups > 0) r.warns.push(`${dups} nombres duplicados`);
   if (entry.hasIntermediate && !subjects.some((s) => s.intermediate)) {
@@ -70,9 +68,9 @@ async function runPlan(entry) {
     file: entry.file, career: entry.career, tipo: entry.tipo,
     estado: "FAIL", mensaje: "", warns: [],
     httpParse: null, detectedCount: null, sourceKind: null,
-    creditsFinal: null, creditsIntermediate: null, intermediateTitle: null,
+    intermediateTitle: null,
     intermediateMarked: null, intermediateClassified: false,
-    saved: null, total: null, sumCredits: null, sinAnio: null,
+    saved: null, total: null, sinAnio: null,
   };
   if (!fs.existsSync(abs)) {
     r.estado = "SKIP";
@@ -96,8 +94,6 @@ async function runPlan(entry) {
   }
   r.detectedCount = parsed.detectedCount ?? parsed.subjects?.length ?? 0;
   r.sourceKind = parsed.sourceKind;
-  r.creditsFinal = parsed.creditsFinal;
-  r.creditsIntermediate = parsed.creditsIntermediate;
   r.intermediateTitle = parsed.intermediateTitle || null;
   r.intermediateMarked = (parsed.subjects || []).filter((s) => s.intermediate).length;
   r.intermediateClassified = parsed.intermediateClassified === true;
@@ -223,17 +219,16 @@ async function main() {
     ``,
     `Resumen: OK=${counts.OK} OK-IA=${counts["OK-IA"]} WARN=${counts.WARN} FAIL=${counts.FAIL} SKIP=${counts.SKIP} (total ${results.length})`,
     ``,
-    `| Archivo | Tipo | Detect. | Origen | Créd. | Tec. (mat/cr) | Estado | Detalle |`,
-    `| --- | --- | --- | --- | --- | --- | --- | --- |`,
+    `| Archivo | Tipo | Detect. | Origen | Tec. (mat) | Estado | Detalle |`,
+    `| --- | --- | --- | --- | --- | --- | --- |`,
   ];
   for (const r of results) {
     const det = r.tipo === "correlativas" ? (r.total ?? "–") : (r.detectedCount ?? "–");
-    const cred = r.sumCredits ?? r.creditsFinal ?? "–";
     const tec = r.tipo !== "correlativas" && r.intermediateTitle
-      ? `${r.intermediateMarked}/${r.creditsIntermediate ?? "–"}${r.intermediateClassified ? " IA" : ""}`
+      ? `${r.intermediateMarked}${r.intermediateClassified ? " IA" : ""}`
       : "–";
     const det2 = [r.mensaje, ...r.warns].filter(Boolean).join("<br>").replace(/\|/g, "\\|");
-    lines.push(`| ${r.file.split("/").pop()} | ${r.tipo} | ${det} | ${r.sourceKind ?? "–"} | ${cred} | ${tec} | **${r.estado}** | ${det2} |`);
+    lines.push(`| ${r.file.split("/").pop()} | ${r.tipo} | ${det} | ${r.sourceKind ?? "–"} | ${tec} | **${r.estado}** | ${det2} |`);
   }
   const withInt = results.filter((r) => r.tipo !== "correlativas" && r.intermediateTitle);
   if (withInt.length) {
