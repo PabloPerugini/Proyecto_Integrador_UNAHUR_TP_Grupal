@@ -107,6 +107,7 @@ export interface PlanSubject {
   year?: number | null;
   period?: number | null;
   duration?: 'CUATRIMESTRAL' | 'SEMESTRAL' | 'ANUAL' | 'TRIMESTRAL' | 'OTRA';
+  credits?: number | null;
   hours?: Record<string, number | null>;
   optional?: boolean;
   intermediate?: boolean;

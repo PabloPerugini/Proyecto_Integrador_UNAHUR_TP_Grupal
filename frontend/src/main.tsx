@@ -6,7 +6,6 @@ import './styles/tokens/primitives.css'
 import './styles/tokens/semantic.css'
 import './styles/tokens/components.css'
 import './index.css'
-import './styles/academicMapPalette.css'
 import App from './App.tsx'
 
 createRoot(document.getElementById('root')!).render(

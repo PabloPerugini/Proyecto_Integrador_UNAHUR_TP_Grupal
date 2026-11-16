@@ -233,11 +233,11 @@ function YearLabel({ data }: NodeProps<Node<Record<string, unknown>>>) {
         width,
         fontWeight: isYear ? 700 : 600,
         fontSize: 16,
-        color: 'var(--map-year-label)',
+        color: 'var(--color-text-muted)',
         whiteSpace: 'nowrap',
         textAlign: isYear ? 'center' : 'left',
         paddingBottom: isYear ? 8 : 0,
-        borderBottom: isYear ? '1px solid var(--map-year-label)' : undefined,
+        borderBottom: isYear ? '1px solid var(--color-text-muted)' : undefined,
       }}
     >
       {label}
@@ -350,7 +350,7 @@ function DetailPanel({ selectedNode, requires, successors, progressSaving, onSel
             <>
               <div className="plan-detail__status-wrap">
                 {selectedNode.status === 'Bloqueada' ? (
-                  <div className="plan-detail__status" style={{ color: STATUS_NODE_BORDER_COLORS[selectedNode.status] }}>
+                  <div className="plan-detail__status" style={{ color: statusBorder(selectedNode.status) }}>
                     <SubjectStatusIcon status={selectedNode.status} showTooltip={false} className="plan-detail__status-icon" />
                     {statusLabel(selectedNode.status)}
                   </div>
@@ -360,7 +360,7 @@ function DetailPanel({ selectedNode, requires, successors, progressSaving, onSel
                       variant="link"
                       id="plan-detail-status-toggle"
                       className="plan-detail__status plan-detail__status-toggle"
-                      style={{ color: STATUS_NODE_BORDER_COLORS[selectedNode.status] }}
+                      style={{ color: statusBorder(selectedNode.status) }}
                       disabled={progressSaving}
                       aria-label={`Cambiar estado de ${selectedNode.name}`}
                     >
@@ -1243,6 +1243,7 @@ export default function PlanGraph({ initialView = 'grafo' }: { initialView?: 'gr
               </OverlayTrigger>
             </>}
           </div>
+        </div>
         </div>
 
         {displayGraph && <div className={`plan-progress-summary${view === 'tablero' ? ' plan-progress-summary--board' : ''}`}>
