@@ -11,11 +11,11 @@
 | Institución           | Universidad Nacional de Hurlingham (UNAHUR)                          |
 | Unidad Académica      | Facultad de Informática — Proyecto Integrador Programación           |
 | Tipo de documento     | BRD — Documentación de Requerimientos de Negocio                     |
-| Versión               | 2.8                                                                   |
-| Fecha                 | 12 de noviembre de 2026                                            |
+| Versión               | 2.9                                                                   |
+| Fecha                 | 16 de noviembre de 2026                                            |
 | Sponsor Operación     | Secretaría Académica / Dirección de Carrera                          |
 | Sponsor Organización  | UNAHUR                                                               |
-| Integrantes           | Perugini, Pablo; Acuña, Marcos; Masgo Sandoval, Joaquín; Renaud, Román; Remonda, Eliel; Cotera, Dylan |
+| Integrantes           | Perugini, Pablo; Masgo Sandoval, Joaquín; Remonda, Eliel; Cotera, Dylan |
 | Release               | Diciembre 2026                                                       |
 
 ---
@@ -46,6 +46,7 @@
 | 2.6     | 06/11/2026   | Equipo | Actualización del grafo y tablero (iconos SVG por estado y mejoras de disposición), navegación y adaptación responsive; administración de universidades y materias; registro de pruebas actuales. Los créditos y el detalle académico oficial por unidad/período siguen sujetos a validar con documentación institucional. |
 | 2.7     | 06/11/2026   | Equipo | Se incorpora una ayuda de preguntas frecuentes en formato conversacional guiado, con búsqueda local sobre respuestas predefinidas y sin IA ni envío de consultas a servicios externos. |
 | 2.8     | 12/11/2026   | Equipo | Se reemplazan los créditos curriculares por el seguimiento de actividades ACA y se documentan sus metas para Título Intermedio y grado, el estado Libre con conservación del avance previo y la etiqueta “Título Intermedio”. |
+| 2.9     | 16/11/2026   | Equipo | Verificación integral del corpus y de las validaciones: **56 PDFs** clasificados (46 de referencia con golden + 10 excluidos con motivo), **golden 46/46 sin diferencias**, `npm test` **45/45** en 9 archivos, Jest **24/24**, carga masiva **OK=28, OK-IA=1, WARN=0, FAIL=0 y SKIP=17** (29 planes procesados + 17 correlativas derivadas, total 46) y **17 pares de correlatividades** validados con el endpoint dedicado (OK=11, WARN=6, FAIL=0). Se alinean Test-Plan, Test-Cases, Matriz de trazabilidad y READMEs con el estado real. |
 
 ---
 

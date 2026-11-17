@@ -1,8 +1,8 @@
 # Plan de Pruebas
 
 **Proyecto:** Gradify — Grafo Interactivo de Correlatividades y Seguimiento de Progreso Académico
-**Versión:** 3.0
-**Fecha:** 12/11/2026
+**Versión:** 3.1
+**Fecha:** 16/11/2026
 **Sponsor Organización:** Universidad Nacional de Hurlingham (UNAHUR) — Licenciatura en Informática
 **Autor:** Equipo del proyecto integrador
 **Tutor:** Prof. Alejandra Pinto
@@ -19,6 +19,7 @@ Garantizar que la aplicación web (React) y su API REST (Node/Express + MongoDB 
 - Pruebas de funcionamiento de los endpoints de la API (`/users`, `/careers`, `/universities`, `/academic-units`, `/plan-imports`, `/study-plans`, `/user-study-plans`, `/progress`, `/health`) y de la documentación en `/api-docs`.
 - Validación de la carga de PDF: plan oficial, PDF de correlativas y archivo con estructura inesperada; descarte de filas de totales y de títulos de sección.
 - Verificación del **matching clásico** de correlativas (exacto, compacto, difuso y por prefijo) y del nivel de confianza devuelto (`exact` | `compact` | `fuzzy` | `null`).
+- Verificación del **corpus completo**: 56 PDFs clasificados (46 de referencia con golden + 10 excluidos con motivo) y los 17 pares de correlatividades validados con el endpoint dedicado.
 - Verificación del **Título Intermedio**: detección en el PDF, `intermediateTitle`, materias marcadas `intermediate`, sub-plan virtual (`/study-plans/:id/intermediate`) y pestañas Licenciatura/Título Intermedio; no se asignan créditos a materias curriculares.
 - Verificación del registro de actividades ACA: categorías UC/EF/Instituto, 10 CRE por categoría, 4 CRE por categoría para el Título Intermedio, 10 por categoría para el grado y 75 horas de interacción pedagógica.
 - Verificación del **catálogo por instituto** (colores, `withCounts`, filtros `?unit`/`includeArchived`) y de la **articulación** entre carreras.
@@ -41,20 +42,23 @@ Garantizar que la aplicación web (React) y su API REST (Node/Express + MongoDB 
 - Pruebas manuales exploratorias de los flujos de la aplicación (subir PDF, explorar grafo, marcar progreso).
 
 ### Verificación estática y de compilación
-**Descripción:** chequeo de sintaxis del backend con `node --check` sobre `src/` y verificación del frontend con (`eslint`, `tsc -b` y `vite build`). Backend: **`npm test`** (`node --test`) y **`npm run test:jest`**. Frontend: `test:faq`, `test:status`, `test:graph`, `test:layout` y `test:subjects`.
+**Descripción:** chequeo de sintaxis del backend con `node --check` sobre `src/` y verificación del frontend con (`eslint`, `tsc -b` y `vite build`). Backend: **`npm test`** (`node --test`, 45 tests en 9 archivos) y **`npm run test:jest`** (24 tests). Frontend: `test:faq`, `test:status`, `test:graph`, `test:layout`, `test:subjects`, `test:color` y `test:theme`.
 
 **Funcionalidades principales:**
 - Detectar errores de sintaxis en el backend sin necesidad de levantar el entorno.
 - Detectar errores de tipos y de lint en el frontend.
 - Confirmar que el build de producción se completa.
 
-### Pruebas masivas
-**Descripción:** script reutilizable **`npm run test:planes`** (motor `carga-masiva.test.js` con usuario JWT propio) que ejecuta pruebas masivas sobre la API real: recorre los 43 PDFs de `files/UNAHUR-Oferta-Academica` por el mismo camino que la UI (`preview` sin persistir), compara contra la tabla de referencia `docs/testing/planes-referencia.json` (tipo Licenciatura/Tecnicatura/Ingeniería con rangos esperados) y vuelca un informe en `backend/scripts/informes/`.
+### Pruebas masivas y de correlatividades
+**Descripción:** scripts reutilizables con usuario JWT propio que ejecutan pruebas sobre la API real. **`npm run test:planes`** (motor `carga-masiva.test.js`) recorre los **29 PDFs de plan** de `docs/files/UNAHUR-Oferta-Academica` por el mismo camino que la UI (`preview` sin persistir), compara contra la tabla de referencia `docs/testing/planes-referencia.json` (Licenciatura/Tecnicatura/Ingeniería/Profesorado con rangos esperados) y deja las **17 correlativas en SKIP**. **`npm run test:correlativas`** (motor `verificar-correlativas.test.js`) importa cada plan par, llama a `POST /study-plans/:id/parse-correlativas`, valida el matching y borra el plan al final. **`npm run test:cobertura`** (sin API) clasifica los **56 PDFs**: 46 en la referencia con golden + 10 excluidos con motivo. Todos vuelcan un informe en `backend/scripts/informes/`.
 
 **Funcionalidades principales:**
-- Usuario de prueba propio por corrida (se borra al final; el preview no persiste nada).
-- Estados por PDF: `OK` (parser), `OK-IA` (rescatado por el fallback de IA), `WARN` (observaciones: sin año, créditos 0, correlativas vía IA), `FAIL`, `SKIP` (`STRICT_IA=1` vuelve FAIL la falta de IA).
+- Usuario de prueba propio por corrida (se borra al final); `test:planes` usa preview sin persistir y `test:correlativas` crea y borra un plan en borrador.
+- Estados por PDF: `OK` (parser), `OK-IA` (rescatado por el fallback de IA), `WARN` (observaciones: sin año, correlativas vía IA, título intermedio incompleto), `FAIL`, `SKIP` (las 17 correlativas se derivan a `test:correlativas`; `STRICT_IA=1` vuelve FAIL la falta de IA).
 - Análisis automático de respuestas para detectar errores o anomalías.
+
+### Golden snapshot
+**Descripción:** **`npm run snapshot:planes -- --check`** compara los **46 JSON** de `docs/testing/golden/` (29 planes + 17 correlativas) contra el parser actual. `diff = 0` es el gate anti-regresiones: un cambio inesperado en nombres, años o totales falla la corrida.
 
 ## Casos de Prueba
 
@@ -72,8 +76,8 @@ Garantizar que la aplicación web (React) y su API REST (Node/Express + MongoDB 
    - Caso 6: **PDF escaneado o ilegible.** Enviar un PDF sin texto → `422` y el servidor sigue operativo.
    - Caso 7: **No-PDF.** Enviar un archivo que no es PDF → `400`; superar los 10 MB → `400` por tamaño.
    - Caso 7 bis: **Confirm.** `POST /plan-imports/confirm` (`fileHash`, `careerId`, `name`, `fileName`, `subjects`) → `201` con `saved`, `prerequisitesResolved`, `prerequisitesReview`; ciclo → `400` sin guardar; repetido → `409`.
-   - Caso 8: **PDF de correlativas.** `preview` informa `correlativasTexto` por materia; el matching a `prerequisites` lo resuelve el confirm (solo exact+compact; lo dudoso a revisión).
-   - Caso 8 bis: **Carga masiva + fallback IA.** `npm run test:planes` sobre los 43 PDFs: verifica `detectedCount` dentro del rango de `docs/testing/planes-referencia.json`; si el parser devuelve 0 y hay IA configurada, la respuesta trae `aiFallback: true` + `provider`.
+   - Caso 8: **PDF de correlativas.** El flujo dedicado `npm run test:correlativas` importa el plan par y llama a `POST /study-plans/:id/parse-correlativas`; la respuesta informa `matched`, `total` y el detalle de lo no resuelto. El `preview` genérico no se usa para los 17 PDFs de correlativas.
+   - Caso 8 bis: **Carga masiva, cobertura y fallback IA.** `npm run test:planes` sobre los 29 PDFs de plan verifica `detectedCount` dentro del rango de `docs/testing/planes-referencia.json`; si el parser devuelve 0 y hay IA configurada, la respuesta trae `aiFallback: true` + `provider`. `npm run test:correlativas` cubre los 17 pares y `npm run test:cobertura` exige que los 56 PDFs estén clasificados (46 referencia + 10 excluidos).
 
 4. **Progreso académico**
    - Caso 9: **Sin identificación.** Rutas protegidas sin JWT → `401`; plan ajeno sin permiso → `403`/`404`.
@@ -138,12 +142,23 @@ Garantizar que la aplicación web (React) y su API REST (Node/Express + MongoDB 
 ## Plan de Ejecución
 
 1. Configurar un entorno de prueba (backend en puerto 3000, frontend en puerto 5173, MongoDB y Redis locales).
-2. Preparar los casos de prueba y los PDFs de muestra (plan oficial, PDF de correlativas, plan con fila de totales, PDF escaneado, plan extenso).
+2. Preparar los casos de prueba y el corpus de 56 PDFs (29 planes, 17 correlativas y 10 excluidos con motivo; incluye plan con fila de totales, PDF escaneado y plan extenso).
 3. Ejecutar cada caso de prueba sobre los endpoints y flujos relevantes.
 4. Registrar los resultados en el [Documento de Seguimiento de Testing](./Test-Cases.md), incluyendo errores o comportamientos inesperados.
 5. Repetir las pruebas tras cada corrección para confirmar estabilidad y consistencia.
 
-## Resultados de la Última Ejecución Registrada (06/11/2026, v2.9)
+## Resultados de la Última Ejecución Registrada (16/11/2026, v3.1)
+
+- **Cobertura del corpus:** `npm run test:cobertura` → `cobertura OK: 56 PDFs = 46 en referencia (con golden) + 10 excluidos con motivo`; no quedan PDFs sin clasificar.
+- **Golden:** `npm run snapshot:planes -- --check` → **46/46 SIN DIFERENCIAS** (29 planes + 17 correlativas).
+- **Unitarios backend:** `npm test` **45/45** en 9 archivos; `npm run test:jest` **24/24**.
+- **Masiva:** `npm run test:planes` → **OK=28 + OK-IA=1 + WARN=0 + FAIL=0 + SKIP=17** (total 46); las 17 correlativas se derivan al test dedicado.
+- **Correlatividades:** `npm run test:correlativas` → **OK=11 + WARN=6 + FAIL=0 + SKIP=0** (17 pares). Nueve planes quedan al 100%; Biología 37/39 (94,9%) y Letras 37/38 (97,4%) cierran en OK. Los WARN son Obstetricia 23/35 (65,7%), Nutrición 41/48 (85,4%), Diseño Industrial 32/38 (84,2%), Gestión del Mantenimiento 27/31 (87,1%), Mantenimiento Hospitalario 14/19 (73,7%) y Kinesiología 41/41 (duplicado de slug deduplicado en el test, sin cambio de parser).
+- **Salud:** `npm run test:salud` → Kinesiología 47, Obstetricia 39, Enfermería 41, Nutrición 52; controles negativos 400/400. El preview genérico de Nutrición responde 422 (limitación conocida del test de salud); su par de correlatividades queda cubierto por `test:correlativas` (41/48).
+- **Limpieza:** 0 usuarios `test-corr-*` y 0 planes `[E2E correlativas]` al finalizar.
+- **Frontend:** sin cambios en esta corrida; la QA visual del grafo sin la etiqueta `N cr` sigue pendiente (manual).
+
+## Resultados de la Ejecución v2.9 (06/11/2026)
 
 - **Frontend (FAQ):** `npm run test:faq` 6/6 y `npm run build` correcto. `npm run lint` terminó sin errores y con una advertencia existente en `PlanGraph.tsx:791` por dependencias de `useMemo`.
 - **Antecedente de la corrida anterior:** `nameOverride` ya se refleja en las vistas de consulta y su precedencia tiene pruebas unitarias frontend/backend.

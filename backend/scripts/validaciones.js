@@ -4,7 +4,7 @@
  * Uso: node scripts/validaciones.js <cobertura|masiva|correlativas|salud|golden|todo|--help> [-- args...]
  *   npm run validar          -> todo (cobertura + golden --check + salud + masiva + correlativas)
  *   npm run test:cobertura   -> cobertura (cada PDF de files/ clasificado: referencia o exclusión con motivo)
- *   npm run test:planes      -> masiva (carga E2E por API real, 29 planes; correlativas se derivan)
+ *   npm run test:planes      -> masiva (carga E2E por API real de 29 planes; las 17 correlativas quedan en SKIP y se validan en test:correlativas)
  *   npm run test:correlativas -> correlativas (E2E del endpoint dedicado, importa plan par y limpia)
  *   npm run test:salud       -> salud (control de correlativas + negativo)
  *   npm run snapshot:planes  -> golden (snapshot determinístico, -- --check)
@@ -36,7 +36,7 @@ function help() {
   console.log(`validaciones.js <comando> [-- args del motor]
 
   cobertura  control de corpus: cada PDF de files/ está en la referencia o excluido con motivo (sin API)
-  masiva     carga E2E de planes por API real (29 planes; correlativas se derivan)
+  masiva     carga E2E de planes por API real (29 planes; 17 correlativas en SKIP)
   correlativas E2E de correlatividades por API real: importa el plan par, parsea y limpia
   salud      control de correlativas de Salud + control negativo (idem API)
   golden     snapshot determinístico del parser (sin API; -- --check compara)

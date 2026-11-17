@@ -1,8 +1,8 @@
 # Documento de Seguimiento de Testing
 
 **Proyecto:** Gradify — Grafo Interactivo de Correlatividades y Seguimiento de Progreso Académico
-**Versión:** 2.9
-**Fecha:** 2026-11-12
+**Versión:** 3.0
+**Fecha:** 2026-11-16
 **Sponsor Organización:** Universidad Nacional de Hurlingham (UNAHUR) — Licenciatura en Informática
 **Autor:** Equipo del proyecto integrador
 **Tutor:** Prof. Alejandra Pinto
@@ -17,7 +17,7 @@ El Documento de Seguimiento de Testing tiene como objetivo principal registrar y
 La metodología de prueba se describe en el [Plan de Pruebas](./Test-Plan.md).
 
 > [!NOTE]
-> El registro cubre solo los bugs de la **implementación actual**. Los hallazgos correspondientes a funcionalidades que ya no forman parte de la aplicación (autenticación, roles, recuperación de contraseña, chat con IA, matching por embeddings, Docker Compose, suites de tests) se retiraron en la versión 2.0 de este documento.
+> El registro cubre solo los bugs de la **implementación actual**. Los hallazgos de funcionalidades que ya no forman parte (recuperación de contraseña, chat con IA y matching por embeddings) se retiraron en la versión 2.0 de este documento; autenticación, roles, Docker Compose y suites de tests volvieron con la arquitectura JWT de la v2.2 y se registran desde la corrida 7.
 
 ## Formato del Documento
 
@@ -207,7 +207,43 @@ Registro anticipado de las dos tandas posteriores a la corrida 10 (CHANGELOG 1.2
 | 41 | Registro/Mi cuenta validan por campo (2–50, email ≤ 254, contraseña 6–72, nick ≥ 3) y el backend lo replica | 🟡 pendiente de ejecutar |
 | 42 | Home sin *Ver materias/Qué puedo cursar/Mi avance*; detalle necesario solo en Mi progreso/grafo | 🟡 pendiente de ejecutar |
 
-**Regresión automatizada (06/11/2026):** `npm test` backend pasó 43/43; `test:faq` 6/6, `test:status` 3/3, `test:graph` 3/3, `test:layout` 3/3 y `test:subjects` 4/4. La prioridad de `nameOverride` está cubierta en ambas capas. Esto no sustituye la verificación manual del guardado en lote del caso 40 ni de los casos 39, 41 y 42.
+**Regresión automatizada (06/11/2026):** `npm test` backend pasó 43/43; `test:faq` 6/6, `test:status` 3/3, `test:graph` 3/3, `test:layout` 3/3 y `test:subjects` 4/4. La prioridad de `nameOverride` está cubierta en ambas capas. Esto no sustituye la verificación manual del guardado en lote del caso 40 ni de los casos 39, 41 y 42. En la corrida 12 (16/11/2026) el backend pasó a **45/45** y Jest a **24/24**; las suites frontend no se re-ejecutaron en esa corrida.
+
+---
+
+## Corrida 12 (16/11/2026, v3.1: corpus completo y test dedicado de correlatividades)
+
+Cierre de la validación del corpus y del flujo de correlatividades sobre `develop` (`7b7c7a2`). No hubo cambios de código en esta corrida: se ejecutaron las validaciones existentes y se agregó el test dedicado que faltaba.
+
+- **Unitarios backend:** `npm test` **45/45** en 9 archivos; `npm run test:jest` **24/24**.
+- **Cobertura:** `npm run test:cobertura` → **56 PDFs = 46 en la referencia (con golden) + 10 excluidos con motivo**; no quedan PDFs sin clasificar.
+- **Golden:** `npm run snapshot:planes -- --check` → **46/46 SIN DIFERENCIAS** (29 planes + 17 correlativas).
+- **Masiva:** `npm run test:planes` → **OK=28 + OK-IA=1 + WARN=0 + FAIL=0 + SKIP=17** (total 46). Las 17 correlativas se derivan a `test:correlativas` y ya no se prueban con el preview genérico.
+- **Correlatividades:** `npm run test:correlativas` → **OK=11 + WARN=6 + FAIL=0 + SKIP=0** (17 pares). El mínimo del corpus es Obstetricia 65,7% (23/35); nueve pares quedan al 100%.
+- **Salud:** `npm run test:salud` → Kinesiología 47, Obstetricia 39, Enfermería 41, Nutrición 52; controles negativos 400/400. El preview genérico de Nutrición responde 422 (limitación conocida del test de salud); su par de correlatividades queda cubierto por `test:correlativas` (41/48).
+- **Limpieza:** 0 usuarios `test-corr-*` y 0 planes `[E2E correlativas]` al finalizar.
+
+| Carrera | Plan (materias) | Correlativas | Matched | % | Estado |
+| --- | --- | --- | --- | --- | --- |
+| Licenciatura en Biotecnología | 46 | 41 | 41 | 100,0% | OK |
+| Licenciatura en Kinesiología y Fisiatría | 46 | 41 | 41 | 100,0% | WARN (duplicado de slug deduplicado en el test) |
+| Licenciatura en Obstetricia | 39 | 35 | 23 | 65,7% | WARN |
+| Licenciatura en Enfermería | 41 | 39 | 39 | 100,0% | OK |
+| Licenciatura en Nutrición | 52 | 48 | 41 | 85,4% | WARN |
+| Licenciatura en Ciberseguridad | 33 | 31 | 31 | 100,0% | OK |
+| Licenciatura en Desarrollo de Videojuegos y Simulaciones | 32 | 31 | 31 | 100,0% | OK |
+| Licenciatura en Informática | 46 | 45 | 45 | 100,0% | OK |
+| Licenciatura en Diseño Industrial | 37 | 38 | 32 | 84,2% | WARN |
+| Licenciatura en Gestión del Mantenimiento | 40 | 31 | 27 | 87,1% | WARN |
+| Tecnicatura Universitaria en Mantenimiento Hospitalario | 21 | 19 | 14 | 73,7% | WARN |
+| Profesorado Universitario de Biología | 41 | 39 | 37 | 94,9% | OK |
+| Profesorado Universitario en Educación Física | 44 | 39 | 39 | 100,0% | OK |
+| Profesorado Universitario de Inglés | 36 | 33 | 33 | 100,0% | OK |
+| Profesorado Universitario de Letras | 39 | 38 | 37 | 97,4% | OK |
+| Profesorado Universitario de Matemática | 37 | 35 | 35 | 100,0% | OK |
+| Profesorado Universitario de Geografía | 39 | 37 | 37 | 100,0% | OK |
+
+**Hallazgos:** el `422` de Nutrición en `test:salud` es un desajuste del test de salud, no un fallo de la app ni del PDF; el endpoint dedicado resuelve 41/48. Kinesiología trae dos variantes del mismo nombre (`ACTIVIDADES CURRICULARES ACREDITABLES (ACA)` y `(ACA`); el test deduplica por nombre normalizado y reporta WARN, sin tocar parser ni confirm. No se registran bugs nuevos.
 
 ---
 
@@ -221,6 +257,7 @@ Registro anticipado de las dos tandas posteriores a la corrida 10 (CHANGELOG 1.2
 | 8 | 14/10/2026 | v2.3 (institutos, tecnicatura, articulación, RN05) | `npm test` 26/26; golden sin diferencias; front verde |
 | 9 | 16/10/2026 | v2.4 (tipo de carrera, intermedio, IA revisable) | `npm test` 32/32; golden 43/43; masiva 27+1+15+0; salud OK; E2E v2.4 18/18 |
 | 10 | 16/10/2026 | v2.5 (panel admin completo, correlativas regularizadas) | `npm test` 32/32; E2E admin 14/14; correlativas scratch 5/5; front `tsc`+`lint` verdes |
+| 12 | 16/11/2026 | v3.1 (corpus completo y correlatividades E2E) | Cobertura 56=46+10; golden 46/46; `npm test` 45/45; Jest 24/24; masiva 28+1+0+0+17; correlativas 11+6+0+0 |
 
 ## Verificación de FAQ (06/11/2026, v2.8)
 

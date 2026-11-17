@@ -26,11 +26,13 @@ npm run test:status
 npm run test:graph
 npm run test:layout
 npm run test:subjects
+npm run test:color
+npm run test:theme
 ```
 
 > Variable opcional: `VITE_API_URL` (por defecto `http://localhost:3000`), apunta al backend. No hay un `.env.Ejemplo` propio del frontend; si necesitás cambiar la URL, creá `.env` con esa variable.
 
-> Los tests cubren búsqueda FAQ, estados de progreso, resaltado del grafo, trazado de aristas y nombre visible por plan (`nameOverride`). La ruta `/faq` ofrece una conversación guiada con sugerencias, respuestas relacionadas y enlaces a secciones de la app; el contenido está en `src/data/faq.ts` y `faqSearch` lo busca localmente, sin IA, backend ni envío de consultas.
+> Los tests cubren búsqueda FAQ, estados de progreso, resaltado y trazado del grafo, layout, nombre visible por plan (`nameOverride`), utilidades de color y tokens de tema. La ruta `/faq` ofrece una conversación guiada con sugerencias, respuestas relacionadas y enlaces a secciones de la app; el contenido está en `src/data/faq.ts` y `faqSearch` lo busca localmente, sin IA, backend ni envío de consultas.
 
 ## Estructura
 

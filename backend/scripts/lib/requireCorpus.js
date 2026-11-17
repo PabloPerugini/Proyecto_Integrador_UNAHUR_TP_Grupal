@@ -1,5 +1,5 @@
 // Guard de corpus compartido (plan maestro §1.5.3 C6/C7 + Fase 2).
-// Sin los 43 PDFs el gate golden queda mudo: los scripts masivos deben
+// Sin el corpus de PDFs (56 archivos: 46 de referencia + 10 excluidos) el gate golden queda mudo: los scripts masivos deben
 // fallar con mensaje claro, no en silencio.
 const fs = require("fs");
 const path = require("path");

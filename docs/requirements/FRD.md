@@ -11,11 +11,11 @@
 | Institución           | Universidad Nacional de Hurlingham (UNAHUR)                          |
 | Unidad Académica      | Facultad de Informática — Proyecto Integrador Programación           |
 | Tipo de documento     | FRD — Documentación de Requerimientos Funcionales                    |
-| Versión               | 3.0                                                                  |
-| Fecha                 | 12 de noviembre de 2026                                             |
+| Versión               | 3.1                                                                  |
+| Fecha                 | 16 de noviembre de 2026                                             |
 | Sponsor Operación     | Secretaría Académica / Dirección de Carrera                          |
 | Sponsor Organización  | UNAHUR                                                               |
-| Integrantes           | Perugini, Pablo; Acuña, Marcos; Masgo Sandoval, Joaquín; Renaud, Román; Remonda, Eliel; Cotera, Dylan |
+| Integrantes           | Perugini, Pablo; Masgo Sandoval, Joaquín; Remonda, Eliel; Cotera, Dylan |
 | Release               | Diciembre 2026                                                       |
 
 ---
@@ -48,6 +48,7 @@
 | 2.8     | 06/11/2026   | Equipo | `nameOverride` ahora prevalece sobre el nombre del catálogo en Grafo, Tablero, Mi progreso, Home y el matching de correlativas. Se agregan pruebas unitarias para nombres por plan y para utilidades frontend cuyos scripts no tenían pruebas. |
 | 2.9     | 06/11/2026   | Equipo | Se documenta la ayuda FAQ conversacional guiada: sugerencias, búsqueda local de respuestas predefinidas, enlaces relacionados y aviso de privacidad; no usa IA ni envía consultas. |
 | 3.0     | 12/11/2026   | Equipo | Se reemplazan los créditos por materia por el seguimiento de actividades ACA (30 CRE, metas por categoría y 75 horas pedagógicas para el grado); se incorpora el estado Libre conservando avances previos y se unifican las etiquetas bajo “Título Intermedio”. |
+| 3.1     | 16/11/2026   | Equipo | Verificación integral del corpus y de las validaciones: **56 PDFs** (46 de referencia con golden + 10 excluidos con motivo), **golden 46/46**, `npm test` **45/45**, Jest **24/24**, carga masiva **OK=28, OK-IA=1, WARN=0, FAIL=0 y SKIP=17** (29 planes procesados + 17 correlativas derivadas, total 46) y **17 pares de correlatividades** con el endpoint dedicado (OK=11, WARN=6, FAIL=0). El matching se ejecuta en `POST /study-plans/:id/parse-correlativas` (preview sin guardar). |
 
 ---
 
@@ -321,7 +322,7 @@ flowchart LR
 - **ORDEN DE ESTADÍSTICAS:** Mostrar las estadísticas de MATERIAS B en orden **decreciente** — implementado (`materiasB` ordenado).
 - **FUSIÓN DE CONDICIONES:** Si no hay materias C4 en MATERIAS A, usar solo C1, C2, C3. Si no hay materias C1/C2, fusionarlas en C5 [APROBADA] (nota ≥ 4) — implementado (las aprobadas sin nota van a C5 solo si no hay C1/C2, si no a C2).
 - **CRÉDITOS ACA:** las actividades registran nombre, categoría (UC —unidades curriculares no incluidas en el plan—, EF —experiencias formativas diversas— o Instituto —según la definición del Instituto de Tecnología e Ingeniería—), CRE y horas de interacción pedagógica. Cada categoría muestra su porcentaje hacia la meta de 10 CRE; el Título Intermedio requiere 4 CRE (40%) por categoría y el grado 10 CRE (100%) por categoría. Para completar el grado se requieren además 75 horas de interacción pedagógica (10% mínimo del total ACA). Excedentes en una categoría no compensan faltantes en otra.
-- **CORRELATIVIDADES:** el matching entre el plan oficial y el PDF de correlativas es clásico (exacto, compacto, difuso/Levenshtein y por prefijo), con nivel de confianza devuelto en la respuesta (`exact` | `compact` | `fuzzy` | `null`).
+- **CORRELATIVIDADES:** el matching entre el plan oficial y el PDF de correlativas es clásico (exacto, compacto, difuso/Levenshtein y por prefijo), con nivel de confianza devuelto en la respuesta (`exact` | `compact` | `fuzzy` | `null`). Se ejecuta en `POST /study-plans/:id/parse-correlativas` (preview sin guardar) y el corpus de 17 pares se valida con `npm run test:correlativas`; el guardado posterior (`POST /study-plans/:id/correlativas`) rechaza ciclos.
 - **TÍTULO INTERMEDIO:** si el PDF del plan declara un título intermedio, el backend expone sus materias (`intermediateTitle`, `subject.intermediate`) y ofrece un **sub-plan virtual** (`GET /study-plans/:id/intermediate`, con `closed` y `externalRequires`); el grafo, el tablero y Mi progreso muestran **pestañas Licenciatura/Título Intermedio** y avisan cuando no hay materias marcadas. No se calculan créditos curriculares por materia.
 - **TÍTULO INTERMEDIO — HONESTIDAD DEL DATO:** el subconjunto solo se marca de forma determinística cuando el PDF trae la sección que lo tabula (Lic. en Informática); si no la trae, el sistema **no inventa**: avisa al ADMIN (preview y Editar plan), permite marcar **en lote** y, si la IA propone un subconjunto, la propuesta se **valida contra las materias reales** (sin filas ACA, mínimo 4 materias, tramo ≤ 3 años lectivos), se muestra en la columna *Tec* del preview y es descartable. La IA nunca persiste nada por su cuenta.
 - **TIPO DE CARRERA:** `Career.careerType` ∈ {Licenciatura, Tecnicatura, Profesorado, Ingenieria, Otro} ∪ {null}; se edita en el catálogo (ADMIN) y las tecnicaturas se etiquetan en el Home con el chip 🎓. El tipo no altera permisos ni correlativas: es información de catálogo.

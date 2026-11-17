@@ -28,10 +28,20 @@ Una vez iniciado:
 ## Pruebas
 
 ```bash
-npm test                 # 43 pruebas unitarias con node:test
-npm run test:jest        # 24 pruebas Jest
-npm run validar          # validaciones integrales; requiere servicios y corpus PDF
+npm test                  # 45 pruebas unitarias con node:test (9 archivos)
+npm run test:jest         # 24 pruebas Jest
+npm run validar           # cobertura + golden --check + salud + masiva + correlativas
+npm run test:cobertura    # 56 PDFs: 46 en la referencia + 10 excluidos con motivo (sin API)
+npm run test:planes       # E2E de los 29 planes (las 17 correlativas quedan SKIP)
+npm run test:correlativas # E2E de los 17 pares de correlatividades (importa, parsea y limpia)
+npm run test:salud        # control de correlativas de Salud + control negativo
+npm run snapshot:planes -- --check   # regresión del parser: 46 golden, diff = 0
 ```
+
+Los scripts masivos requieren API y corpus; `test:cobertura` y `snapshot:planes` solo
+corpus. El corpus se busca en `files/UNAHUR-Oferta-Academica` (raíz), en la carpeta
+histórica `../files/...` o en `PLANES_DIR`; en este workspace está en
+`docs/files/UNAHUR-Oferta-Academica`.
 
 ## Estructura
 
@@ -45,6 +55,9 @@ src/
 ├── middlewares/       # Validaciones y helpers por ruta
 ├── services/          # Lógica transversal (ej: cache.service)
 └── config/            # Conexiones (mongo, redisClient)
+tests/                 # Unitarios con node:test
+tests-jest/            # Pruebas Jest (API con supertest)
+scripts/               # Validaciones E2E, golden, seed y utilidades del corpus
 ```
 
 ## Reglas de estilo

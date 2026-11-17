@@ -11,12 +11,12 @@
 | Institución           | Universidad Nacional de Hurlingham (UNAHUR)                          |
 | Unidad Académica      | Facultad de Informática — Proyecto Integrador Programación           |
 | Tipo de documento     | Matriz de trazabilidad — cruce BRD / FRD ↔ verificación existente    |
-| Versión               | 1.9                                                                  |
-| Fecha                 | 12 de noviembre de 2026                                              |
-| Documentos de origen  | `BRD.md` v2.8 · `FRD.md` v3.0 · `Test-Plan.md` v3.0 · `Test-Cases.md` v2.9 |
+| Versión               | 2.0                                                                  |
+| Fecha                 | 16 de noviembre de 2026                                              |
+| Documentos de origen  | `BRD.md` v2.9 · `FRD.md` v3.1 · `Test-Plan.md` v3.1 · `Test-Cases.md` v3.0 |
 | Sponsor Operación     | Secretaría Académica / Dirección de Carrera                          |
 | Sponsor Organización  | UNAHUR                                                               |
-| Integrantes           | Perugini, Pablo; Acuña, Marcos; Masgo Sandoval, Joaquín; Renaud, Román; Remonda, Eliel; Cotera, Dylan |
+| Integrantes           | Perugini, Pablo; Masgo Sandoval, Joaquín; Remonda, Eliel; Cotera, Dylan |
 | Tutor                 | Prof. Alejandra Pinto                                                |
 | Release               | Diciembre 2026                                                       |
 
@@ -53,32 +53,33 @@ existe** en el repositorio, respondiendo tres preguntas:
 
 | Herramienta | Comando / ubicación | Qué cubre |
 | ----------- | ------------------- | --------- |
-| **Carga masiva** | `npm run test:planes` → `validaciones.js masiva` (motor `carga-masiva.test.js`) | Parseo de los PDFs del corpus contra rangos esperados, título intermedio, par de correlativas, fallback de IA. |
-| **Control de salud** | `npm run test:salud` → `validaciones.js salud` (motor `verificar-salud.test.js`) | Matching de correlativas, aristas, detección de ciclos, materias disponibles. |
-| **Cobertura de corpus** | `npm run test:cobertura` → `validaciones.js cobertura` (motor `check-cobertura.js`) | Cada PDF de `files/` está en la referencia (con golden) o excluido con motivo en `docs/testing/pdf-sin-referencia.json`; falla si aparece uno sin clasificar. |
-| **Golden snapshot** | `npm run snapshot:planes` → `validaciones.js golden` (motor `golden-snapshot.js`) | Regresión del parser: `diff = 0` sobre los planes sanos. |
-| **Todo en uno** | `npm run validar` → `validaciones.js todo` | Cobertura, golden `--check` + salud + masiva, con guard de corpus previo. |
-| **Unitarios** | `npm test` → `node --test` (0 dependencias, 6 archivos) | `bestDbMatch`, whitelist/anti-ciclos/BUG-009, RN04, AR-3, registro/roles, CSRF `checkOrigin` + `tokenVersion` y la validación pura del intermedio (`pickIntermediateNames`, BUG-017) (**32 tests**). |
+| **Carga masiva** | `npm run test:planes` → `validaciones.js masiva` (motor `carga-masiva.test.js`) | Parseo de los **29 PDFs de plan** contra rangos esperados, título intermedio y fallback de IA; las 17 correlativas quedan `SKIP`. |
+| **Correlatividades E2E** | `npm run test:correlativas` → `validaciones.js correlativas` (motor `verificar-correlativas.test.js`) | Importa el plan par, llama a `POST /study-plans/:id/parse-correlativas`, valida el matching y limpia el plan creado. |
+| **Control de salud** | `npm run test:salud` → `validaciones.js salud` (motor `verificar-salud.test.js`) | Matching de correlativas, aristas, detección de ciclos, materias disponibles y control negativo. |
+| **Cobertura de corpus** | `npm run test:cobertura` → `validaciones.js cobertura` (motor `check-cobertura.js`) | Los 56 PDFs están en la referencia (46, con golden) o excluidos con motivo (10) en `docs/testing/pdf-sin-referencia.json`; falla si aparece uno sin clasificar. |
+| **Golden snapshot** | `npm run snapshot:planes` → `validaciones.js golden` (motor `golden-snapshot.js`) | Regresión del parser: `diff = 0` sobre los **46 JSON** (29 planes + 17 correlativas). |
+| **Todo en uno** | `npm run validar` → `validaciones.js todo` | Cobertura, golden `--check`, salud, masiva y correlativas, con guard de corpus previo. |
+| **Unitarios** | `npm test` → `node --test` (0 dependencias, 9 archivos) · `npm run test:jest` (24 tests) | `bestDbMatch`, whitelist/anti-ciclos/BUG-009, RN04, AR-3, registro/roles, CSRF `checkOrigin` + `tokenVersion`, intermedio (`pickIntermediateNames`, BUG-017), estrategia de extracción, nombres por plan y reglas de progreso (**45 tests**). |
 | **Verificación estática** | `node --check` sobre `backend/src` | Sintaxis del backend. |
-| **Frontend** | `npm run lint` · `npx tsc -b` · `npm run build` | Lint, tipos y build de producción. |
-| **HTTP manual** | Postman | Casos 1–19 del Test-Plan. |
-| **Interfaz manual** | Navegador + DevTools | Casos 20–23 del Test-Plan. |
-| **Seguimiento** | `docs/requirements/Test-Cases.md` | Registro BUG-001 … BUG-020 y resultados de corrida (corridas 5–10 documentadas). |
+| **Frontend** | `npm run lint` · `npx tsc -b` · `npm run build` · `test:faq/status/graph/layout/subjects/color/theme` | Lint, tipos, build y suites unitarias. |
+| **HTTP manual** | Postman / `pruebas.http` | Casos 1–19 del Test-Plan. |
+| **Interfaz manual** | Navegador + DevTools | Casos 20–48 del Test-Plan. |
+| **Seguimiento** | `docs/requirements/Test-Cases.md` | Registro BUG-001 … BUG-021 y resultados de corrida (corridas 5–12 documentadas). |
 
 ### Artefactos de evidencia
 
 | Artefacto | Ubicación | Contenido |
 | --------- | --------- | --------- |
-| Informes de carga | `backend/scripts/informes/` (13 archivos, ignorados por git) | Corridas `test:planes` (incl. corrida 6 del 30/09: OK=34+OK-IA=1+WARN=8+FAIL=0), controles de salud (Obst 23/35, Nutr 41/48), backup de `requires`, tabla de correlativas reales. |
-| Baseline golden | `docs/testing/golden/` (43 JSON) | Salida esperada del parser por PDF. |
-| Referencia de rangos | `docs/testing/planes-referencia.json` (43 entradas) | Rangos esperados por tipo, `hasIntermediate`, `pairCorrelativas`. |
-| Corpus de PDFs | `../files/UNAHUR-Oferta-Academica/` (**fuera del repo**, 56 PDF en 2026-10) | Insumo de los 3 scripts masivos (referencia y salud resuelven por nombre de archivo, §11.9). |
+| Informes de carga | `backend/scripts/informes/` (ignorados por git) | Corridas de `test:planes`, `test:correlativas` y `test:salud`; en la última corrida: masiva 28+1+0+0+17 y correlativas 11+6+0+0. |
+| Baseline golden | `docs/testing/golden/` (46 JSON) | Salida esperada del parser por PDF: 29 planes + 17 correlativas. |
+| Referencia de rangos | `docs/testing/planes-referencia.json` (46 entradas) | Rangos esperados por tipo, `hasIntermediate`, `pairCorrelativas`. |
+| Corpus de PDFs | `docs/files/UNAHUR-Oferta-Academica/` o `files/UNAHUR-Oferta-Academica/` (**fuera del repo**, 56 PDF) | 46 de referencia + 10 excluidos con motivo; insumo de los scripts masivos (referencia, golden, salud y cobertura resuelven por nombre de archivo, §11.9). |
 
 > [!WARNING]
-> **El corpus de PDFs vive fuera del repositorio** (`../files/…`, ver `requireCorpus()` en
-> `scripts/lib/`). En un clon limpio los tres scripts masivos **salen con mensaje claro
-> (código 2)** en vez de fallar críptico; quedan como evidencia los informes y los golden.
-> Guardia cerrada el 30/09 (Fase 2.2). Ver §11.6.
+> **El corpus de PDFs vive fuera del repositorio** (`docs/files/…` o `files/…`, ver
+> `requireCorpus()` en `scripts/lib/`). En un clon limpio los scripts masivos **salen con
+> mensaje claro (código 2)** en vez de fallar críptico; quedan como evidencia los informes
+> y los 46 golden. Guardia cerrada el 30/09 (Fase 2.2). Ver §11.6.
 
 ---
 
@@ -113,13 +114,10 @@ existe** en el repositorio, respondiendo tres preguntas:
 | ID | Historia | Verificación que lo cubre | Herramienta | Estado |
 | -- | -------- | ------------------------- | ----------- | ------ |
 | AR-1 | Visualizar progreso académico en un grafo | Caso 11 (estructura del grafo: `nodes`, `edges`, `stats`); Caso 10 (estados); Caso 21 (colores) | Postman / navegador | 🟡 |
-| AR-2 | Importar el plan en PDF y editar correlativas | **`test:planes`** ejecuta crear carrera → `parse-official` → `saveSubjects` → `parse-correlativas` sobre **43 documentos** (Test-Cases:59-107); `saveCorrelativas` blindado y verificado (BUG-009) | `test:planes` ✅ · Casos 3–8 🟡 | ✅ parcial |
+| AR-2 | Importar el plan en PDF y editar correlativas | **`test:planes` + `test:correlativas`** ejecutan el flujo sobre **46 documentos** (29 planes y 17 pares de correlatividades; Test-Cases, corrida 12); `saveCorrelativas` blindado y verificado (BUG-009) | `test:planes` + `test:correlativas` ✅ · Casos 3–8 🟡 | ✅ parcial |
 | AR-3 | Recibir sugerencias automáticas de inscripción | `GET /study-plans/:id/sugerencias` (E2E 200) + sección en Mi progreso + 4 unitarios | `npm test` ✅ · smoke ✅ · caso UI 🟡 | ✅ parcial |
 | US-02 | Grafo interactivo con colores por estado + banner de título intermedio | Caso 12 (`graph.intermediate`, banner) y Caso 21 (colores); `test:planes` valida `hasIntermediate` (`carga-masiva.test.js:235`) | `test:planes` ✅ parcial · Casos 12 y 21 🟡 | ⚠️ |
 | US-03 | Clic en materia disponible cambia estado y desbloquea sucesoras | Caso 21 | navegador | 🟡 |
-
----
-
 | US-04 | Explorar el catálogo por instituto y carrera | `withCounts` + `?unit` (estructura) + Home (Caso 24); búsqueda de carreras | Postman / navegador | 🟡 |
 | US-05 | Título Intermedio con pestañas Licenciatura/Título Intermedio y aviso si está vacío | `GET /study-plans/:id/intermediate` (`closed`/`externalRequires`); **E2E v2.4**: sub-plan devuelve las materias marcadas y `closed`; avisos en Cargar plan/Editar plan cuando hay título sin materias (BUG-016); Caso 26 | E2E ✅ API · Caso 26 🟡 | ⚠️ |
 | US-06 | Admin marca el Título Intermedio y articulación | **E2E v2.4**: `PATCH /study-plans/:id/subjects/intermediate` por año/todo (`matched`/`modified`), `400` con valor no booleano, `403/404` para ajenos; `PATCH /careers/:id` valida `continuesIn` (autorreferencia 400); UI `AdminCatalog`; Caso 25 | E2E ✅ API · Caso 25 🟡 | ⚠️ |
@@ -144,12 +142,9 @@ existe** en el repositorio, respondiendo tres preguntas:
 | 4 | **MATERIAS A ⇒ MATERIAS B** (C1–C6) | Implementado + unitarios (`sugerencias.test.js`) | ✅ |
 | 5 | **ORDEN DE ESTADÍSTICAS** decreciente | Implementado + unitario de orden | ✅ |
 | 6 | **FUSIÓN DE CONDICIONES** (C1+C2 → C5) | Implementada + unitario de fusión C5 | ✅ |
-| 7 | **CORRELATIVIDADES** — matching exacto/compacto/difuso/prefijo con `confidence` | **`test:planes`** (ej. Biotecnología 41/41, Enfermería 39/39) y **`test:salud`** (Test-Cases:107-109); Caso 8 manual 🟡 | ✅ |
+| 7 | **CORRELATIVIDADES** — matching exacto/compacto/difuso/prefijo con `confidence` | **`test:correlativas`** (17 pares: 11 OK / 6 WARN; Biotecnología 41/41, Enfermería 39/39, Informática 45/45) y **`test:salud`**; Caso 8 manual 🟡 | ✅ |
 | 8 | **TÍTULO INTERMEDIO** — `intermediateTitle`, `subject.intermediate`, banner de materias aprobadas sin créditos curriculares | `test:planes` valida `hasIntermediate` de la referencia (`carga-masiva.test.js:235`); **marcado en lote** `PATCH /subjects/intermediate` + aviso si está vacío (BUG-016) y **propuesta IA validada** con regresión unitaria (BUG-017); Casos 3 y 12 🟡 | ⚠️ |
 | 9 | **MANEJO DE ERRORES** — JSON en español, `400/404/409/500`, UI sin romperse | Casos 17, 18, 19 (HTTP) y Caso 22 (`ErrorBoundary`) | 🟡 |
-
----
-
 | 10 | **CORRELATIVAS BLOQUEANTES (RN05)** — no se avanza sin correlativas cumplidas | `subjectProgressService` (`400` con detalle) + pre-chequeo en Mi progreso; Caso 27 | ✅ backend · 🟡 UI |
 | 11 | **TÍTULO INTERMEDIO** — sub-plan virtual con pestañas Licenciatura/Título Intermedio y aviso si está vacío | `GET /study-plans/:id/intermediate` + Caso 26 | ⚠️ |
 | 12 | **ARTICULACIÓN** — `continuesIn` entre carreras | `PATCH /careers/:id` (valida IDs y autorreferencia) + Caso 25 | 🟡 |
@@ -214,10 +209,10 @@ hasta la API; la capa de interfaz (Casos 20–23, 25–30) no tiene resultado re
 | BUG-001 | Fila de totales importada como materia | Resuelto | `test:planes` + golden (`TAB_TOTAL_RE`) | ✅ |
 | BUG-002 | Dialecto `Asignatura\|Campo\|Carga` → 0 materias | Resuelto | `test:planes` (23 detectadas) + **golden detectó la regresión de 6 planes sanos** | ✅ |
 | BUG-003 | Dialecto con número pegado → 0 materias | Mitigado | `test:planes` → estado `OK-IA` (20 materias vía IA) | ✅ |
-| BUG-004 | Correlativas 2 columnas sin números → 0/0 | Resuelto el layout: `test:planes` → **32/38 determinístico** (corrida 6); IA lectora cubre el resto | ✅ |
-| BUG-005 | Matching bajo con nombres envueltos | **Fix A 30/09** (triple gate: cierre `-` + nombre completo + banda): Obstetricia **23/35**, Nutrición **41/48** solo determinístico (`test:salud` corrida 30/09) | ✅ |
+| BUG-004 | Correlativas 2 columnas sin números → 0/0 | Resuelto | Layout resuelto: `test:correlativas` → **32/38 determinístico**; IA lectora cubre el resto | ✅ |
+| BUG-005 | Matching bajo con nombres envueltos | Mitigado | **Fix A 30/09** (triple gate: cierre `-` + nombre completo + banda): Obstetricia **23/35** y Nutrición **41/48** solo determinístico (`test:correlativas`, corrida 12) | ✅ |
 | BUG-006 | 8 materias sin año (Ciberseguridad) | Resuelto | `test:planes` → 0 sin año + golden `diff = 0` | ✅ |
-| BUG-007 | Typo en `pairCorrelativas` → SKIP | Resuelto | `test:planes` → Mantenimiento 27/31 (corrida 6) | ✅ |
+| BUG-007 | Typo en `pairCorrelativas` → SKIP | Resuelto | `test:correlativas` → Mantenimiento 27/31 | ✅ |
 | BUG-008 | Groq 413 / Gemini 503-429 | Mitigado | Observado en corrida; **sin test automatizado** (depende de cuota externa) | ❌ |
 | BUG-009 | `saveCorrelativas` persistía cualquier `requires` (ciclos, autorreferencias) | Resuelto | Regresión automática `npm test` (whitelist + anti-ciclos) | ✅ |
 | BUG-010 | Scripts hablaban API pre-merge (`POST /careers` sin auth) → 401/FAIL | Resuelto 09/10 | Scripts reescritos a `preview`+JWT; matcher portado a `correlativas.service` | ✅ |
@@ -231,8 +226,9 @@ hasta la API; la capa de interfaz (Casos 20–23, 25–30) no tiene resultado re
 | BUG-018 | Extractos cacheados v2 no refrescaban la clasificación del intermedio | Resuelto 16/10 | `PARSER_VERSION` v3 (`fileHash + parserVersion`); E2E: segundo preview `cached:true` con el mismo resultado | ✅ |
 | BUG-019 | Fallo transitorio de IA (429) congelado en la extracción cacheada: el preview reutilizado ya no reintentaba la clasificación del intermedio | Resuelto 16/10 | Camino `REUSE` reintenta (`tryClassifyIntermediate`) + `refreshPdfExtraction`; E2E: Diseño 0 → 18 marcadas sobre la caché | ✅ |
 | BUG-020 | Typos históricos del controlador de institutos (`updatedAcademicUnit`/`getAcademicUnitById`, inexistentes en el servicio) → editar un instituto respondía `400` siempre | Resuelto 16/10 | E2E v2.5: `PATCH` color/rename `200` + `withCounts` coherente (Caso 36) | ✅ |
+| BUG-021 | `PlanSubject.nameOverride` no se mostraba en las vistas de consulta aunque se persistía | Resuelto (06/11) | Pruebas unitarias frontend/backend; pendiente la verificación manual de los flujos completos | ✅ (unit) |
 
-**Cobertura de regresión de bugs: 19/20 automatizados.** Falta BUG-008 (cuota externa, aceptado).
+**Cobertura de regresión de bugs: 20/21 automatizados.** Falta BUG-008 (cuota externa, aceptado).
 
 ---
 
@@ -242,16 +238,16 @@ hasta la API; la capa de interfaz (Casos 20–23, 25–30) no tiene resultado re
 | --------- | ----- | -- | -- | -- | -- | -- |
 | Reglas de negocio (RN01–RN05) | 5 | 2 | 1 | 2 | 0 | 0 |
 | Reglas de sugerencia (R0–R6, C1–C6, orden) | 3 | 3 | 0 | 0 | 0 | 0 |
-| Historias de usuario (AR/US) | 15 | 2 | 6 | 7 | 0 | 0 |
-| Criterios de bondad | 16 | 5 | 5 | 6 | 0 | 0 |
-| Requisitos de seguridad | 6 | 3 | 3 | 0 | 0 | 0 |
+| Historias de usuario (AR/US) | 18 | 2 | 8 | 8 | 0 | 0 |
+| Criterios de bondad | 18 | 5 | 7 | 6 | 0 | 0 |
+| Requisitos de seguridad | 6 | 6 | 0 | 0 | 0 | 0 |
 | Pantallas (SC) | 10 | 0 | 9 | 1 | 0 | 0 |
-| Casos de estudio (CS) | 7 | 0 | 3 | 4 | 0 | 0 |
-| **TOTAL** | **62** | **15** | **27** | **20** | **0** | **0** |
+| Casos de estudio (CS) | 7 | 0 | 4 | 3 | 0 | 0 |
+| **TOTAL** | **67** | **18** | **29** | **20** | **0** | **0** |
 
-> De 62 puntos: **15 verificados**, **27 definidos pero sin ejecutar** (casi todos, casos
+> De 67 puntos: **18 verificados**, **29 definidos pero sin ejecutar** (casi todos, casos
 > manuales HTTP/UI), **20 parciales** y **0 pendientes**: no quedan requisitos sin
-> implementar ni sin caso. **Ninguna pantalla está verificada end-to-end** (Casos 20–38).
+> implementar ni sin caso. **Ninguna pantalla está verificada end-to-end** (Casos 20–48).
 
 ---
 
@@ -263,10 +259,11 @@ Corrida completa 09/10: E2E 12/12 con JWT (register->login->me->careers->preview
 
 
 
-### 11.2 Tests unitarios ✅ (cerrada 30/09)
-`npm test` (node:test, 0 dependencias, 14 tests): `bestDbMatch`, whitelist/anti-ciclos/
-BUG-009, RN04 y AR-3. El matching, los ciclos y las reglas ahora tienen casos
-aislados además de la verificación masiva/E2E.
+### 11.2 Tests unitarios ✅ (actualizada 16/11/2026)
+`npm test` (node:test, 0 dependencias): **45 tests en 9 archivos** (`bestDbMatch`,
+whitelist/anti-ciclos/BUG-009, RN04, AR-3, registro/roles, CSRF, intermedio, estrategia
+de extracción, nombres por plan y reglas de progreso). Jest suma **24/24**. El matching,
+los ciclos y las reglas tienen casos aislados además de la verificación masiva/E2E.
 
 ### 11.3 RN04 ✅ (actualizada 15/11/2026)
 `tests/rn04.test.js` (3 tests): los estados guardados se conservan y una materia
@@ -274,37 +271,41 @@ aprobada sigue habilitando sus correlativas directas, aunque un requisito anteri
 pase a Libre. La disponibilidad se calcula por requisito directo.
 
 ### 11.4 La capa de interfaz no tiene resultados 🟠
-Casos 20–23 (navegación, estados en grafo, `ErrorBoundary`, accesibilidad) y 24–38 (flujos v2.3/v2.4/v2.5:
+Casos 20–23 (navegación, estados en grafo, `ErrorBoundary`, accesibilidad) y 24–48 (flujos v2.3–v3.0:
 catálogo, articulación, tecnicatura, RN05, promedio, cuenta, admin, avisos, marcado en lote, IA,
 tipo de carrera, caché, institutos con color, edición/archivado/borrado de carreras, correlativas
-regularizadas) definidos en `Test-Plan.md` sin resultados de interfaz registrados; los flujos
-nuevos quedaron verificados **por API** (E2E v2.4, 18 chequeos; E2E v2.5, 14 chequeos de administración
-+ 5 de correlativas en base scratch) y los manuales siguen pendientes.
+regularizadas, baja reversible, `nameOverride`, validaciones, FAQ, estado Libre y créditos ACA)
+definidos en `Test-Plan.md` sin resultados de interfaz registrados; los flujos nuevos quedaron
+verificados **por API** (E2E v2.4, 18 chequeos; E2E v2.5, 14 de administración + 5 de correlativas
+en base scratch; corrida 12, 17 pares de correlatividades) y los manuales siguen pendientes.
 
 ### 11.5 Un bug sin regresión automatizada 🟢
 Solo queda BUG-008 (cuota externa, aceptado). BUG-009 tiene regresión en `npm test`.
 
 ### 11.6 El corpus de PDFs está fuera del repositorio 🟡
-`../files/UNAHUR-Oferta-Academica/` (43 PDF de referencia, 56 archivos en 2026-10) no se
-commitea. En un clon limpio los scripts salen con mensaje claro (código 2) gracias a
-`requireCorpus()` (Fase 2.2, `scripts/lib/` + `validaciones.js todo`). Quedan como evidencia
-los informes y los golden. Pendiente de equipo: decidir destino del corpus (§4 fila 6 del plan maestro).
+`docs/files/UNAHUR-Oferta-Academica/` (o `files/UNAHUR-Oferta-Academica/`; **56 PDFs: 46 de
+referencia + 10 excluidos con motivo**) no se commitea. En un clon limpio los scripts salen
+con mensaje claro (código 2) gracias a `requireCorpus()` (Fase 2.2, `scripts/lib/` +
+`validaciones.js todo`). Quedan como evidencia los informes y los 46 golden. Pendiente de
+equipo: decidir el destino definitivo del corpus (§4 fila 6 del plan maestro).
 
-### 11.7 Cifra 29 → 43 PDFs ✅ (cerrada 30/09)
-Corregida en `Test-Plan.md:47,67` y `Test-Cases.md:59`.
+### 11.7 Cifra de referencia 29 → 46 PDFs ✅ (actualizada 16/11/2026)
+La referencia pasó de 29 planes a **46 PDFs de referencia** (29 planes + 17 correlativas) y **10 excluidos con motivo** (56 archivos totales); `Test-Plan.md` y `Test-Cases.md` quedaron alineados. La cifra histórica de 43 (30/09) correspondía a la referencia previa a separar las correlatividades.
 
-### 11.8 Herramientas documentadas ✅ (cerrada 30/09)
+### 11.8 Herramientas documentadas ✅ (actualizada 16/11/2026)
 `README.md` (sección Validar y testear) + `Test-Plan.md` describen `test:planes`,
-`test:salud`, `snapshot:planes`, `npm test` y `npm run validar`.
+`test:correlativas`, `test:cobertura`, `test:salud`, `snapshot:planes`, `npm test`,
+`test:jest` y `npm run validar`.
 
 ### 11.9 Rutas del corpus y harness E2E alineados 🟢 (cerrada 16/10)
 El corpus se reordenó en subcarpetas por carrera y la referencia (`planes-referencia.json`), el
 golden y `test:salud` apuntaban al layout viejo (44 “archivo no encontrado”; salud abortaba). Se
-re-apuntaron **por nombre de archivo**: `planes-referencia.json` (43 entradas, 53 rutas) y
+re-apuntaron **por nombre de archivo**: `planes-referencia.json` (46 entradas) y
 `verificar-salud.test.js` (helper `findInPlanes` como respaldo). Además, `validar` corre con el
 usuario de prueba **promovido a ADMIN por DB** (`preview`/`confirm` lo exigen desde v2.3) y `salud`
 captura los timeouts por carrera en lugar de abortar (planes grandes con rescate IA: 300 s).
-Golden 43/43 sin diferencias; salud OK con controles negativos 400/400.
+Golden **46/46** sin diferencias; salud OK con controles negativos 400/400; el par de Nutrición
+se valida en `test:correlativas` porque el preview genérico de salud responde 422.
 
 ---
 
@@ -321,6 +322,8 @@ de equipo: no se borra, solo se documenta) + Swagger lo marca como legado.
 `swagger.yaml` pasó de 9 a 16 paths (incl. `parse-correlativas`, `correlativas`,
 `PATCH/DELETE /careers/{id}`, `sugerencias`, `/users/*` legado, `/` raíz).
 
+**Estado actual (16/11/2026):** `backend/docs/swagger.yaml` declara OpenAPI 3.0.3 y versión **2.1.0**; el endpoint dedicado `POST /study-plans/:id/parse-correlativas` existe en las rutas y se usa en `test:correlativas`, pero **no figura en Swagger** (junto con `POST /study-plans/:id/correlativas`).
+
 ### 12.4 Fila BUG-009 ✅
 Repegada a la tabla (sin líneas en blanco intermedias).
 
@@ -328,14 +331,16 @@ Repegada a la tabla (sin líneas en blanco intermedias).
 
 ## 13. Recomendaciones priorizadas
 
+| # | Recomendación | Estado | Prioridad |
+| - | ------------- | ------ | --------- |
 | 1 | **Ejecutar los casos HTTP 1–19** y registrar en Test-Cases | 🟠 smoke ejecutado (404/401/200 + sugerencias); falta registro caso por caso | 🟡 medio |
 | 2 | **Regresión `saveCorrelativas`** (ciclo, inexistente, autorreferencia) | ✅ en `npm test` | 🟢 bajo |
 | 3 | **FRD RN05** (correlativas bloquean el avance) | ✅ en `subjectProgressService` + unit `seguridad` | listo |
 | 4 | **FRD SEG-6** (CSRF/sesión) | ✅ en `tests/seguridad.test.js` | 🟢 bajo |
 | 5 | **Caso RN04** | ✅ `tests/rn04.test.js` (M1 Libre, M2 aprobada y M3 disponible) | 🟢 bajo |
-| 6 | **Unitarios** (matching + ciclos + AR-3 + registro/roles + seguridad + intermedio) | ✅ `npm test`, **32 tests**, 0 deps | 🟢 bajo (era medio) |
-| 7 | **Casos 20–35 de interfaz** | ⬜ pendiente (0/10 pantallas E2E); los flujos nuevos (bulk/IA/tipo de carrera) quedaron verificados por API | 🟡 medio |
-| 8 | **Corrida masiva oficial (v2.4)** | ✅ corrida 9 (16/10): masiva 27+1+15+0 + títulos intermedios y salud OK; informes en `backend/scripts/informes/` | 🟢 bajo |
+| 6 | **Unitarios** (matching + ciclos + AR-3 + registro/roles + seguridad + intermedio + extracción + nombres + progreso) | ✅ `npm test`, **45 tests en 9 archivos**, 0 deps; Jest **24/24** | 🟢 bajo (era medio) |
+| 7 | **Casos 20–48 de interfaz** | ⬜ pendiente (0/10 pantallas E2E); los flujos nuevos (bulk/IA/tipo de carrera/FAQ/Libre/ACA) quedaron verificados por API o unitarios | 🟡 medio |
+| 8 | **Corrida integral del corpus (v3.1)** | ✅ corrida 12 (16/11): cobertura 56=46+10; golden 46/46; masiva 28+1+0+0+17; correlativas 11+6+0+0; informes en `backend/scripts/informes/` | 🟢 bajo |
 
 > Los ítems 2–6 son **solo de documentación/unitarios** y pueden resolverse en la misma
 > corrida de edición de `docs/requirements`.
@@ -356,3 +361,4 @@ Repegada a la tabla (sin líneas en blanco intermedias).
 | 1.7 | 20/10/2026 | Equipo + agente | **v2.6**: stories **US-12** (baja reversible) y **US-13** (`nameOverride` + guardado en lote con códigos únicos); Casos 39–40 definidos en Test-Plan (pendientes de corrida); validaciones reutilizables de cuenta/registro documentadas (US-09/SC000/SC007). Documentación: BRD 2.5 / FRD 2.6 / Test-Plan 2.6 / Test-Cases 2.5. Cobertura 15✅/27🟡/20⚠️/0❌/0⛔ (62 puntos). |
 | 1.8 | 06/11/2026 | Equipo + agente | **v2.9**: documentada la FAQ conversacional local (US-14/SC011), Caso 46 y verificación automatizada del buscador `faqSearch` (6/6) más humo manual en navegador con sesión simulada; no se hizo E2E con backend ni prueba en dispositivo físico. Fuentes: BRD 2.7 / FRD 2.9 / Test-Plan 2.9 / Test-Cases 2.8. |
 | 1.9 | 12/11/2026 | Equipo + agente | **v3.0**: US-15/US-16 documentan créditos por actividades ACA y estado Libre; Casos 47–48 definidos y pendientes; se retiran los créditos por materia de requisitos y se unifican las etiquetas de vista como “Título Intermedio”. Fuentes: BRD 2.8 / FRD 3.0 / Test-Plan 3.0 / Test-Cases 2.9. |
+| 2.0 | 16/11/2026 | Equipo + agente | **v3.1**: cierre del corpus (**56 PDFs = 46 referencia + 10 excluidos**), golden **46/46**, `test:planes` (29 planes + 17 `SKIP`) y nuevo `test:correlativas` (**11 OK / 6 WARN**); `npm test` **45/45** y Jest **24/24**. Se actualizan conteos de la matriz (**67 puntos: 18✅/29🟡/20⚠️**), se agrega BUG-021 y se alinean Test-Plan 3.1 / Test-Cases 3.0. Fuentes: BRD 2.9 / FRD 3.1 / Test-Plan 3.1 / Test-Cases 3.0. |
