@@ -35,8 +35,16 @@ test('una correlativa aprobada habilita la siguiente aunque pierda estado un req
 });
 
 test('mantiene bloqueado el nuevo avance que depende de una materia libre', () => {
-  const statuses = resolveProgressStatuses(subjects, new Map([
+    const statuses = resolveProgressStatuses(subjects, new Map([
     ['a', 'LIBRE'],
   ]));
+  assert.equal(statuses.get('b'), 'BLOQUEADA');
+  assert.equal(statuses.get('c'), 'BLOQUEADA');
+});
+
+test('Sin preservar avances, bloquea la materia que perdió su correlativa', () => {
+  const statuses = resolveProgressStatuses(subjects, new Map([
+    ['b', 'APROBADA'],
+  ]), false);
   assert.equal(statuses.get('b'), 'BLOQUEADA');
 });

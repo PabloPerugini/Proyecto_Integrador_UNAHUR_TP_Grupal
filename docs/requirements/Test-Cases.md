@@ -1,8 +1,8 @@
 # Documento de Seguimiento de Testing
 
 **Proyecto:** Gradify — Grafo Interactivo de Correlatividades y Seguimiento de Progreso Académico
-**Versión:** 3.0
-**Fecha:** 2026-11-16
+**Versión:** 3.1
+**Fecha:** 2026-11-19
 **Sponsor Organización:** Universidad Nacional de Hurlingham (UNAHUR) — Licenciatura en Informática
 **Autor:** Equipo del proyecto integrador
 **Tutor:** Prof. Alejandra Pinto
@@ -140,6 +140,9 @@ Scripts E2E reescritos a la API nueva (`lib/testAuth.js`: usuario propio + Beare
 | BUG-019 | Un fallo transitorio de la IA (429/cuota) durante el preview quedaba congelado en la extracción cacheada: el preview reutilizado (`cached: true`) ya no reintentaba la clasificación del intermedio y el plan quedaba sin marcar de forma permanente. | Resuelto 16/10 | El camino `REUSE` del preview ahora reintenta la clasificación si el extracto tiene título intermedio sin marcar (`tryClassifyIntermediate`), propaga el `aiProvider` y **refresca la caché** (`refreshPdfExtraction`, que actualiza un extracto `COMPLETADA`). Verificado en E2E v2.4: Diseño Industrial pasó de 0 a **18 marcadas / 109 créditos** sobre la caché existente y el segundo preview mantuvo `cached: true` con el mismo resultado. |
 | BUG-020 | El controlador de institutos (`academicUnit.controllers`) llamaba `academicUnitService.updatedAcademicUnit` y `getAcademicUnitById`, nombres **inexistentes** en el servicio (los reales son `updateAcademicUnit`/`findAcademicUnitById`): editar un instituto por API respondía `400` siempre (`TypeError` capturado) y el detalle por id, `500`. | Resuelto 16/10 | Se corrigieron ambos nombres; verificado en E2E v2.5: `PATCH /academic-units/:id` de color y nombre → `200` persistido y `withCounts` coherente (14/14). |
 | BUG-021 | El nombre por plan (`PlanSubject.nameOverride`) no se mostraba en las vistas de consulta aunque se persistía. | Resuelto (06/11) | Frontend y backend priorizan el override, con fallback al nombre del catálogo y luego al código. Cubierto por pruebas unitarias frontend y backend; pendiente la verificación manual de los flujos completos. |
+| BUG-022 | El registro (`POST /users/register`) acepta un nombre con digitos (por ejemplo `Juan1`) y un `nickName` de 2 caracteres, aunque el Caso 41 del Test-Plan indica rechazo 400. El esquema `user.schemas.js` spñp exoge im `nickName` no vacio y entre 2 y 50 caracteres en un nombre y apellido. Detectado con Jest + Supertestl. En `api.seguridad.test.js` hay 2 pruebas que quedan saltadas (`test.skip`) hasta que se decida que hacer con nickName. Estado ABIERTO
+| BUG-023 | La prueba `tests/progressStatus.test.mjs` esperaba que se bloquearan las materias aprobadas cuando una correlativa anterior volvía a pendiente, pero la regla RN04 indica que esos avances se conservan (`src/utils/progressStatus.ts`). La prueba había quedado desactualizada respecto del código. Se detectó al correr `npm run test:status`. Se resolvio reemplazando por dos pruebas: una verifica que se conserva el progreso con RN04 y otra que, con esa opción desactivada, la materia sin correlativa cumplida queda bloqueada
+
 
 ## Corrida 8 (14/10/2026, v2.3: institutos, tecnicatura, articulación y correlativas bloqueantes)
 
@@ -271,3 +274,10 @@ Cierre de la validación del corpus y del flujo de correlatividades sobre `devel
 - **Caso 47 — Estado Libre:** está definido en el [Plan de Pruebas](./Test-Plan.md); falta verificar que se conserven avances dependientes ya registrados y se rechacen nuevos avances sin correlativas válidas.
 - **Caso 48 — Créditos ACA:** está definido en el [Plan de Pruebas](./Test-Plan.md); falta probar el alta/listado/eliminación de actividades, los porcentajes por categoría y los hitos de ambos títulos.
 - No se registran resultados de ejecución para estos dos casos en esta versión.
+
+## Verificación 12 (19/11/2026): pruebas automáticas de testing
+- Backend `npm test` (node:test): 43/43.
+- Backend `npm run test:jest` (Jest + Supertest): 48 pasaron, 2 saltadas por BUG-022, 50 en total.
+- Frontend (5 scripts `test:*`): 24/24 tras actualizar `progressStatus` (BUG-023).
+- Total: 115 pruebas pasaron, 0 fallaron, 2 saltadas.
+- Bugs nuevos: BUG-022 (abierto) y BUG-023 (resuelto).
