@@ -27,7 +27,7 @@ describe("Registro: validaciones del backend", () => {
         password: "clave123",
     };
 
-    test.skip("un nombre con un número se rechaza con 400", async () => {
+    test("un nombre con un número se rechaza con 400", async () => {
         const res = await request(app)
             .post("/users/register")
             .send({ ...base, firstName: "Juan1" });
@@ -55,7 +55,7 @@ describe("Registro: validaciones del backend", () => {
         expect(res.status).toBe(400);
     });
 
-    test.skip("un nickName de 2 letras se rechaza con 400", async () => {
+    test("un nickName de 2 letras se rechaza con 400", async () => {
         const res = await request(app)
             .post("/users/register")
             .send({ ...base, nickName: "ab" });
