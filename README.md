@@ -88,6 +88,6 @@ Para validar el frontend, ejecutar `npm run build`, `npm run lint` y los tests `
 | Integrante | Email | GitHub |
 | ---------- | ----- | ------ |
 | Pablo Perugini | pablochristian.perugini@estudiantes.unahur.edu.ar | [@PabloPerugini](https://github.com/PabloPerugini) |
-| Joaquín Masgo Sandoval | joaomasgosandoval@gmail.com | — |
+| Joao Masgo Sandoval | joaomasgosandoval@gmail.com | — |
 | Eliel Remonda | elieldario.remonda@estudiantes.unahur.edu.ar | — |
 | Dylan Cotera | dylancotera@gmail.com | [@dylancotera](https://github.com/dylancotera) |
